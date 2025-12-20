@@ -91,6 +91,10 @@ export interface ReportResponse {
   report: Report;
 }
 
+export interface ChartResponse {
+  chart: Chart;
+}
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;

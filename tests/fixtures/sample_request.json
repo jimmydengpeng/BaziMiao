@@ -1,7 +1,13 @@
 {
   "name": "测试用户",
   "gender": "male",
-  "birth": "1992-07-27T08:00:00",
-  "tz_offset_hours": 0,
+  "year": 1992,
+  "month": 8,
+  "day": 25,
+  "hour": 8,
+  "minute": 0,
+  "calendar": "solar",
+  "is_leap_month": false,
+  "tz_offset_hours": 8,
   "focus": ["事业", "财富"]
 }

@@ -16,7 +16,7 @@
 - 存储（MVP 可选）：日志、调用统计、命盘缓存；后续可接入 Redis/DB。
 
 ## 核心数据结构
-- 输入 `BaziInput`（待放入 `src/models/input.py`）：name/gender/birth_datetime/timezone/birth_place/time_unknown。
+- 输入 `BaziInput`（待放入 `src/models/input.py`）：name/gender/year/month/day/hour/calendar/is_leap_month/timezone。
 - 命盘 `Chart`（现有 `src/models/chart.py`）：四柱、藏干、日主、五行计数、大运、起运日期。
 - 规则输出 `Analysis`（现有 `src/models/analysis.py`）：身强弱/分值、用忌、标签、风险点、大运提示。
 - 知识库 `KnowledgeChunk`（现有 `src/models/knowledge.py`）：来源/主题/摘要，检索基于 pattern_tags + 用忌 + focus。
@@ -34,8 +34,9 @@
 - 安全：拒绝医疗/赌博/违法/确定性预测；语气温和、不恐吓。
 
 ## API 设计（FastAPI）
-- `POST /api/bazi/report`：入参 BaziInput；流程=排盘→规则→知识→Prompt→LLM（当前 `_fake_llm_generate` 占位）；出参 chart/analysis/report。
-- `POST /api/bazi/chat`：入参 chart+analysis+history+focus+user_msg；Prompt 约束复用同一命盘；出参 reply。
+- `POST /api/bazi/chart`：入参 BaziInput（支持阳历/农历 + 闰月）；返回 chart，用于前端展示命盘。
+- `POST /api/bazi/report`：可直接使用 BaziInput 生成报告，或传入已排盘 chart（推荐）；流程=规则→知识→Prompt→LLM（当前 `_fake_llm_generate` 占位）。
+- `POST /api/bazi/chat`：入参 chart+analysis+history+focus；Prompt 约束复用同一命盘；出参 reply。
 - 跨域：MVP 可全开，后续收紧。
 - 入参模型当前定义在 `src/api/schemas.py`，可逐步与 `src/models` 对齐。
 

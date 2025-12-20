@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from typing import Dict, List
+from datetime import datetime
+from typing import Dict, List, Optional, Union
 
 from fastapi import FastAPI, HTTPException
 
-from src.api.schemas import ChatRequest, ReportRequest
+from src.api.schemas import ChartRequest, ChatRequest, ReportRequest
 from src.engine.bazi_engine import BaziPaipanEngine
 from src.knowledge.base import retrieve_knowledge
+from src.models.chart import Chart
 from src.prompt.report_prompt import build_report_prompt
 from src.rules.analysis import evaluate_chart
 
@@ -14,17 +16,58 @@ app = FastAPI(title="神机喵算 / BaziMiao API", version="0.1.0")
 engine = BaziPaipanEngine()
 
 
+def _build_solar_datetime(payload: Union[ChartRequest, ReportRequest]) -> datetime:
+    if payload.calendar == "lunar":
+        return engine.lunar_to_solar(
+            year=payload.year,
+            month=payload.month,
+            day=payload.day,
+            is_leap_month=payload.is_leap_month,
+            hour=payload.hour,
+            minute=payload.minute,
+        )
+    return datetime(payload.year, payload.month, payload.day, payload.hour, payload.minute)
+
+
+def _normalize_name(name: Optional[str]) -> Optional[str]:
+    if not name:
+        return None
+    trimmed = name.strip()
+    return trimmed if trimmed else None
+
+
+@app.post("/api/bazi/chart")
+def generate_chart(payload: ChartRequest):
+    solar_datetime = _build_solar_datetime(payload)
+    chart = engine.calculate_chart(
+        name=_normalize_name(payload.name),
+        gender=payload.gender,
+        solar_datetime=solar_datetime,
+        tz_offset_hours=payload.tz_offset_hours,
+    )
+    return {"chart": chart.model_dump()}
+
+
 @app.post("/api/bazi/report")
 def generate_report(payload: ReportRequest):
-    try:
-        chart = engine.calculate_chart(
-            name=payload.name or "匿名",
-            gender=payload.gender,
-            solar_datetime=payload.birth,
-            tz_offset_hours=payload.tz_offset_hours,
-        )
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"排盘失败: {exc}") from exc
+    if payload.chart:
+        try:
+            chart = Chart.model_validate(payload.chart)
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"命盘数据无效: {exc}") from exc
+    else:
+        if payload.year is None or payload.month is None or payload.day is None or not payload.gender:
+            raise HTTPException(status_code=400, detail="缺少排盘所需的日期或性别信息")
+        try:
+            solar_datetime = _build_solar_datetime(payload)
+            chart = engine.calculate_chart(
+                name=_normalize_name(payload.name),
+                gender=payload.gender,
+                solar_datetime=solar_datetime,
+                tz_offset_hours=payload.tz_offset_hours,
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"排盘失败: {exc}") from exc
 
     analysis = evaluate_chart(chart)
     knowledge = retrieve_knowledge(

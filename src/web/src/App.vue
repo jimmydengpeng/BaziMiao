@@ -17,6 +17,31 @@
         <span class="muted">仅用于排盘，不会长期存储</span>
       </div>
       <div class="birth-grid">
+        <div class="field span-two">
+          <label>姓名（可选）</label>
+          <input v-model.trim="form.name" placeholder="可留空" />
+        </div>
+        <div class="field">
+          <label>历法</label>
+          <div class="segmented">
+            <button
+              class="segmented-btn"
+              :class="{ active: form.calendar === 'solar' }"
+              type="button"
+              @click="form.calendar = 'solar'"
+            >
+              阳历
+            </button>
+            <button
+              class="segmented-btn"
+              :class="{ active: form.calendar === 'lunar' }"
+              type="button"
+              @click="form.calendar = 'lunar'"
+            >
+              农历
+            </button>
+          </div>
+        </div>
         <div class="field">
           <label>出生年份</label>
           <select v-model.number="form.year">
@@ -40,6 +65,13 @@
           <select v-model.number="form.hour">
             <option v-for="hour in hours" :key="hour" :value="hour">{{ hour }} 点</option>
           </select>
+        </div>
+        <div class="field" v-if="isLunar">
+          <label>闰月</label>
+          <label class="check">
+            <input v-model="form.isLeapMonth" type="checkbox" />
+            <span>本月为闰月</span>
+          </label>
         </div>
         <div class="field">
           <label>性别</label>
@@ -71,6 +103,8 @@
       </div>
     </section>
 
+    <ChartPanel v-if="showForm" :chart="chart" />
+
     <section class="report-layout" :class="{ 'report-grid': hasReport }" v-if="showForm">
       <div class="panel stack">
         <div class="status-line">
@@ -93,17 +127,21 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import ChatPanel from "./components/ChatPanel.vue";
-import type { Analysis, Chart, Report, ReportResponse } from "./types";
+import ChartPanel from "./components/ChartPanel.vue";
+import type { Analysis, Chart, ChartResponse, Report, ReportResponse } from "./types";
 import logoUrl from "./assets/logo-bazi_meow.png";
 
 const formBlock = ref<HTMLElement | null>(null);
 const showForm = ref(false);
 const form = ref({
+  name: "",
   year: 1992,
   month: 8,
   day: 25,
   hour: 8,
-  gender: "male"
+  gender: "male",
+  calendar: "solar",
+  isLeapMonth: false
 });
 const focus = ref<string[]>([]);
 const loading = ref(false);
@@ -119,16 +157,14 @@ const years = Array.from({ length: nowYear - 1940 + 1 }, (_, idx) => nowYear - i
 const months = Array.from({ length: 12 }, (_, idx) => idx + 1);
 const hours = Array.from({ length: 24 }, (_, idx) => idx);
 const days = computed(() => {
+  if (form.value.calendar === "lunar") {
+    return Array.from({ length: 30 }, (_, idx) => idx + 1);
+  }
   const lastDay = new Date(form.value.year, form.value.month, 0).getDate();
   return Array.from({ length: lastDay }, (_, idx) => idx + 1);
 });
 
-const birthIso = computed(() => {
-  const pad = (value: number) => String(value).padStart(2, "0");
-  return `${form.value.year}-${pad(form.value.month)}-${pad(form.value.day)}T${pad(
-    form.value.hour
-  )}:00`;
-});
+const isLunar = computed(() => form.value.calendar === "lunar");
 
 const revealForm = async () => {
   showForm.value = true;
@@ -143,12 +179,22 @@ const updateScrollState = () => {
   logoScale.value = 1 - progress * (1 - minScale);
 };
 
-watch([() => form.value.year, () => form.value.month], () => {
-  const lastDay = new Date(form.value.year, form.value.month, 0).getDate();
-  if (form.value.day > lastDay) {
-    form.value.day = lastDay;
+watch([() => form.value.year, () => form.value.month, () => form.value.calendar], () => {
+  const maxDay =
+    form.value.calendar === "lunar" ? 30 : new Date(form.value.year, form.value.month, 0).getDate();
+  if (form.value.day > maxDay) {
+    form.value.day = maxDay;
   }
 });
+
+watch(
+  () => form.value.calendar,
+  (value) => {
+    if (value === "solar") {
+      form.value.isLeapMonth = false;
+    }
+  }
+);
 
 onMounted(() => {
   updateScrollState();
@@ -161,27 +207,41 @@ onUnmounted(() => {
 
 const submit = async () => {
   error.value = "";
-  if (!birthIso.value) {
-    error.value = "请填写出生日期时间";
-    return;
-  }
+  error.value = "";
   loading.value = true;
   report.value = null;
   try {
-    const res = await fetch("/api/bazi/report", {
+    const chartRes = await fetch("/api/bazi/chart", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name: "匿名",
+        name: form.value.name,
         gender: form.value.gender,
-        birth: birthIso.value,
-        tz_offset_hours: 8,
+        year: form.value.year,
+        month: form.value.month,
+        day: form.value.day,
+        hour: form.value.hour,
+        minute: 0,
+        calendar: form.value.calendar,
+        is_leap_month: form.value.isLeapMonth,
+        tz_offset_hours: 0
+      })
+    });
+    if (!chartRes.ok) throw new Error(await chartRes.text());
+    const chartData = (await chartRes.json()) as ChartResponse;
+    chart.value = chartData.chart;
+    analysis.value = null;
+
+    const reportRes = await fetch("/api/bazi/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chart: chart.value,
         focus: focus.value
       })
     });
-    if (!res.ok) throw new Error(await res.text());
-    const data = (await res.json()) as ReportResponse;
-    chart.value = data.chart;
+    if (!reportRes.ok) throw new Error(await reportRes.text());
+    const data = (await reportRes.json()) as ReportResponse;
     analysis.value = data.analysis;
     report.value = data.report;
   } catch (err) {

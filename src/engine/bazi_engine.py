@@ -178,6 +178,24 @@ class BaziPaipanEngine:
         "亥": ["壬", "甲"],
     }
 
+    def lunar_to_solar(
+        self,
+        year: int,
+        month: int,
+        day: int,
+        is_leap_month: bool,
+        hour: int = 0,
+        minute: int = 0,
+    ) -> datetime:
+        lunar_day = sxtwl.fromLunar(year, month, day, is_leap_month)
+        return datetime(
+            lunar_day.getSolarYear(),
+            lunar_day.getSolarMonth(),
+            lunar_day.getSolarDay(),
+            hour,
+            minute,
+        )
+
     def calculate_chart(
         self,
         name: str,
@@ -382,4 +400,3 @@ class BaziPaipanEngine:
                 is_leap_month=qiyun_date_day.isLunarLeap(),
             ),
         }
-

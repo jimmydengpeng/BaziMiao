@@ -7,7 +7,7 @@
 - `src/rules/analysis.py`：轻量规则层，生成身强弱、用忌神、标签。
 - `src/knowledge/base.py`：知识模板检索，供 LLM 参考。
 - `src/prompt/report_prompt.py`：生成 LLM Prompt，限制“不重算只解释”。
-- `src/api/server.py`：FastAPI 接口 `/api/bazi/report` 与 `/api/bazi/chat`。
+- `src/api/server.py`：FastAPI 接口 `/api/bazi/chart`、`/api/bazi/report` 与 `/api/bazi/chat`。
 - `src/api/schemas.py`：API 入参模型（Pydantic）。
 - `src/web/`：前端 Vue3/Vite 工程，包含 Landing + 表单 + 报告 + 对话。
 - `docs/architecture.md`：总体架构与产品/交互/Prompt/安全设计。
@@ -35,6 +35,10 @@ make web-dev
 
 4) 示例请求
 ```bash
+curl -X POST http://127.0.0.1:8000/api/bazi/chart \
+  -H "Content-Type: application/json" \
+  -d @tests/fixtures/sample_request.json
+
 curl -X POST http://127.0.0.1:8000/api/bazi/report \
   -H "Content-Type: application/json" \
   -d @tests/fixtures/sample_request.json
@@ -46,6 +50,7 @@ curl -X POST http://127.0.0.1:8000/api/bazi/report \
 - Prompt 中明确禁令：不得重算八字、不得自创格局。
 - 现有规则为简版，可在 `rules/analysis.py` 中逐步替换更严谨的判定。
 - 详细产品/架构/迭代路线见 `docs/architecture.md`。
+ - 排盘与报告支持分两步调用：先 `/api/bazi/chart` 渲染命盘，再用 `/api/bazi/report` 生成报告。
 
 ## 前后端协作
 - 前端开发端口 5173，Vite 代理 `/api` 到 `http://127.0.0.1:8000`。
