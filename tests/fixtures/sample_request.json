@@ -1,0 +1,7 @@
+{
+  "name": "测试用户",
+  "gender": "male",
+  "birth": "1992-07-27T08:00:00",
+  "tz_offset_hours": 0,
+  "focus": ["事业", "财富"]
+}
