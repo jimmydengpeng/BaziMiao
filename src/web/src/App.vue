@@ -1,113 +1,66 @@
 <template>
   <div class="app-shell stack">
     <section class="hero">
-      <div>
-        <div class="badge">神机喵算 · BaziMiao</div>
-        <h1>用 AI 读懂八字，看到趋势与选择</h1>
-        <p class="subtitle">
-          确定性排盘 + 规则层 + LLM 解读。模型不重算命盘，只负责解释与润色，帮你看到事业、财富、情感的走向。
-        </p>
-        <div class="cta-row">
-          <button class="btn primary" @click="scrollToForm">开始占测</button>
-          <button class="btn" @click="prefillExample">填充示例</button>
+      <div class="hero-content">
+        <div class="logo-placeholder logo-image" :style="{ transform: `scale(${logoScale})` }">
+          <img :src="logoUrl" alt="神机喵算 Logo" />
         </div>
-      </div>
-      <div class="panel stack">
-        <div class="status-line">
-          <strong>命盘概览</strong>
-          <span class="badge">后端排盘</span>
-        </div>
-        <div class="card-grid">
-          <div class="pill" v-if="analysis?.pattern">
-            <span>身强弱</span>
-            <strong>{{ analysis?.pattern }}</strong>
-          </div>
-          <div class="pill" v-if="analysis?.strength_score !== undefined">
-            <span>强度</span>
-            <strong>{{ analysis?.strength_score }}</strong>
-          </div>
-          <div class="pill" v-if="analysis?.yi_yong_shen?.length">
-            <span>用神</span>
-            <strong>{{ analysis?.yi_yong_shen.join("、") }}</strong>
-          </div>
-          <div class="pill" v-if="analysis?.ji_shen?.length">
-            <span>忌神</span>
-            <strong>{{ analysis?.ji_shen.join("、") }}</strong>
-          </div>
-        </div>
-        <div class="muted" v-if="!chart">尚未排盘，填写信息后生成命盘与报告。</div>
-        <div v-else class="sections">
-          <div class="section-card">
-            <h3>四柱</h3>
-            <div class="card-grid">
-              <div class="pill">
-                年柱：{{ chart.year_pillar.heaven_stem.name }}{{ chart.year_pillar.earth_branch.name }}
-              </div>
-              <div class="pill">
-                月柱：{{ chart.month_pillar.heaven_stem.name }}{{ chart.month_pillar.earth_branch.name }}
-              </div>
-              <div class="pill">
-                日柱：{{ chart.day_pillar.heaven_stem.name }}{{ chart.day_pillar.earth_branch.name }}
-              </div>
-              <div class="pill">
-                时柱：{{ chart.hour_pillar.heaven_stem.name }}{{ chart.hour_pillar.earth_branch.name }}
-              </div>
-            </div>
-          </div>
-          <div class="section-card">
-            <h3>大运起运</h3>
-            <div class="muted">
-              {{ chart.destiny_cycle.start_age.year }}岁{{ chart.destiny_cycle.start_age.month }}月起运，
-              {{ chart.destiny_cycle.is_forward ? "顺行" : "逆行" }}。
-            </div>
-            <div class="card-grid" style="margin-top: 8px">
-              <div
-                v-for="(lp, idx) in chart.destiny_cycle.destiny_pillars.slice(0, 4)"
-                :key="idx"
-                class="pill"
-              >
-                {{ lp.year }} · {{ lp.heaven_stem.name }}{{ lp.earth_branch.name }}
-              </div>
-            </div>
-          </div>
-        </div>
+        <h1>神机喵算</h1>
+        <p class="subtitle">用 AI 读懂八字，看到趋势与选择</p>
+        <button class="btn primary hero-btn" @click="revealForm">我们开始吧</button>
       </div>
     </section>
 
-    <section class="panel stack" ref="formBlock">
+    <section class="panel stack" ref="formBlock" v-if="showForm">
       <div class="status-line">
         <strong>填写生辰</strong>
         <span class="muted">仅用于排盘，不会长期存储</span>
       </div>
-      <div class="form-grid">
+      <div class="birth-grid">
         <div class="field">
-          <label>姓名（可选）</label>
-          <input v-model="form.name" placeholder="神机喵算用户" />
+          <label>出生年份</label>
+          <select v-model.number="form.year">
+            <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>月份</label>
+          <select v-model.number="form.month">
+            <option v-for="month in months" :key="month" :value="month">{{ month }}</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>日期</label>
+          <select v-model.number="form.day">
+            <option v-for="day in days" :key="day" :value="day">{{ day }}</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>时辰</label>
+          <select v-model.number="form.hour">
+            <option v-for="hour in hours" :key="hour" :value="hour">{{ hour }} 点</option>
+          </select>
         </div>
         <div class="field">
           <label>性别</label>
-          <select v-model="form.gender">
-            <option value="male">男</option>
-            <option value="female">女</option>
-            <option value="other">其他/不公开</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>出生日期时间（公历）</label>
-          <input v-model="form.birth" type="datetime-local" />
-        </div>
-        <div class="field">
-          <label>时区偏移（小时，例如北京 +8）</label>
-          <input v-model.number="form.tzOffsetHours" type="number" step="1" />
-        </div>
-        <div class="field">
-          <label>关注方向</label>
-          <select v-model="form.focus" multiple>
-            <option value="事业">事业</option>
-            <option value="财富">财富</option>
-            <option value="情感">情感</option>
-            <option value="健康">健康</option>
-          </select>
+          <div class="segmented">
+            <button
+              class="segmented-btn"
+              :class="{ active: form.gender === 'male' }"
+              type="button"
+              @click="form.gender = 'male'"
+            >
+              男
+            </button>
+            <button
+              class="segmented-btn"
+              :class="{ active: form.gender === 'female' }"
+              type="button"
+              @click="form.gender = 'female'"
+            >
+              女
+            </button>
+          </div>
         </div>
       </div>
       <div class="cta-row">
@@ -118,13 +71,13 @@
       </div>
     </section>
 
-    <section class="grid-two">
+    <section class="report-layout" :class="{ 'report-grid': hasReport }" v-if="showForm">
       <div class="panel stack">
         <div class="status-line">
           <strong>命理报告</strong>
           <span class="badge">LLM 解释器</span>
         </div>
-        <div v-if="!report" class="muted">提交后会生成分章节报告。</div>
+        <div v-if="!report" class="muted">生成报告后，将在此处展示详细解读。</div>
         <div v-else class="sections">
           <div class="section-card" v-for="(sec, idx) in report.sections" :key="idx">
             <h3>{{ sec.title }}</h3>
@@ -132,48 +85,83 @@
           </div>
         </div>
       </div>
-      <ChatPanel :chart="chart" :analysis="analysis" :focus="form.focus" />
+      <ChatPanel v-if="hasReport" :chart="chart" :analysis="analysis" :focus="focus" />
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import ChatPanel from "./components/ChatPanel.vue";
 import type { Analysis, Chart, Report, ReportResponse } from "./types";
+import logoUrl from "./assets/logo-bazi_meow.png";
 
 const formBlock = ref<HTMLElement | null>(null);
+const showForm = ref(false);
 const form = ref({
-  name: "",
-  gender: "male",
-  birth: "",
-  tzOffsetHours: 8,
-  focus: ["事业", "财富"] as string[]
+  year: 1992,
+  month: 8,
+  day: 25,
+  hour: 8,
+  gender: "male"
 });
+const focus = ref<string[]>([]);
 const loading = ref(false);
 const error = ref("");
 const chart = ref<Chart | null>(null);
 const analysis = ref<Analysis | null>(null);
 const report = ref<Report | null>(null);
+const logoScale = ref(1);
 
-const scrollToForm = () => {
+const hasReport = computed(() => !!report.value);
+const nowYear = new Date().getFullYear();
+const years = Array.from({ length: nowYear - 1940 + 1 }, (_, idx) => nowYear - idx);
+const months = Array.from({ length: 12 }, (_, idx) => idx + 1);
+const hours = Array.from({ length: 24 }, (_, idx) => idx);
+const days = computed(() => {
+  const lastDay = new Date(form.value.year, form.value.month, 0).getDate();
+  return Array.from({ length: lastDay }, (_, idx) => idx + 1);
+});
+
+const birthIso = computed(() => {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${form.value.year}-${pad(form.value.month)}-${pad(form.value.day)}T${pad(
+    form.value.hour
+  )}:00`;
+});
+
+const revealForm = async () => {
+  showForm.value = true;
+  await nextTick();
   formBlock.value?.scrollIntoView({ behavior: "smooth" });
 };
 
-const prefillExample = () => {
-  form.value = {
-    name: "测试用户",
-    gender: "male",
-    birth: "1992-07-27T08:00",
-    tzOffsetHours: 8,
-    focus: ["事业", "财富"]
-  };
-  scrollToForm();
+const updateScrollState = () => {
+  const maxShrinkPx = 220;
+  const minScale = 0.65;
+  const progress = Math.min(Math.max(window.scrollY / maxShrinkPx, 0), 1);
+  logoScale.value = 1 - progress * (1 - minScale);
 };
+
+watch([() => form.value.year, () => form.value.month], () => {
+  const lastDay = new Date(form.value.year, form.value.month, 0).getDate();
+  if (form.value.day > lastDay) {
+    form.value.day = lastDay;
+  }
+});
+
+onMounted(() => {
+  updateScrollState();
+  window.addEventListener("scroll", updateScrollState, { passive: true });
+});
+
+onUnmounted(() => {
+  window.removeEventListener("scroll", updateScrollState);
+});
 
 const submit = async () => {
   error.value = "";
-  if (!form.value.birth) {
+  if (!birthIso.value) {
     error.value = "请填写出生日期时间";
     return;
   }
@@ -184,11 +172,11 @@ const submit = async () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name: form.value.name,
+        name: "匿名",
         gender: form.value.gender,
-        birth: form.value.birth,
-        tz_offset_hours: form.value.tzOffsetHours,
-        focus: form.value.focus
+        birth: birthIso.value,
+        tz_offset_hours: 8,
+        focus: focus.value
       })
     });
     if (!res.ok) throw new Error(await res.text());
