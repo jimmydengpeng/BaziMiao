@@ -178,6 +178,27 @@
           </div>
         </div>
       </div>
+
+      <div class="destiny-panel">
+        <div class="status-line">
+          <strong>大运</strong>
+          <span v-if="destinyMeta" class="muted">{{ destinyMeta }}</span>
+        </div>
+        <div v-if="!destinyPillars.length" class="muted">暂无大运数据。</div>
+        <div v-else class="destiny-grid">
+          <div v-for="pillar in destinyPillars" :key="pillar.year" class="destiny-card">
+            <div class="destiny-year">{{ pillar.year }}年</div>
+            <div class="destiny-pillar">
+              <span :class="['destiny-char', elementClass(pillar.heaven_stem.element)]">
+                {{ pillar.heaven_stem.name }}
+              </span>
+              <span :class="['destiny-char', elementClass(pillar.earth_branch.element)]">
+                {{ pillar.earth_branch.name }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -217,6 +238,19 @@ const elementCounts = computed(() => {
     label,
     value: props.chart?.five_elements_count[label] ?? 0
   }));
+});
+
+const destinyPillars = computed(() => {
+  if (!props.chart) return [];
+  return props.chart.destiny_cycle?.destiny_pillars ?? [];
+});
+
+const destinyMeta = computed(() => {
+  if (!props.chart) return "";
+  const startAge = props.chart.destiny_cycle?.start_age;
+  if (!startAge) return "";
+  const direction = props.chart.destiny_cycle.is_forward ? "顺行" : "逆行";
+  return `起运 ${startAge.year}岁${startAge.month}月${startAge.day}天 · ${direction}`;
 });
 
 const elementClass = (element: string) => {
