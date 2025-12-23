@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import sxtwl
 
@@ -198,7 +198,7 @@ class BaziPaipanEngine:
 
     def calculate_chart(
         self,
-        name: str,
+        name: Optional[str],
         gender: str,
         solar_datetime: datetime,
         use_true_solar_time: bool = False,

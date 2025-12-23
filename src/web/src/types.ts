@@ -91,6 +91,18 @@ export interface ReportResponse {
   report: Report;
 }
 
+export type ReportStreamEvent =
+  | {
+      type: "meta";
+      chart: Chart;
+      analysis: Analysis;
+      knowledge: Array<{ source: string; topic: string; summary: string }>;
+      prompt: unknown;
+    }
+  | { type: "delta"; text: string }
+  | { type: "done"; report: Report; analysis?: Analysis }
+  | { type: "error"; message: string };
+
 export interface ChartResponse {
   chart: Chart;
 }
@@ -104,3 +116,8 @@ export interface ChatResponse {
   reply: { overall_tone?: string; sections?: { title: string; content: string }[]; raw_prompt?: unknown };
   prompt: unknown;
 }
+
+export type ChatStreamEvent =
+  | { type: "delta"; text: string }
+  | { type: "done"; reply: string }
+  | { type: "error"; message: string };

@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import json
+import re
 from datetime import datetime
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, Iterator, List, Optional, Union
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 
 from src.api.schemas import ChartRequest, ChatRequest, ReportRequest
 from src.engine.bazi_engine import BaziPaipanEngine
 from src.knowledge.base import retrieve_knowledge
+from src.llm import OllamaError, chat, stream_chat
 from src.models.chart import Chart
 from src.prompt.report_prompt import build_report_prompt
 from src.rules.analysis import evaluate_chart
@@ -50,6 +54,96 @@ def generate_chart(payload: ChartRequest):
 
 @app.post("/api/bazi/report")
 def generate_report(payload: ReportRequest):
+    chart, analysis, knowledge, prompt = _prepare_report_context(payload)
+    messages = _build_llm_messages(prompt)
+
+    try:
+        raw_text = chat(messages)
+    except OllamaError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    report = _normalize_llm_report(raw_text, prompt)
+    return {
+        "chart": chart.model_dump(),
+        "analysis": analysis.model_dump(),
+        "knowledge": [k.model_dump() for k in knowledge],
+        "prompt": prompt,
+        "report": report,
+    }
+
+
+@app.post("/api/bazi/report/stream")
+def generate_report_stream(payload: ReportRequest):
+    chart, analysis, knowledge, prompt = _prepare_report_context(payload)
+    messages = _build_llm_messages(prompt)
+
+    def _event_stream() -> Iterator[str]:
+        meta = {
+            "type": "meta",
+            "chart": chart.model_dump(mode="json"),
+            "analysis": analysis.model_dump(mode="json"),
+            "knowledge": [k.model_dump() for k in knowledge],
+            "prompt": prompt,
+        }
+        yield json.dumps(meta, ensure_ascii=False) + "\n"
+
+        chunks: List[str] = []
+        try:
+            for chunk in stream_chat(messages):
+                if not chunk:
+                    continue
+                chunks.append(chunk)
+                yield json.dumps({"type": "delta", "text": chunk}, ensure_ascii=False) + "\n"
+        except OllamaError as exc:
+            yield json.dumps({"type": "error", "message": str(exc)}, ensure_ascii=False) + "\n"
+            return
+
+        report_text = "".join(chunks).strip()
+        report = _normalize_llm_report(report_text, prompt)
+        done = {"type": "done", "report": report, "analysis": analysis.model_dump(mode="json")}
+        yield json.dumps(done, ensure_ascii=False) + "\n"
+
+    return StreamingResponse(_event_stream(), media_type="application/x-ndjson")
+
+
+@app.post("/api/bazi/chat")
+def chat_with_chart(payload: ChatRequest):
+    prompt = _build_chat_prompt(payload)
+    try:
+        raw_text = chat(_build_llm_messages(prompt))
+    except OllamaError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    reply = _normalize_llm_report(raw_text, prompt)
+    return {"reply": reply, "prompt": prompt}
+
+
+@app.post("/api/bazi/chat/stream")
+def chat_with_chart_stream(payload: ChatRequest):
+    prompt = _build_chat_prompt(payload)
+    messages = _build_llm_messages(prompt)
+
+    def _event_stream() -> Iterator[str]:
+        chunks: List[str] = []
+        try:
+            for chunk in stream_chat(messages):
+                if not chunk:
+                    continue
+                chunks.append(chunk)
+                yield json.dumps({"type": "delta", "text": chunk}, ensure_ascii=False) + "\n"
+        except OllamaError as exc:
+            yield json.dumps({"type": "error", "message": str(exc)}, ensure_ascii=False) + "\n"
+            return
+
+        reply_text = "".join(chunks).strip()
+        if not reply_text:
+            reply_text = "已收到。"
+        yield json.dumps({"type": "done", "reply": reply_text}, ensure_ascii=False) + "\n"
+
+    return StreamingResponse(_event_stream(), media_type="application/x-ndjson")
+
+
+def _prepare_report_context(payload: ReportRequest):
     if payload.chart:
         try:
             chart = Chart.model_validate(payload.chart)
@@ -74,23 +168,15 @@ def generate_report(payload: ReportRequest):
         pattern_tags=analysis.pattern_tags, yi_yong_shen=analysis.yi_yong_shen, focus=payload.focus
     )
     prompt = build_report_prompt(chart, analysis, knowledge, payload.focus)
-    report = _fake_llm_generate(prompt, payload.focus)
+    return chart, analysis, knowledge, prompt
 
+
+def _build_chat_prompt(payload: ChatRequest) -> Dict[str, Any]:
     return {
-        "chart": chart.model_dump(),
-        "analysis": analysis.model_dump(),
-        "knowledge": [k.model_dump() for k in knowledge],
-        "prompt": prompt,
-        "report": report,
-    }
-
-
-@app.post("/api/bazi/chat")
-def chat_with_chart(payload: ChatRequest):
-    prompt = {
         "system": (
             "你在持续解读同一命盘，请保持前后一致。禁止新增格局或修改四柱。"
             "回答需要引用已给出的 chart/analysis 事实。"
+            "请直接输出自然语言答复，不需要固定结构。"
         ),
         "user": {
             "chart": payload.chart,
@@ -99,21 +185,49 @@ def chat_with_chart(payload: ChatRequest):
             "focus": payload.focus,
         },
     }
-    reply = _fake_llm_generate(prompt, payload.focus)
-    return {"reply": reply, "prompt": prompt}
 
 
-def _fake_llm_generate(prompt: Dict, focus: List[str]) -> Dict:
-    """
-    本地占位，方便在未接入真实 LLM 时自测接口。
-    返回结构遵循报告格式，真实环境应替换为 LLM API 调用。
-    """
-    focus_text = "、".join(focus) if focus else "事业/财富/情感/健康"
-    sections = [
-        {"title": "一、命局总体气质", "content": "根据提供的 pattern_tags 给出整体气质解读。"},
-        {"title": "二、事业发展趋势", "content": f"结合用神与大运，围绕 {focus_text} 给出现实建议。"},
-        {"title": "三、财富机会与风险", "content": "提示忌神岁运的风险，并给出稳健建议。"},
-        {"title": "四、性格与人际特点", "content": "以日主五行与十神倾向描述性格与人际模式。"},
-        {"title": "五、小结与建议", "content": "列出3-5条可执行的生活/决策建议。"},
-    ]
-    return {"overall_tone": "温和中肯", "sections": sections, "raw_prompt": prompt}
+def _build_llm_messages(prompt: Dict[str, Any]) -> List[Dict[str, str]]:
+    system = prompt.get("system", "")
+    user = prompt.get("user", {})
+    user_text = json.dumps(user, ensure_ascii=False, indent=2)
+    return [{"role": "system", "content": system}, {"role": "user", "content": user_text}]
+
+
+def _extract_json(text: str) -> Optional[Dict[str, Any]]:
+    if not text:
+        return None
+    cleaned = text.strip()
+    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", cleaned, re.S)
+    candidate = fenced.group(1) if fenced else None
+
+    if not candidate:
+        start = cleaned.find("{")
+        end = cleaned.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            candidate = cleaned[start : end + 1]
+
+    if not candidate:
+        return None
+
+    try:
+        data = json.loads(candidate)
+    except json.JSONDecodeError:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _normalize_llm_report(text: str, prompt: Dict[str, Any]) -> Dict[str, Any]:
+    data = _extract_json(text)
+    if isinstance(data, dict) and data.get("sections"):
+        if not data.get("overall_tone"):
+            data["overall_tone"] = "温和中肯"
+        data.setdefault("raw_prompt", prompt)
+        return data
+
+    fallback_text = text.strip() if text else "模型未返回有效内容。"
+    return {
+        "overall_tone": "温和中肯",
+        "sections": [{"title": "生成结果", "content": fallback_text}],
+        "raw_prompt": prompt,
+    }
