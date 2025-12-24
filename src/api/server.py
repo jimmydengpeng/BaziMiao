@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import urllib.error
+import urllib.request
 from datetime import datetime
 from typing import Any, Dict, Iterator, List, Optional, Union
 
@@ -11,7 +14,7 @@ from fastapi.responses import StreamingResponse
 from src.api.schemas import ChartRequest, ChatRequest, ReportRequest
 from src.engine.bazi_engine import BaziPaipanEngine
 from src.knowledge.base import retrieve_knowledge
-from src.llm import OllamaError, chat, stream_chat
+from src.llm import OllamaError, chat, stream_chat_with_reasoning
 from src.models.chart import Chart
 from src.prompt.report_prompt import build_report_prompt
 from src.rules.analysis import evaluate_chart
@@ -88,19 +91,29 @@ def generate_report_stream(payload: ReportRequest):
         yield json.dumps(meta, ensure_ascii=False) + "\n"
 
         chunks: List[str] = []
+        thinking_chunks: List[str] = []
         try:
-            for chunk in stream_chat(messages):
-                if not chunk:
-                    continue
-                chunks.append(chunk)
-                yield json.dumps({"type": "delta", "text": chunk}, ensure_ascii=False) + "\n"
+            for chunk in stream_chat_with_reasoning(messages):
+                if chunk.reasoning:
+                    thinking_chunks.append(chunk.reasoning)
+                    yield json.dumps(
+                        {"type": "thinking", "text": chunk.reasoning}, ensure_ascii=False
+                    ) + "\n"
+                if chunk.content:
+                    chunks.append(chunk.content)
+                    yield json.dumps({"type": "delta", "text": chunk.content}, ensure_ascii=False) + "\n"
         except OllamaError as exc:
             yield json.dumps({"type": "error", "message": str(exc)}, ensure_ascii=False) + "\n"
             return
 
         report_text = "".join(chunks).strip()
         report = _normalize_llm_report(report_text, prompt)
-        done = {"type": "done", "report": report, "analysis": analysis.model_dump(mode="json")}
+        done = {
+            "type": "done",
+            "report": report,
+            "analysis": analysis.model_dump(mode="json"),
+            "thinking": "".join(thinking_chunks).strip(),
+        }
         yield json.dumps(done, ensure_ascii=False) + "\n"
 
     return StreamingResponse(_event_stream(), media_type="application/x-ndjson")
@@ -125,12 +138,17 @@ def chat_with_chart_stream(payload: ChatRequest):
 
     def _event_stream() -> Iterator[str]:
         chunks: List[str] = []
+        thinking_chunks: List[str] = []
         try:
-            for chunk in stream_chat(messages):
-                if not chunk:
-                    continue
-                chunks.append(chunk)
-                yield json.dumps({"type": "delta", "text": chunk}, ensure_ascii=False) + "\n"
+            for chunk in stream_chat_with_reasoning(messages):
+                if chunk.reasoning:
+                    thinking_chunks.append(chunk.reasoning)
+                    yield json.dumps(
+                        {"type": "thinking", "text": chunk.reasoning}, ensure_ascii=False
+                    ) + "\n"
+                if chunk.content:
+                    chunks.append(chunk.content)
+                    yield json.dumps({"type": "delta", "text": chunk.content}, ensure_ascii=False) + "\n"
         except OllamaError as exc:
             yield json.dumps({"type": "error", "message": str(exc)}, ensure_ascii=False) + "\n"
             return
@@ -138,9 +156,42 @@ def chat_with_chart_stream(payload: ChatRequest):
         reply_text = "".join(chunks).strip()
         if not reply_text:
             reply_text = "已收到。"
-        yield json.dumps({"type": "done", "reply": reply_text}, ensure_ascii=False) + "\n"
+        yield json.dumps(
+            {"type": "done", "reply": reply_text, "thinking": "".join(thinking_chunks).strip()},
+            ensure_ascii=False,
+        ) + "\n"
 
     return StreamingResponse(_event_stream(), media_type="application/x-ndjson")
+
+
+@app.get("/api/ollama/test")
+def test_ollama(prompt: str = "ping", model: Optional[str] = None, base_url: Optional[str] = None):
+    ollama_base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+    ollama_model = model or os.getenv("OLLAMA_MODEL", "deepseek-r1:8b")
+    payload = {"model": ollama_model, "prompt": prompt, "stream": False}
+    data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    request = urllib.request.Request(
+        f"{ollama_base_url}/api/generate",
+        data=data,
+        headers={"Content-Type": "application/json"},
+    )
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+    try:
+        with opener.open(request, timeout=15) as response:
+            raw = response.read().decode("utf-8").strip()
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="ignore").strip()
+        detail = body or f"HTTP {exc.code} {exc.reason}"
+        raise HTTPException(status_code=502, detail=f"Ollama 测试失败: {detail}") from exc
+    except (urllib.error.URLError, TimeoutError) as exc:
+        raise HTTPException(status_code=502, detail=f"Ollama 测试失败: {exc}") from exc
+
+    try:
+        parsed = json.loads(raw) if raw else {}
+    except json.JSONDecodeError:
+        parsed = {"raw": raw}
+    return {"ok": True, "base_url": ollama_base_url, "model": ollama_model, "result": parsed}
 
 
 def _prepare_report_context(payload: ReportRequest):

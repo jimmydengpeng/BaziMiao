@@ -109,7 +109,7 @@
         </div>
         <div class="cta-row">
           <button class="btn primary" :disabled="loading" @click="submit">
-            {{ loading ? "生成中..." : "生成报告" }}
+            {{ loading ? "排盘中..." : "一键排盘" }}
           </button>
           <span class="muted" v-if="error">{{ error }}</span>
         </div>
@@ -140,6 +140,7 @@
           class="nav-btn"
           type="button"
           :class="{ active: activeTab === 'report' }"
+          :disabled="!canViewReport"
           @click="activeTab = 'report'"
         >
           命理报告
@@ -149,6 +150,23 @@
       <main class="detail-content">
         <div v-if="activeTab === 'chart'" class="detail-panel">
           <ChartPanel :chart="chart" />
+          <div class="panel stack">
+            <div class="status-line">
+              <strong>AI智能解析</strong>
+              <span class="muted">基于当前命盘生成详细报告</span>
+            </div>
+            <div class="cta-row">
+              <button
+                class="btn primary"
+                type="button"
+                :disabled="reportLoading || reportStreaming"
+                @click="generateReport"
+              >
+                {{ reportLoading || reportStreaming ? "解析中..." : "AI智能解析" }}
+              </button>
+              <span v-if="error" class="muted">{{ error }}</span>
+            </div>
+          </div>
         </div>
         <div v-else class="panel stack">
           <div class="status-line">
@@ -157,6 +175,14 @@
           </div>
           <div v-if="error" class="muted">{{ error }}</div>
           <div v-if="reportStreaming" class="sections">
+            <div v-if="reportThinking" class="section-card thinking-card">
+              <div class="thinking-header">
+                <h3>模型思考</h3>
+              </div>
+              <div class="streaming-text thinking">
+                {{ reportThinking }}
+              </div>
+            </div>
             <div class="section-card">
               <h3>生成中...</h3>
               <div class="streaming-text">
@@ -164,10 +190,31 @@
               </div>
             </div>
           </div>
-          <div v-else-if="report" class="sections">
-            <div class="section-card" v-for="(sec, idx) in report.sections" :key="idx">
-              <h3>{{ sec.title }}</h3>
-              <div>{{ sec.content }}</div>
+          <div v-else-if="report" class="report-layout">
+            <div v-if="reportThinking" class="section-card thinking-card">
+              <div class="thinking-header">
+                <h3>模型思考</h3>
+                <button
+                  class="btn ghost"
+                  type="button"
+                  @click="reportThinkingCollapsed = !reportThinkingCollapsed"
+                >
+                  {{ reportThinkingCollapsed ? "展开" : "收起" }}
+                </button>
+              </div>
+              <div v-if="!reportThinkingCollapsed" class="streaming-text thinking">
+                {{ reportThinking }}
+              </div>
+            </div>
+            <div v-if="report.energy_chart" class="section-card">
+              <h3>五行能量图</h3>
+              <pre class="energy-chart">{{ report.energy_chart }}</pre>
+            </div>
+            <div class="sections">
+              <div class="section-card" v-for="(sec, idx) in report.sections" :key="idx">
+                <h3>{{ sec.title }}</h3>
+                <div class="markdown-body" v-html="renderMarkdown(sec.content)"></div>
+              </div>
             </div>
           </div>
           <div v-else class="muted">生成报告后，将在此处展示详细解读。</div>
@@ -214,7 +261,7 @@ const activeTab = ref<"chart" | "report">("chart");
 const chatOpen = ref(false);
 const form = ref({
   name: "",
-  year: 1992,
+  year: 2000,
   month: 8,
   day: 25,
   hour: 8,
@@ -230,8 +277,12 @@ const analysis = ref<Analysis | null>(null);
 const report = ref<Report | null>(null);
 const reportDraft = ref("");
 const reportStreaming = ref(false);
+const reportThinking = ref("");
+const reportThinkingCollapsed = ref(false);
+const reportLoading = ref(false);
 
 const canChat = computed(() => !!chart.value && !!analysis.value);
+const canViewReport = computed(() => reportStreaming.value || !!report.value);
 const nowYear = new Date().getFullYear();
 const years = Array.from({ length: nowYear - 1940 + 1 }, (_, idx) => nowYear - idx);
 const months = Array.from({ length: 12 }, (_, idx) => idx + 1);
@@ -268,6 +319,71 @@ const toggleChat = () => {
   chatOpen.value = !chatOpen.value;
 };
 
+const renderMarkdown = (text: string) => {
+  if (!text) return "";
+  const escape = (value: string) =>
+    value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const inline = (value: string) =>
+    value
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+
+  const lines = escape(text).split(/\r?\n/);
+  let html = "";
+  let listType: "ul" | "ol" | null = null;
+
+  const closeList = () => {
+    if (listType) {
+      html += `</${listType}>`;
+      listType = null;
+    }
+  };
+
+  const openList = (type: "ul" | "ol") => {
+    if (listType && listType !== type) {
+      closeList();
+    }
+    if (!listType) {
+      listType = type;
+      html += `<${type}>`;
+    }
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      closeList();
+      html += "<br>";
+      continue;
+    }
+    const unorderedMatch = /^\s*[-*]\s+(.+)$/.exec(rawLine);
+    if (unorderedMatch) {
+      openList("ul");
+      html += `<li>${inline(unorderedMatch[1].trim())}</li>`;
+      continue;
+    }
+    const orderedMatch = /^\s*\d+\.\s+(.+)$/.exec(rawLine);
+    if (orderedMatch) {
+      openList("ol");
+      html += `<li>${inline(orderedMatch[1].trim())}</li>`;
+      continue;
+    }
+    const headingMatch = /^\s{0,3}(#{1,4})\s+(.+)$/.exec(rawLine);
+    if (headingMatch) {
+      closeList();
+      const level = Math.min(4, headingMatch[1].length);
+      html += `<h${level}>${inline(headingMatch[2].trim())}</h${level}>`;
+      continue;
+    }
+    closeList();
+    html += `<p>${inline(rawLine)}</p>`;
+  }
+
+  closeList();
+  return html;
+};
+
 watch([() => form.value.year, () => form.value.month, () => form.value.calendar], () => {
   const maxDay =
     form.value.calendar === "lunar" ? 30 : new Date(form.value.year, form.value.month, 0).getDate();
@@ -288,9 +404,6 @@ watch(
 const submit = async () => {
   error.value = "";
   loading.value = true;
-  report.value = null;
-  reportDraft.value = "";
-  reportStreaming.value = false;
   try {
     const chartRes = await fetch("/api/bazi/chart", {
       method: "POST",
@@ -312,101 +425,129 @@ const submit = async () => {
     const chartData = (await chartRes.json()) as ChartResponse;
     chart.value = chartData.chart;
     analysis.value = null;
-
-    const payload = JSON.stringify({
-      chart: chart.value,
-      focus: focus.value
-    });
-
-    const streamReport = async () => {
-      const reportRes = await fetch("/api/bazi/report/stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: payload
-      });
-      if (!reportRes.ok) throw new Error(await reportRes.text());
-      if (!reportRes.body) throw new Error("浏览器不支持流式响应");
-
-      reportStreaming.value = true;
-      goToDetail("report");
-
-      const reader = reportRes.body.getReader();
-      const decoder = new TextDecoder("utf-8");
-      let buffer = "";
-      let doneReceived = false;
-
-      const handleLine = (line: string) => {
-        const trimmed = line.trim();
-        if (!trimmed) return;
-        let event: ReportStreamEvent;
-        try {
-          event = JSON.parse(trimmed) as ReportStreamEvent;
-        } catch {
-          return;
-        }
-        if (event.type === "meta") {
-          analysis.value = event.analysis;
-          return;
-        }
-        if (event.type === "delta") {
-          reportDraft.value += event.text;
-          return;
-        }
-        if (event.type === "error") {
-          throw new Error(event.message || "生成报告失败");
-        }
-        if (event.type === "done") {
-          report.value = event.report;
-          if (event.analysis) analysis.value = event.analysis;
-          reportDraft.value = "";
-          reportStreaming.value = false;
-          doneReceived = true;
-        }
-      };
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-        lines.forEach(handleLine);
-      }
-
-      buffer += decoder.decode();
-      if (buffer.trim()) {
-        buffer.split("\n").forEach(handleLine);
-      }
-
-      if (!doneReceived) {
-        throw new Error("流式响应未返回完成事件");
-      }
-    };
-
-    const fetchReportOnce = async () => {
-      const reportRes = await fetch("/api/bazi/report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: payload
-      });
-      if (!reportRes.ok) throw new Error(await reportRes.text());
-      const data = (await reportRes.json()) as ReportResponse;
-      analysis.value = data.analysis;
-      report.value = data.report;
-      goToDetail("report");
-    };
-
-    try {
-      await streamReport();
-    } catch (streamErr) {
-      reportStreaming.value = false;
-      reportDraft.value = "";
-      await fetchReportOnce();
-    }
+  report.value = null;
+  reportDraft.value = "";
+  reportStreaming.value = false;
+  reportThinking.value = "";
+  reportThinkingCollapsed.value = false;
+  reportLoading.value = false;
+  goToDetail("chart");
   } catch (err) {
     error.value = err instanceof Error ? err.message : String(err);
   } finally {
     loading.value = false;
+  }
+};
+
+const generateReport = async () => {
+  if (!chart.value || reportStreaming.value || reportLoading.value) return;
+  error.value = "";
+  reportLoading.value = true;
+  report.value = null;
+  reportDraft.value = "";
+  reportStreaming.value = false;
+  reportThinking.value = "";
+  reportThinkingCollapsed.value = false;
+
+  const payload = JSON.stringify({
+    chart: chart.value,
+    focus: focus.value
+  });
+
+  const streamReport = async () => {
+    const reportRes = await fetch("/api/bazi/report/stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: payload
+    });
+    if (!reportRes.ok) throw new Error(await reportRes.text());
+    if (!reportRes.body) throw new Error("浏览器不支持流式响应");
+
+    reportStreaming.value = true;
+    goToDetail("report");
+
+    const reader = reportRes.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+    let doneReceived = false;
+
+    const handleLine = (line: string) => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+      let event: ReportStreamEvent;
+      try {
+        event = JSON.parse(trimmed) as ReportStreamEvent;
+      } catch {
+        return;
+      }
+      if (event.type === "meta") {
+        analysis.value = event.analysis;
+        return;
+      }
+      if (event.type === "delta") {
+        reportDraft.value += event.text;
+        return;
+      }
+      if (event.type === "thinking") {
+        reportThinking.value += event.text;
+        return;
+      }
+      if (event.type === "error") {
+        throw new Error(event.message || "生成报告失败");
+      }
+      if (event.type === "done") {
+        report.value = event.report;
+        if (event.analysis) analysis.value = event.analysis;
+        if (event.thinking) reportThinking.value = event.thinking;
+        if (reportThinking.value) reportThinkingCollapsed.value = true;
+        reportDraft.value = "";
+        reportStreaming.value = false;
+        doneReceived = true;
+      }
+    };
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      lines.forEach(handleLine);
+    }
+
+    buffer += decoder.decode();
+    if (buffer.trim()) {
+      buffer.split("\n").forEach(handleLine);
+    }
+
+    if (!doneReceived) {
+      throw new Error("流式响应未返回完成事件");
+    }
+  };
+
+  const fetchReportOnce = async () => {
+    const reportRes = await fetch("/api/bazi/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: payload
+    });
+    if (!reportRes.ok) throw new Error(await reportRes.text());
+    const data = (await reportRes.json()) as ReportResponse;
+    analysis.value = data.analysis;
+    report.value = data.report;
+    goToDetail("report");
+  };
+
+  try {
+    await streamReport();
+  } catch (streamErr) {
+    reportStreaming.value = false;
+    reportDraft.value = "";
+    reportThinking.value = "";
+    reportThinkingCollapsed.value = false;
+    await fetchReportOnce();
+  } finally {
+    reportLoading.value = false;
   }
 };
 </script>

@@ -81,6 +81,8 @@ export interface Report {
   overall_tone: string;
   sections: { title: string; content: string }[];
   raw_prompt?: unknown;
+  energy_chart?: string;
+  facts_ref?: string[];
 }
 
 export interface ReportResponse {
@@ -99,8 +101,9 @@ export type ReportStreamEvent =
       knowledge: Array<{ source: string; topic: string; summary: string }>;
       prompt: unknown;
     }
+  | { type: "thinking"; text: string }
   | { type: "delta"; text: string }
-  | { type: "done"; report: Report; analysis?: Analysis }
+  | { type: "done"; report: Report; analysis?: Analysis; thinking?: string }
   | { type: "error"; message: string };
 
 export interface ChartResponse {
@@ -110,6 +113,8 @@ export interface ChartResponse {
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  thinking?: string;
+  thinkingCollapsed?: boolean;
 }
 
 export interface ChatResponse {
@@ -118,6 +123,7 @@ export interface ChatResponse {
 }
 
 export type ChatStreamEvent =
+  | { type: "thinking"; text: string }
   | { type: "delta"; text: string }
-  | { type: "done"; reply: string }
+  | { type: "done"; reply: string; thinking?: string }
   | { type: "error"; message: string };

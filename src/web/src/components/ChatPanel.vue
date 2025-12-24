@@ -13,12 +13,40 @@
           class="bubble"
           :class="msg.role === 'user' ? 'me' : 'bot'"
         >
-          {{ msg.content }}
+          <div
+            v-if="msg.role === 'assistant' && msg.thinking"
+            class="bubble-thinking"
+          >
+            <div class="thinking-header">
+              <span class="thinking-label">思考</span>
+              <button
+                class="btn ghost"
+                type="button"
+                @click="msg.thinkingCollapsed = !msg.thinkingCollapsed"
+              >
+                {{ msg.thinkingCollapsed ? "展开" : "收起" }}
+              </button>
+            </div>
+            <div v-if="!msg.thinkingCollapsed" class="thinking-text">
+              {{ msg.thinking }}
+            </div>
+          </div>
+          <div v-if="msg.content" class="bubble-text">{{ msg.content }}</div>
         </div>
       </div>
       <div v-else class="muted">还没有对话，先问一个问题吧。</div>
     </div>
-    <div class="chat-suggestions">
+    <div class="chat-suggestions-header">
+      <strong>提问建议</strong>
+      <button
+        class="btn ghost"
+        type="button"
+        @click="suggestionsExpanded = !suggestionsExpanded"
+      >
+        {{ suggestionsExpanded ? "收起" : "展开" }}
+      </button>
+    </div>
+    <div v-if="suggestionsExpanded" class="chat-suggestions">
       <button
         v-for="(item, idx) in suggestions"
         :key="idx"
@@ -60,6 +88,7 @@ const input = ref("");
 const pending = ref(false);
 const inputRef = ref<HTMLInputElement | null>(null);
 const chatScroll = ref<HTMLDivElement | null>(null);
+const suggestionsExpanded = ref(true);
 
 const suggestions = [
   "我今年的姻缘怎么样？",
@@ -75,6 +104,16 @@ watch(
     messages.value = [];
     input.value = "";
     pending.value = false;
+    suggestionsExpanded.value = true;
+  }
+);
+
+watch(
+  () => messages.value.length,
+  (length) => {
+    if (length === 0) {
+      suggestionsExpanded.value = true;
+    }
   }
 );
 
@@ -97,7 +136,7 @@ const send = async () => {
   input.value = "";
   pending.value = true;
   const assistantIndex = messages.value.length;
-  messages.value.push({ role: "assistant", content: "" });
+  messages.value.push({ role: "assistant", content: "", thinking: "", thinkingCollapsed: false });
   await nextTick(scrollToBottom);
   try {
     const payload = JSON.stringify({
@@ -130,6 +169,15 @@ const send = async () => {
         } catch {
           return;
         }
+        if (event.type === "thinking") {
+          const current = messages.value[assistantIndex];
+          current.thinking = (current.thinking || "") + event.text;
+          if (current.thinkingCollapsed === undefined) {
+            current.thinkingCollapsed = false;
+          }
+          void nextTick(scrollToBottom);
+          return;
+        }
         if (event.type === "delta") {
           messages.value[assistantIndex].content += event.text;
           void nextTick(scrollToBottom);
@@ -140,6 +188,10 @@ const send = async () => {
         }
         if (event.type === "done") {
           messages.value[assistantIndex].content = event.reply || "已收到。";
+          if (event.thinking) {
+            messages.value[assistantIndex].thinking = event.thinking;
+          }
+          suggestionsExpanded.value = false;
           doneReceived = true;
         }
       };
@@ -176,6 +228,7 @@ const send = async () => {
         data.reply?.overall_tone ||
         "已收到。";
       messages.value[assistantIndex].content = replyText;
+      suggestionsExpanded.value = false;
     };
 
     try {
