@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -65,6 +65,6 @@ class Chart(BaseModel):
     day_pillar: PillarInfo
     hour_pillar: PillarInfo
     day_master: HeavenStemInfo
-    five_elements_count: dict
+    five_elements_count: Dict[str, int]
+    five_elements_ratio: Dict[str, float]
     destiny_cycle: DestinyCycleInfo
-

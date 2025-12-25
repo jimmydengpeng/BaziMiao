@@ -240,6 +240,7 @@ class BaziPaipanEngine:
         five_elements_count = self._calculate_five_elements(
             [year_pillar, month_pillar, day_pillar, hour_pillar]
         )
+        five_elements_ratio = self._calculate_five_elements_ratio(five_elements_count)
 
         return Chart(
             name=name,
@@ -252,6 +253,7 @@ class BaziPaipanEngine:
             hour_pillar=hour_pillar,
             day_master=day_pillar.heaven_stem,
             five_elements_count=five_elements_count,
+            five_elements_ratio=five_elements_ratio,
             destiny_cycle=destiny_cycle,
         )
 
@@ -309,6 +311,12 @@ class BaziPaipanEngine:
             for hidden in pillar.earth_branch.hidden_stems:
                 counts[hidden.element] += 1
         return counts
+
+    def _calculate_five_elements_ratio(self, counts: Dict[str, int]) -> Dict[str, float]:
+        total = sum(counts.values())
+        if total == 0:
+            return {key: 0.0 for key in counts}
+        return {key: round(value / total * 100, 1) for key, value in counts.items()}
 
     def _calculate_dayun(
         self, birth_day: sxtwl.Day, hour: int, minute: int, gender: str, day_stem: str

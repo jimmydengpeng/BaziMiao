@@ -1,5 +1,8 @@
 <template>
-  <div class="app-shell" :class="{ 'detail-layout': stage === 'detail' }">
+  <div
+    class="app-shell"
+    :class="{ 'detail-layout': stage === 'detail', 'archive-layout': stage === 'archive' }"
+  >
     <section v-if="stage === 'landing'" class="hero hero-landing">
       <div class="hero-content">
         <div class="logo-placeholder logo-image">
@@ -21,6 +24,9 @@
             <div class="brand-title">神机喵算</div>
             <div class="muted">输入生辰，生成命理报告</div>
           </div>
+        </div>
+        <div class="brand-actions">
+          <button class="btn ghost" type="button" @click="goToArchive">查看档案</button>
         </div>
       </header>
       <section class="form-shell">
@@ -85,82 +91,86 @@
               <label>出生时间（必填）</label>
               <button class="date-display" type="button" @click="pickerOpen = !pickerOpen">
                 <span>{{ displayDate }}</span>
-                <span class="chevron">{{ pickerOpen ? "v" : ">" }}</span>
+                <span v-if="!pickerOpen" class="chevron">&gt;</span>
               </button>
             </div>
-            <div class="panel picker-card" :class="{ open: pickerOpen }">
-              <div class="picker-head">
-                <div class="segmented">
-                  <button
-                    class="segmented-btn"
-                    :class="{ active: form.calendar === 'solar' }"
-                    type="button"
-                    @click="form.calendar = 'solar'"
-                  >
-                    公历
+            <div v-if="pickerOpen" class="picker-overlay" role="dialog" aria-modal="true">
+              <div class="panel picker-card open">
+                <div class="picker-head">
+                  <div class="segmented">
+                    <button
+                      class="segmented-btn"
+                      :class="{ active: form.calendar === 'solar' }"
+                      type="button"
+                      @click="form.calendar = 'solar'"
+                    >
+                      公历
+                    </button>
+                    <button
+                      class="segmented-btn"
+                      :class="{ active: form.calendar === 'lunar' }"
+                      type="button"
+                      @click="form.calendar = 'lunar'"
+                    >
+                      农历
+                    </button>
+                  </div>
+                  <button class="btn ghost today-btn" type="button" @click="setToday">今天</button>
+                </div>
+                <div class="picker-grid">
+                  <div class="picker-column">
+                    <span class="picker-label">年</span>
+                    <select v-model.number="form.year" class="picker-select">
+                      <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
+                    </select>
+                  </div>
+                  <div class="picker-column">
+                    <span class="picker-label">月</span>
+                    <select v-model.number="form.month" class="picker-select">
+                      <option v-for="month in monthOptions" :key="month.value" :value="month.value">
+                        {{ month.label }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="picker-column">
+                    <span class="picker-label">日</span>
+                    <select v-model.number="form.day" class="picker-select">
+                      <option v-for="day in days" :key="day" :value="day">{{ day }}</option>
+                    </select>
+                  </div>
+                  <div class="picker-column">
+                    <span class="picker-label">时</span>
+                    <select v-model.number="form.hour" class="picker-select">
+                      <option v-for="hour in hours" :key="hour" :value="hour">
+                        {{ hour.toString().padStart(2, "0") }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="picker-column">
+                    <span class="picker-label">分</span>
+                    <select v-model.number="form.minute" class="picker-select">
+                      <option v-for="minute in minutes" :key="minute" :value="minute">
+                        {{ minute.toString().padStart(2, "0") }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+                <div v-if="isLunar" class="field-group">
+                  <label>闰月</label>
+                  <label class="check">
+                    <input v-model="form.isLeapMonth" type="checkbox" />
+                    <span>本月为闰月</span>
+                  </label>
+                </div>
+                <div class="picker-footer">
+                  <span class="muted picker-note">选择好后点击确定收起。</span>
+                  <button class="btn primary" type="button" @click="pickerOpen = false">
+                    确定
                   </button>
-                  <button
-                    class="segmented-btn"
-                    :class="{ active: form.calendar === 'lunar' }"
-                    type="button"
-                    @click="form.calendar = 'lunar'"
-                  >
-                    农历
-                  </button>
                 </div>
-                <button class="btn ghost today-btn" type="button" @click="setToday">今天</button>
-              </div>
-              <div class="picker-grid">
-                <div class="picker-column">
-                  <span class="picker-label">年</span>
-                  <select v-model.number="form.year" class="picker-select">
-                    <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
-                  </select>
-                </div>
-                <div class="picker-column">
-                  <span class="picker-label">月</span>
-                  <select v-model.number="form.month" class="picker-select">
-                    <option v-for="month in monthOptions" :key="month.value" :value="month.value">
-                      {{ month.label }}
-                    </option>
-                  </select>
-                </div>
-                <div class="picker-column">
-                  <span class="picker-label">日</span>
-                  <select v-model.number="form.day" class="picker-select">
-                    <option v-for="day in days" :key="day" :value="day">{{ day }}</option>
-                  </select>
-                </div>
-                <div class="picker-column">
-                  <span class="picker-label">时</span>
-                  <select v-model.number="form.hour" class="picker-select">
-                    <option v-for="hour in hours" :key="hour" :value="hour">
-                      {{ hour.toString().padStart(2, "0") }}
-                    </option>
-                  </select>
-                </div>
-                <div class="picker-column">
-                  <span class="picker-label">分</span>
-                  <select v-model.number="form.minute" class="picker-select">
-                    <option v-for="minute in minutes" :key="minute" :value="minute">
-                      {{ minute.toString().padStart(2, "0") }}
-                    </option>
-                  </select>
-                </div>
-              </div>
-              <div v-if="isLunar" class="field-group">
-                <label>闰月</label>
-                <label class="check">
-                  <input v-model="form.isLeapMonth" type="checkbox" />
-                  <span>本月为闰月</span>
-                </label>
-              </div>
-              <div class="picker-footer">
-                <span class="muted picker-note">选择好后点击确定收起。</span>
-                <button class="btn primary" type="button" @click="pickerOpen = false">确定</button>
               </div>
             </div>
-            <div class="cta-row">
+            <div class="cta-row center">
               <button class="btn primary cta-primary" :disabled="loading" @click="submit">
                 {{ loading ? "排盘中..." : "一键排盘" }}
               </button>
@@ -169,6 +179,78 @@
           </div>
         </div>
       </section>
+    </section>
+
+    <section v-else-if="stage === 'archive'" class="archive-shell">
+      <header class="archive-header">
+        <div class="brand-left">
+          <div class="logo-placeholder logo-image logo-mini">
+            <img :src="logoUrl" alt="神机喵算 Logo" />
+          </div>
+          <div>
+            <div class="brand-title">档案选择</div>
+            <div class="muted">已保存 {{ archives.length }} 份命盘档案</div>
+          </div>
+        </div>
+        <div class="archive-actions">
+          <button class="btn ghost" type="button" @click="goToForm">添加档案</button>
+          <button class="btn ghost" type="button" @click="goToLanding">返回主页</button>
+        </div>
+      </header>
+      <div class="archive-content">
+        <div class="archive-list">
+          <div v-if="archives.length === 0" class="archive-empty panel">
+            <h2>还没有档案</h2>
+            <p class="muted">先填写姓名与生日信息，再保存到这里。</p>
+            <button class="btn primary" type="button" @click="goToForm">去填写</button>
+          </div>
+          <button
+            v-for="entry in archives"
+            :key="entry.id"
+            class="archive-card"
+            type="button"
+            :class="{ active: entry.id === activeArchiveId }"
+            @click="activeArchiveId = entry.id"
+          >
+            <div class="archive-main">
+              <div class="archive-name">{{ entry.displayName }}</div>
+              <div class="archive-birth">{{ entry.birthLabel }}</div>
+            </div>
+            <div class="archive-pillars">
+              <div class="archive-pillar-row">
+                <span
+                  v-for="(pillar, idx) in entry.pillars"
+                  :key="`stem-${entry.id}-${idx}`"
+                  :class="['archive-char', elementClass(pillar.stemElement)]"
+                >
+                  {{ pillar.stem }}
+                </span>
+              </div>
+              <div class="archive-pillar-row">
+                <span
+                  v-for="(pillar, idx) in entry.pillars"
+                  :key="`branch-${entry.id}-${idx}`"
+                  :class="['archive-char', elementClass(pillar.branchElement)]"
+                >
+                  {{ pillar.branch }}
+                </span>
+              </div>
+            </div>
+            <div class="archive-arrow">›</div>
+          </button>
+        </div>
+        <aside class="archive-preview panel">
+          <div class="archive-preview-title">档案提示</div>
+          <p class="muted">
+            目前为前端临时档案，后续会接入保存与同步。点击条目可高亮查看。
+          </p>
+          <div class="archive-tags">
+            <span class="pill">四柱</span>
+            <span class="pill">五行</span>
+            <span class="pill">命盘</span>
+          </div>
+        </aside>
+      </div>
     </section>
 
     <section v-else class="detail-shell">
@@ -210,16 +292,16 @@
               <strong>AI智能解析</strong>
               <span class="muted">基于当前命盘生成详细报告</span>
             </div>
-            <div class="cta-row">
+            <div class="cta-row matrix">
               <button
-                class="btn primary"
+                class="btn primary ai-primary"
                 type="button"
                 :disabled="reportLoading || reportStreaming"
                 @click="generateReport"
               >
                 {{ reportLoading || reportStreaming ? "解析中..." : "AI智能解析" }}
               </button>
-              <span v-if="error" class="muted">{{ error }}</span>
+              <span v-if="error" class="muted cta-message">{{ error }}</span>
             </div>
           </div>
         </div>
@@ -311,12 +393,27 @@ import type {
 } from "./types";
 import logoUrl from "./assets/logo-bazi_meow.png";
 
-const stage = ref<"landing" | "form" | "detail">("landing");
+type ArchivePillar = {
+  stem: string;
+  branch: string;
+  stemElement: string;
+  branchElement: string;
+};
+
+type ArchiveEntry = {
+  id: number;
+  name: string;
+  displayName: string;
+  birthLabel: string;
+  pillars: ArchivePillar[];
+};
+
+const stage = ref<"landing" | "form" | "detail" | "archive">("landing");
 const activeTab = ref<"chart" | "report">("chart");
 const chatOpen = ref(false);
 const form = ref({
   name: "",
-  year: 1900,
+  year: 2000,
   month: 1,
   day: 1,
   hour: 0,
@@ -336,6 +433,9 @@ const reportStreaming = ref(false);
 const reportThinking = ref("");
 const reportThinkingCollapsed = ref(false);
 const reportLoading = ref(false);
+const archives = ref<ArchiveEntry[]>([]);
+const activeArchiveId = ref<number | null>(null);
+const archiveCounter = ref(0);
 
 const canChat = computed(() => !!chart.value && !!analysis.value);
 const canViewReport = computed(() => reportStreaming.value || !!report.value);
@@ -399,6 +499,11 @@ const goToForm = () => {
 
 const goToLanding = () => {
   stage.value = "landing";
+  chatOpen.value = false;
+};
+
+const goToArchive = () => {
+  stage.value = "archive";
   chatOpen.value = false;
 };
 
@@ -530,6 +635,7 @@ const submit = async () => {
     if (!chartRes.ok) throw new Error(await chartRes.text());
     const chartData = (await chartRes.json()) as ChartResponse;
     chart.value = chartData.chart;
+    saveArchive();
     analysis.value = null;
     report.value = null;
     reportDraft.value = "";
@@ -543,6 +649,102 @@ const submit = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+const saveArchive = () => {
+  const name = form.value.name.trim();
+  const displayName = name || `命主${archiveCounter.value + 1}`;
+  archiveCounter.value += 1;
+
+  const year = form.value.year;
+  const month = form.value.month;
+  const day = form.value.day;
+  const hour = form.value.hour;
+  const minute = form.value.minute;
+  const minuteLabel = minute.toString().padStart(2, "0");
+  const hourLabel = hour.toString().padStart(2, "0");
+
+  const birthLabel =
+    form.value.calendar === "lunar"
+      ? `农历${year}年${form.value.isLeapMonth ? "闰" : ""}${
+          lunarMonthLabels[month - 1]
+        }${day}日 ${hourLabel}:${minuteLabel}`
+      : `阳历${year}年${month}月${day}日 ${hourLabel}:${minuteLabel}`;
+
+  const pillars = buildPillarsFromDate(year, month, day, hour);
+  const entry: ArchiveEntry = {
+    id: archiveCounter.value,
+    name,
+    displayName,
+    birthLabel,
+    pillars
+  };
+  archives.value.unshift(entry);
+  activeArchiveId.value = entry.id;
+};
+
+const buildPillarsFromDate = (year: number, month: number, day: number, hour: number) => {
+  const stems = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"];
+  const branches = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"];
+  const indices = [
+    { stem: year % 10, branch: year % 12 },
+    { stem: (year + month) % 10, branch: (year + month) % 12 },
+    { stem: (year + month + day) % 10, branch: (year + month + day) % 12 },
+    { stem: (year + month + day + hour) % 10, branch: (year + month + day + hour) % 12 }
+  ];
+
+  // 临时占位：用日期生成四柱，后续接入真实排盘数据。
+  return indices.map((item) => ({
+    stem: stems[item.stem],
+    branch: branches[item.branch],
+    stemElement: elementForStem(stems[item.stem]),
+    branchElement: elementForBranch(branches[item.branch])
+  }));
+};
+
+const elementForStem = (stem: string) => {
+  const map: Record<string, string> = {
+    甲: "木",
+    乙: "木",
+    丙: "火",
+    丁: "火",
+    戊: "土",
+    己: "土",
+    庚: "金",
+    辛: "金",
+    壬: "水",
+    癸: "水"
+  };
+  return map[stem] ?? "";
+};
+
+const elementForBranch = (branch: string) => {
+  const map: Record<string, string> = {
+    子: "水",
+    丑: "土",
+    寅: "木",
+    卯: "木",
+    辰: "土",
+    巳: "火",
+    午: "火",
+    未: "土",
+    申: "金",
+    酉: "金",
+    戌: "土",
+    亥: "水"
+  };
+  return map[branch] ?? "";
+};
+
+const elementClass = (element: string) => {
+  const map: Record<string, string> = {
+    木: "element-wood",
+    火: "element-fire",
+    土: "element-earth",
+    金: "element-metal",
+    水: "element-water"
+  };
+  return map[element] ?? "element-neutral";
 };
 
 const generateReport = async () => {

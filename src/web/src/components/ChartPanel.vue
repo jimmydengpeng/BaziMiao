@@ -179,6 +179,80 @@
         </div>
       </div>
 
+      <div class="panel energy-card">
+        <div class="energy-shell">
+          <div class="energy-radar">
+            <div class="status-line">
+              <strong>五行雷达图</strong>
+              <span class="muted">最高占比为满格</span>
+            </div>
+            <div class="radar-stage">
+              <svg class="radar-svg" viewBox="0 0 400 400" role="img" aria-label="五行雷达图">
+                <g class="radar-grid">
+                  <polygon
+                    v-for="level in radarLevels"
+                    :key="`grid-${level}`"
+                    :points="gridPoints(level)"
+                  />
+                  <line
+                    v-for="(axis, idx) in radarAxes"
+                    :key="`axis-${idx}`"
+                    :x1="axis.cx"
+                    :y1="axis.cy"
+                    :x2="axis.x"
+                    :y2="axis.y"
+                  />
+                </g>
+                <polygon class="radar-shape" :points="radarShapePoints" />
+                <g class="radar-dots">
+                  <circle
+                    v-for="(point, idx) in radarPoints"
+                    :key="`dot-${idx}`"
+                    :cx="point.x"
+                    :cy="point.y"
+                    r="7"
+                    :class="['radar-dot', elementClass(point.element)]"
+                  />
+                </g>
+                <g class="radar-labels">
+                  <text
+                    v-for="(axis, idx) in radarAxes"
+                    :key="`label-${idx}`"
+                    :x="axis.labelX"
+                    :y="axis.labelY"
+                    text-anchor="middle"
+                    :class="['radar-label', elementClass(axis.element)]"
+                  >
+                    {{ axis.element }}
+                  </text>
+                </g>
+              </svg>
+            </div>
+          </div>
+          <div class="energy-aside">
+            <div class="status-line">
+              <strong>五行占比</strong>
+              <span class="muted">基于天干与藏干统计</span>
+            </div>
+            <div class="energy-list">
+              <div v-for="item in energyItems" :key="item.element" class="energy-item">
+                <div class="energy-left">
+                  <span :class="['energy-dot', elementClass(item.element)]"></span>
+                  <div>
+                    <div class="energy-name">{{ item.element }}</div>
+                    <div class="energy-meta">代表{{ item.relation }}</div>
+                  </div>
+                </div>
+                <div class="energy-right">
+                  <div class="energy-value">{{ formatPercent(item.ratio) }}</div>
+                  <div class="energy-count">{{ item.count }}个</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="destiny-panel">
         <div class="status-line">
           <strong>大运</strong>
@@ -232,6 +306,19 @@ const solarText = computed(() => {
 });
 
 const elementOrder = ["木", "火", "土", "金", "水"];
+const radarSize = 400;
+const radarCenter = radarSize / 2;
+const radarRadius = 140;
+const radarLevels = [1, 2, 3, 4, 5];
+const radarAngleStep = (Math.PI * 2) / elementOrder.length;
+const radarStartAngle = -Math.PI / 2;
+const elementRelationMap: Record<string, Record<string, string>> = {
+  木: { 木: "比劫", 火: "食伤", 土: "财才", 金: "官杀", 水: "印枭" },
+  火: { 木: "印枭", 火: "比劫", 土: "食伤", 金: "财才", 水: "官杀" },
+  土: { 木: "官杀", 火: "印枭", 土: "比劫", 金: "食伤", 水: "财才" },
+  金: { 木: "财才", 火: "官杀", 土: "印枭", 金: "比劫", 水: "食伤" },
+  水: { 木: "食伤", 火: "财才", 土: "官杀", 金: "印枭", 水: "比劫" }
+};
 const elementCounts = computed(() => {
   if (!props.chart) return [];
   return elementOrder.map((label) => ({
@@ -239,6 +326,81 @@ const elementCounts = computed(() => {
     value: props.chart?.five_elements_count[label] ?? 0
   }));
 });
+
+const energyItems = computed(() => {
+  if (!props.chart) {
+    return elementOrder.map((element) => ({
+      element,
+      count: 0,
+      ratio: 0,
+      relation: "未知"
+    }));
+  }
+  const counts = props.chart.five_elements_count ?? {};
+  const ratios = props.chart.five_elements_ratio ?? {};
+  const dayElement = props.chart.day_master?.element ?? "";
+  return elementOrder.map((element) => ({
+    element,
+    count: counts[element] ?? 0,
+    ratio: ratios[element] ?? 0,
+    relation: elementRelationMap[dayElement]?.[element] ?? "未知"
+  }));
+});
+
+const maxEnergyRatio = computed(() => {
+  const maxValue = Math.max(...energyItems.value.map((item) => item.ratio), 0);
+  return maxValue > 0 ? maxValue : 1;
+});
+
+const radarAxes = computed(() =>
+  elementOrder.map((element, idx) => {
+    const angle = radarStartAngle + radarAngleStep * idx;
+    const axisX = radarCenter + radarRadius * Math.cos(angle);
+    const axisY = radarCenter + radarRadius * Math.sin(angle);
+    const labelOffset = 28;
+    return {
+      element,
+      cx: radarCenter,
+      cy: radarCenter,
+      x: axisX,
+      y: axisY,
+      labelX: radarCenter + (radarRadius + labelOffset) * Math.cos(angle),
+      labelY: radarCenter + (radarRadius + labelOffset) * Math.sin(angle)
+    };
+  })
+);
+
+const radarPoints = computed(() =>
+  energyItems.value.map((item, idx) => {
+    const angle = radarStartAngle + radarAngleStep * idx;
+    const ratio = item.ratio / maxEnergyRatio.value;
+    const radius = radarRadius * ratio;
+    return {
+      element: item.element,
+      x: radarCenter + radius * Math.cos(angle),
+      y: radarCenter + radius * Math.sin(angle)
+    };
+  })
+);
+
+const radarShapePoints = computed(() =>
+  radarPoints.value.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(" ")
+);
+
+const gridPoints = (level: number) => {
+  const scale = level / radarLevels.length;
+  return elementOrder
+    .map((_, idx) => {
+      const angle = radarStartAngle + radarAngleStep * idx;
+      const radius = radarRadius * scale;
+      const x = radarCenter + radius * Math.cos(angle);
+      const y = radarCenter + radius * Math.sin(angle);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+};
+
+const formatPercent = (value: number) => `${(Number.isFinite(value) ? value : 0).toFixed(1)}%`;
 
 const destinyPillars = computed(() => {
   if (!props.chart) return [];

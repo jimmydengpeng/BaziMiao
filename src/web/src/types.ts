@@ -57,6 +57,7 @@ export interface Chart {
   hour_pillar: PillarInfo;
   day_master: HeavenStemInfo;
   five_elements_count: Record<string, number>;
+  five_elements_ratio: Record<string, number>;
   destiny_cycle: DestinyCycleInfo;
 }
 
