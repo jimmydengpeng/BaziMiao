@@ -1,16 +1,18 @@
 <template>
   <div
     class="app-shell"
-    :class="{ 'detail-layout': stage === 'detail', 'archive-layout': stage === 'archive' }"
+    :class="{
+      'landing-layout': stage === 'landing',
+      'main-layout': stage === 'detail' || stage === 'archive'
+    }"
   >
     <section v-if="stage === 'landing'" class="hero hero-landing">
       <div class="hero-content">
-        <div class="logo-placeholder logo-image">
-          <img :src="logoUrl" alt="神机喵算 Logo" />
+        <img class="hero-title-image" :src="titleTextUrl" alt="神机喵算" />
+        <p class="subtitle hero-slogan">用 AI 读懂八字，看到趋势与选择</p>
+        <div class="hero-actions">
+          <button class="btn primary hero-btn" type="button" @click="goToForm">我们开始吧</button>
         </div>
-        <h1>神机喵算</h1>
-        <p class="subtitle">用 AI 读懂八字，看到趋势与选择</p>
-        <button class="btn primary hero-btn" type="button" @click="goToForm">我们开始吧</button>
       </div>
     </section>
 
@@ -25,11 +27,20 @@
             <div class="muted">输入生辰，生成命理报告</div>
           </div>
         </div>
-        <div class="brand-actions">
-          <button class="btn ghost" type="button" @click="goToArchive">查看档案</button>
-        </div>
       </header>
-      <section class="form-shell">
+      <section v-if="formStep === 'choice'" class="form-entry panel">
+        <div class="form-entry-title">选择开始方式</div>
+        <p class="muted">新建会进入填写生辰页面，也可以从档案中直接选择。</p>
+        <div class="form-entry-actions">
+          <button class="btn primary form-action-btn" type="button" @click="startNewForm">
+            新建
+          </button>
+          <button class="btn secondary form-action-btn" type="button" @click="goToArchive">
+            从档案中选择
+          </button>
+        </div>
+      </section>
+      <section v-else class="form-shell">
         <div class="form-intro">
           <div class="status-line">
             <strong>填写生辰</strong>
@@ -181,80 +192,8 @@
       </section>
     </section>
 
-    <section v-else-if="stage === 'archive'" class="archive-shell">
-      <header class="archive-header">
-        <div class="brand-left">
-          <div class="logo-placeholder logo-image logo-mini">
-            <img :src="logoUrl" alt="神机喵算 Logo" />
-          </div>
-          <div>
-            <div class="brand-title">档案选择</div>
-            <div class="muted">已保存 {{ archives.length }} 份命盘档案</div>
-          </div>
-        </div>
-        <div class="archive-actions">
-          <button class="btn ghost" type="button" @click="goToForm">添加档案</button>
-          <button class="btn ghost" type="button" @click="goToLanding">返回主页</button>
-        </div>
-      </header>
-      <div class="archive-content">
-        <div class="archive-list">
-          <div v-if="archives.length === 0" class="archive-empty panel">
-            <h2>还没有档案</h2>
-            <p class="muted">先填写姓名与生日信息，再保存到这里。</p>
-            <button class="btn primary" type="button" @click="goToForm">去填写</button>
-          </div>
-          <button
-            v-for="entry in archives"
-            :key="entry.id"
-            class="archive-card"
-            type="button"
-            :class="{ active: entry.id === activeArchiveId }"
-            @click="activeArchiveId = entry.id"
-          >
-            <div class="archive-main">
-              <div class="archive-name">{{ entry.displayName }}</div>
-              <div class="archive-birth">{{ entry.birthLabel }}</div>
-            </div>
-            <div class="archive-pillars">
-              <div class="archive-pillar-row">
-                <span
-                  v-for="(pillar, idx) in entry.pillars"
-                  :key="`stem-${entry.id}-${idx}`"
-                  :class="['archive-char', elementClass(pillar.stemElement)]"
-                >
-                  {{ pillar.stem }}
-                </span>
-              </div>
-              <div class="archive-pillar-row">
-                <span
-                  v-for="(pillar, idx) in entry.pillars"
-                  :key="`branch-${entry.id}-${idx}`"
-                  :class="['archive-char', elementClass(pillar.branchElement)]"
-                >
-                  {{ pillar.branch }}
-                </span>
-              </div>
-            </div>
-            <div class="archive-arrow">›</div>
-          </button>
-        </div>
-        <aside class="archive-preview panel">
-          <div class="archive-preview-title">档案提示</div>
-          <p class="muted">
-            目前为前端临时档案，后续会接入保存与同步。点击条目可高亮查看。
-          </p>
-          <div class="archive-tags">
-            <span class="pill">四柱</span>
-            <span class="pill">五行</span>
-            <span class="pill">命盘</span>
-          </div>
-        </aside>
-      </div>
-    </section>
-
-    <section v-else class="detail-shell">
-      <aside class="side-nav">
+    <section v-else class="main-shell">
+      <aside class="side-nav main-nav">
         <div class="brand-mini">
           <div class="logo-placeholder logo-image logo-mini">
             <img :src="logoUrl" alt="神机喵算 Logo" />
@@ -264,108 +203,201 @@
             <div class="muted">命盘与报告</div>
           </div>
         </div>
-        <button class="nav-btn" type="button" @click="goToLanding">回到主页</button>
-        <button
-          class="nav-btn"
-          type="button"
-          :class="{ active: activeTab === 'chart' }"
-          @click="activeTab = 'chart'"
-        >
-          八字命盘
-        </button>
-        <button
-          class="nav-btn"
-          type="button"
-          :class="{ active: activeTab === 'report' }"
-          :disabled="!canViewReport"
-          @click="activeTab = 'report'"
-        >
-          命理报告
-        </button>
+        <div class="nav-section">
+          <div class="nav-label">核心功能</div>
+          <button
+            class="nav-btn"
+            type="button"
+            :class="{ active: stage === 'detail' && activeTab === 'chart' }"
+            @click="goToDetail('chart')"
+          >
+            八字命盘
+          </button>
+          <button
+            class="nav-btn"
+            type="button"
+            :class="{ active: stage === 'detail' && activeTab === 'report' }"
+            :disabled="!canViewReport"
+            @click="goToDetail('report')"
+          >
+            命理报告
+          </button>
+          <button
+            class="nav-btn"
+            type="button"
+            :class="{ active: stage === 'archive' }"
+            @click="goToArchive"
+          >
+            档案列表
+          </button>
+        </div>
+        <div class="nav-section nav-section-muted">
+          <div class="nav-label">更多模块</div>
+          <button class="nav-btn muted" type="button" disabled>运势测算</button>
+          <button class="nav-btn muted" type="button" disabled>今日运势</button>
+          <button class="nav-btn muted" type="button" disabled>命理百科</button>
+        </div>
+        <div class="nav-section">
+          <div class="nav-label">快捷入口</div>
+          <button class="nav-btn" type="button" @click="goToForm">新建排盘</button>
+          <button class="nav-btn" type="button" @click="goToLanding">回到欢迎</button>
+        </div>
       </aside>
 
-      <main class="detail-content">
-        <div v-if="activeTab === 'chart'" class="detail-panel">
-          <ChartPanel :chart="chart" />
-          <div class="panel stack">
-            <div class="status-line">
-              <strong>AI智能解析</strong>
-              <span class="muted">基于当前命盘生成详细报告</span>
+      <main class="main-content">
+        <section v-if="stage === 'archive'" class="archive-panel">
+          <header class="archive-header">
+            <div class="brand-left">
+              <div>
+                <div class="brand-title">档案列表</div>
+                <div class="muted">已保存 {{ archives.length }} 份命盘档案</div>
+              </div>
             </div>
-            <div class="cta-row matrix">
-              <button
-                class="btn primary ai-primary"
-                type="button"
-                :disabled="reportLoading || reportStreaming"
-                @click="generateReport"
-              >
-                {{ reportLoading || reportStreaming ? "解析中..." : "AI智能解析" }}
+            <div class="archive-actions">
+              <button class="btn primary" type="button" @click="startNewFormFlow">
+                新建档案
               </button>
-              <span v-if="error" class="muted cta-message">{{ error }}</span>
+            </div>
+          </header>
+          <div class="archive-content">
+            <div class="archive-list">
+              <div v-if="archives.length === 0" class="archive-empty panel">
+                <h2>还没有档案</h2>
+                <p class="muted">先填写姓名与生日信息，再保存到这里。</p>
+                <button class="btn primary" type="button" @click="goToForm">去填写</button>
+              </div>
+              <button
+                v-for="entry in archives"
+                :key="entry.id"
+                class="archive-card"
+                type="button"
+                :class="{ active: entry.id === activeArchiveId }"
+                @click="openArchive(entry)"
+              >
+                <div class="archive-main">
+                  <div class="archive-name">{{ entry.displayName }}</div>
+                  <div class="archive-birth">{{ entry.birthLabel }}</div>
+                </div>
+                <div class="archive-pillars">
+                  <div class="archive-pillar-row">
+                    <span
+                      v-for="(pillar, idx) in entry.pillars"
+                      :key="`stem-${entry.id}-${idx}`"
+                      :class="['archive-char', elementClass(pillar.stemElement)]"
+                    >
+                      {{ pillar.stem }}
+                    </span>
+                  </div>
+                  <div class="archive-pillar-row">
+                    <span
+                      v-for="(pillar, idx) in entry.pillars"
+                      :key="`branch-${entry.id}-${idx}`"
+                      :class="['archive-char', elementClass(pillar.branchElement)]"
+                    >
+                      {{ pillar.branch }}
+                    </span>
+                  </div>
+                </div>
+                <div class="archive-arrow">›</div>
+              </button>
             </div>
           </div>
-        </div>
-        <div v-else class="panel stack">
-          <div class="status-line">
-            <strong>命理报告</strong>
-            <span class="badge">LLM 解释器</span>
-          </div>
-          <div v-if="error" class="muted">{{ error }}</div>
-          <div v-if="reportStreaming" class="sections">
-            <div v-if="reportThinking" class="section-card thinking-card">
-              <div class="thinking-header">
-                <h3>模型思考</h3>
-              </div>
-              <div class="streaming-text thinking">
-                {{ reportThinking }}
-              </div>
-            </div>
-            <div class="section-card">
-              <h3>生成中...</h3>
-              <div class="streaming-text">
-                {{ reportDraft || "正在生成，请稍候..." }}
-              </div>
-            </div>
-          </div>
-          <div v-else-if="report" class="report-layout">
-            <div v-if="reportThinking" class="section-card thinking-card">
-              <div class="thinking-header">
-                <h3>模型思考</h3>
-                <button
-                  class="btn ghost"
-                  type="button"
-                  @click="reportThinkingCollapsed = !reportThinkingCollapsed"
-                >
-                  {{ reportThinkingCollapsed ? "展开" : "收起" }}
-                </button>
-              </div>
-              <div v-if="!reportThinkingCollapsed" class="streaming-text thinking">
-                {{ reportThinking }}
-              </div>
-            </div>
-            <div v-if="report.energy_chart" class="section-card">
-              <h3>五行能量图</h3>
-              <pre class="energy-chart">{{ report.energy_chart }}</pre>
-            </div>
-            <div class="sections">
-              <div class="section-card" v-for="(sec, idx) in report.sections" :key="idx">
-                <h3>{{ sec.title }}</h3>
-                <div class="markdown-body" v-html="renderMarkdown(sec.content)"></div>
-              </div>
-            </div>
-          </div>
-          <div v-else class="muted">生成报告后，将在此处展示详细解读。</div>
-        </div>
+        </section>
 
+        <section v-else>
+          <div v-if="activeTab === 'chart'" class="detail-panel">
+            <ChartPanel :chart="chart" />
+            <div class="panel stack">
+              <div class="status-line">
+                <strong>AI智能解析</strong>
+                <span class="muted">基于当前命盘生成详细报告</span>
+              </div>
+              <div class="cta-row matrix">
+                <button
+                  class="btn primary ai-primary"
+                  type="button"
+                  :disabled="reportLoading || reportStreaming"
+                  @click="generateReport"
+                >
+                  {{ reportLoading || reportStreaming ? "解析中..." : "AI智能解析" }}
+                </button>
+                <span v-if="error" class="muted cta-message">{{ error }}</span>
+              </div>
+            </div>
+          </div>
+          <div v-else class="panel stack">
+            <div class="status-line">
+              <strong>命理报告</strong>
+              <span class="badge">LLM 解释器</span>
+            </div>
+            <div v-if="error" class="muted">{{ error }}</div>
+            <div v-if="reportStreaming" class="sections">
+              <div v-if="reportThinking" class="section-card thinking-card">
+                <div class="thinking-header">
+                  <h3>模型思考</h3>
+                </div>
+                <div class="streaming-text thinking">
+                  {{ reportThinking }}
+                </div>
+              </div>
+              <div class="section-card">
+                <h3>生成中...</h3>
+                <div class="streaming-text">
+                  {{ reportDraft || "正在生成，请稍候..." }}
+                </div>
+              </div>
+            </div>
+            <div v-else-if="report" class="report-layout">
+              <div v-if="reportThinking" class="section-card thinking-card">
+                <div class="thinking-header">
+                  <h3>模型思考</h3>
+                  <button
+                    class="btn ghost"
+                    type="button"
+                    @click="reportThinkingCollapsed = !reportThinkingCollapsed"
+                  >
+                    {{ reportThinkingCollapsed ? "展开" : "收起" }}
+                  </button>
+                </div>
+                <div v-if="!reportThinkingCollapsed" class="streaming-text thinking">
+                  {{ reportThinking }}
+                </div>
+              </div>
+              <div v-if="report.energy_chart" class="section-card">
+                <h3>五行能量图</h3>
+                <pre class="energy-chart">{{ report.energy_chart }}</pre>
+              </div>
+              <div class="sections">
+                <div class="section-card" v-for="(sec, idx) in report.sections" :key="idx">
+                  <h3>{{ sec.title }}</h3>
+                  <div class="markdown-body" v-html="renderMarkdown(sec.content)"></div>
+                </div>
+              </div>
+            </div>
+            <div v-else class="muted">生成报告后，将在此处展示详细解读。</div>
+          </div>
+        </section>
       </main>
 
-      <aside class="chat-column" :aria-hidden="!chatOpen">
-        <div class="chat-window" :class="{ open: chatOpen }">
+      <aside class="chat-column" :aria-hidden="stage === 'detail' ? !chatOpen : undefined">
+        <div v-if="stage === 'detail'" class="chat-window" :class="{ open: chatOpen }">
           <ChatPanel :chart="chart" :analysis="analysis" :focus="focus" />
+        </div>
+        <div v-else class="archive-preview panel">
+          <div class="archive-preview-title">档案提示</div>
+          <p class="muted">
+            选中某个档案后会进入命盘展示页，可继续生成报告或发起对话。
+          </p>
+          <div class="archive-tags">
+            <span class="pill">四柱</span>
+            <span class="pill">五行</span>
+            <span class="pill">命盘</span>
+          </div>
         </div>
       </aside>
 
       <button
+        v-if="stage === 'detail'"
         class="chat-fab"
         type="button"
         :class="{ active: chatOpen }"
@@ -380,7 +412,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import ChatPanel from "./components/ChatPanel.vue";
 import ChartPanel from "./components/ChartPanel.vue";
 import type {
@@ -392,6 +424,7 @@ import type {
   ReportStreamEvent
 } from "./types";
 import logoUrl from "./assets/logo-bazi_meow.png";
+import titleTextUrl from "./assets/title-text.png";
 
 type ArchivePillar = {
   stem: string;
@@ -406,9 +439,11 @@ type ArchiveEntry = {
   displayName: string;
   birthLabel: string;
   pillars: ArchivePillar[];
+  chart: Chart;
 };
 
 const stage = ref<"landing" | "form" | "detail" | "archive">("landing");
+const formStep = ref<"choice" | "edit">("choice");
 const activeTab = ref<"chart" | "report">("chart");
 const chatOpen = ref(false);
 const form = ref({
@@ -492,8 +527,20 @@ const displayDate = computed(() => {
     : `${year}-${monthLabel}-${day} ${hour}:${minute}`;
 });
 
+const updateBodyClass = (value: typeof stage.value) => {
+  if (typeof document === "undefined") return;
+  const classList = document.documentElement.classList;
+  classList.remove("page-landing", "page-main");
+  if (value === "landing") {
+    classList.add("page-landing");
+  } else {
+    classList.add("page-main");
+  }
+};
+
 const goToForm = () => {
   stage.value = "form";
+  formStep.value = "choice";
   chatOpen.value = false;
 };
 
@@ -512,6 +559,31 @@ const goToDetail = (tab: "chart" | "report" = "chart") => {
   activeTab.value = tab;
   chatOpen.value = false;
   window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+const startNewForm = () => {
+  formStep.value = "edit";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+const startNewFormFlow = () => {
+  stage.value = "form";
+  formStep.value = "edit";
+  chatOpen.value = false;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+const openArchive = (entry: ArchiveEntry) => {
+  activeArchiveId.value = entry.id;
+  chart.value = entry.chart;
+  analysis.value = null;
+  report.value = null;
+  reportDraft.value = "";
+  reportStreaming.value = false;
+  reportThinking.value = "";
+  reportThinkingCollapsed.value = false;
+  reportLoading.value = false;
+  goToDetail("chart");
 };
 
 const toggleChat = () => {
@@ -635,7 +707,7 @@ const submit = async () => {
     if (!chartRes.ok) throw new Error(await chartRes.text());
     const chartData = (await chartRes.json()) as ChartResponse;
     chart.value = chartData.chart;
-    saveArchive();
+    saveArchive(chartData.chart);
     analysis.value = null;
     report.value = null;
     reportDraft.value = "";
@@ -651,7 +723,7 @@ const submit = async () => {
   }
 };
 
-const saveArchive = () => {
+const saveArchive = (chartData: Chart) => {
   const name = form.value.name.trim();
   const displayName = name || `命主${archiveCounter.value + 1}`;
   archiveCounter.value += 1;
@@ -677,11 +749,15 @@ const saveArchive = () => {
     name,
     displayName,
     birthLabel,
-    pillars
+    pillars,
+    chart: chartData
   };
   archives.value.unshift(entry);
   activeArchiveId.value = entry.id;
 };
+
+onMounted(() => updateBodyClass(stage.value));
+watch(stage, (value) => updateBodyClass(value));
 
 const buildPillarsFromDate = (year: number, month: number, day: number, hour: number) => {
   const stems = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"];
