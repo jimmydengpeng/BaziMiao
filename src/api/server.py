@@ -11,7 +11,7 @@ from typing import Any, Dict, Iterator, List, Optional, Union
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 
-from src.api.schemas import ChartRequest, ChatRequest, ReportRequest
+from src.api.schemas import ChartRequest, ChatRequest, ReportRequest, PillarSearchRequest
 from src.engine.bazi_engine import BaziPaipanEngine
 from src.knowledge.base import retrieve_knowledge
 from src.llm import OllamaError, chat, stream_chat_with_reasoning
@@ -195,6 +195,28 @@ def test_ollama(prompt: str = "ping", model: Optional[str] = None, base_url: Opt
     except json.JSONDecodeError:
         parsed = {"raw": raw}
     return {"ok": True, "base_url": ollama_base_url, "model": ollama_model, "result": parsed}
+
+
+@app.post("/api/bazi/find-dates-by-pillars")
+def find_dates_by_pillars(payload: PillarSearchRequest):
+    """
+    根据四柱八字查找对应的日期范围
+    """
+    try:
+        matched_dates = engine.find_dates_by_pillars(
+            year_pillar=payload.year_pillar,
+            month_pillar=payload.month_pillar,
+            day_pillar=payload.day_pillar,
+            hour_pillar=payload.hour_pillar,
+            start_year=payload.start_year,
+            end_year=payload.end_year,
+        )
+        return {
+            "matched_dates": matched_dates,
+            "total_count": len(matched_dates),
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"查找失败: {exc}") from exc
 
 
 def _prepare_report_context(payload: ReportRequest):

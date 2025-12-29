@@ -173,3 +173,27 @@ export type ChatStreamEvent =
   | { type: "delta"; text: string }
   | { type: "done"; reply: string; thinking?: string }
   | { type: "error"; message: string };
+
+// 四柱反查相关类型
+export interface PillarSearchRequest {
+  year_pillar: string;
+  month_pillar: string;
+  day_pillar: string;
+  hour_pillar: string;
+  start_year: number;
+  end_year: number;
+}
+
+export interface MatchedDate {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  lunar_display: string;
+}
+
+export interface PillarSearchResponse {
+  matched_dates: MatchedDate[];
+  total_count: number;
+}

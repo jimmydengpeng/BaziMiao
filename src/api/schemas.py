@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 class ChartRequest(BaseModel):
     name: Optional[str] = None
     gender: str = Field(..., description="male/female")
-    year: int = Field(..., ge=1900, le=2100)
+    year: int = Field(..., ge=1801, le=2100, description="年份，支持 1801-2100")
     month: int = Field(..., ge=1, le=12)
     day: int = Field(..., ge=1, le=31)
     hour: int = Field(0, ge=0, le=23)
@@ -27,7 +27,7 @@ class ReportRequest(BaseModel):
     focus: List[str] = Field(default_factory=list, description="用户关注方向，如事业/财富/感情")
     name: Optional[str] = None
     gender: Optional[str] = Field(None, description="male/female")
-    year: Optional[int] = Field(None, ge=1900, le=2100)
+    year: Optional[int] = Field(None, ge=1801, le=2100, description="年份，支持 1801-2100")
     month: Optional[int] = Field(None, ge=1, le=12)
     day: Optional[int] = Field(None, ge=1, le=31)
     hour: int = Field(0, ge=0, le=23)
@@ -51,3 +51,13 @@ class ChatRequest(BaseModel):
     analysis: Dict
     history: List[ChatTurn]
     focus: List[str] = Field(default_factory=list)
+
+
+class PillarSearchRequest(BaseModel):
+    """四柱反查请求"""
+    year_pillar: str = Field(..., min_length=2, max_length=2, description="年柱（如：甲子）")
+    month_pillar: str = Field(..., min_length=2, max_length=2, description="月柱（如：乙丑）")
+    day_pillar: str = Field(..., min_length=2, max_length=2, description="日柱（如：丙寅）")
+    hour_pillar: str = Field(..., min_length=2, max_length=2, description="时柱（如：丁卯）")
+    start_year: int = Field(1801, ge=1800, le=2200, description="查找起始年份")
+    end_year: int = Field(2099, ge=1800, le=2200, description="查找结束年份")

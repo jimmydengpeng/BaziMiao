@@ -95,6 +95,14 @@
                   >
                     农历
                   </button>
+                  <button
+                    class="segmented-btn"
+                    :class="{ active: form.calendar === 'pillar' }"
+                    type="button"
+                    @click="openPillarPicker"
+                  >
+                    四柱
+                  </button>
                 </div>
               </div>
             </div>
@@ -207,6 +215,13 @@
         v-if="showRegionPicker"
         v-model="birthPlace"
         @close="showRegionPicker = false"
+      />
+
+      <!-- 四柱输入选择器 -->
+      <PillarPicker
+        v-if="showPillarPicker"
+        @close="showPillarPicker = false"
+        @select="handlePillarSelect"
       />
     </section>
 
@@ -434,13 +449,15 @@ import { computed, onMounted, ref, watch } from "vue";
 import ChatPanel from "./components/ChatPanel.vue";
 import ChartPanel from "./components/ChartPanel.vue";
 import RegionPicker from "./components/RegionPicker.vue";
+import PillarPicker from "./components/PillarPicker.vue";
 import type {
   Analysis,
   Chart,
   ChartResponse,
   Report,
   ReportResponse,
-  ReportStreamEvent
+  ReportStreamEvent,
+  MatchedDate
 } from "./types";
 import { getDefaultRegion, type SelectedRegion } from "./data/china-regions";
 import logoUrl from "./assets/logo-bazi_meow.png";
@@ -479,6 +496,7 @@ const form = ref({
 });
 const birthPlace = ref<SelectedRegion>(getDefaultRegion());
 const showRegionPicker = ref(false);
+const showPillarPicker = ref(false);
 const focus = ref<string[]>([]);
 const loading = ref(false);
 const error = ref("");
@@ -497,7 +515,8 @@ const archiveCounter = ref(0);
 const canChat = computed(() => !!chart.value && !!analysis.value);
 const canViewReport = computed(() => reportStreaming.value || !!report.value);
 const nowYear = new Date().getFullYear();
-const years = Array.from({ length: nowYear - 1900 + 1 }, (_, idx) => nowYear - idx);
+// 年份范围从 1801 到当前年份，与四柱查找范围一致
+const years = Array.from({ length: nowYear - 1801 + 1 }, (_, idx) => nowYear - idx);
 const hours = Array.from({ length: 24 }, (_, idx) => idx);
 const minutes = Array.from({ length: 60 }, (_, idx) => idx);
 const lunarMonthLabels = [
@@ -622,6 +641,22 @@ const setToday = () => {
   form.value.day = now.getDate();
   form.value.hour = now.getHours();
   form.value.minute = now.getMinutes();
+};
+
+const openPillarPicker = () => {
+  form.value.calendar = "pillar";
+  showPillarPicker.value = true;
+};
+
+const handlePillarSelect = (date: MatchedDate) => {
+  // 用户从四柱查找结果中选择了一个日期
+  form.value.calendar = "solar";
+  form.value.year = date.year;
+  form.value.month = date.month;
+  form.value.day = date.day;
+  form.value.hour = date.hour;
+  form.value.minute = date.minute;
+  showPillarPicker.value = false;
 };
 
 const renderMarkdown = (text: string) => {

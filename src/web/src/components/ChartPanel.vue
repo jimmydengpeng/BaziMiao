@@ -427,10 +427,36 @@
           <div class="ganzi-svg-container">
             <svg class="ganzi-svg" :viewBox="`0 0 ${svgWidth} ${svgHeight}`" :style="{ minHeight: svgHeight + 'px' }" preserveAspectRatio="xMidYMid meet">
               <defs>
-                <!-- 箭头标记定义 -->
-                <marker id="arrow-up" markerWidth="8" markerHeight="8" refX="4" refY="8" orient="auto">
-                  <path d="M0,8 L4,0 L8,8" fill="none" stroke="currentColor" stroke-width="1.5"/>
-                </marker>
+                <!-- 天干连线渐变定义 -->
+                <linearGradient
+                  v-for="conn in stemConnectionLines"
+                  :key="conn.gradientId"
+                  :id="conn.gradientId"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="0%"
+                >
+                  <stop offset="0%" :stop-color="elementColorMap[conn.element1 || '木']" stop-opacity="0.4" />
+                  <stop offset="100%" :stop-color="elementColorMap[conn.element2 || '木']" stop-opacity="0.4" />
+                </linearGradient>
+                
+                <!-- 地支连线渐变定义 -->
+                <linearGradient
+                  v-for="conn in branchConnectionLines"
+                  :key="conn.gradientId"
+                  :id="conn.gradientId"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="0%"
+                >
+                  <stop offset="0%" :stop-color="elementColorMap[conn.element1 || '木']" stop-opacity="0.4" />
+                  <stop offset="100%" :stop-color="elementColorMap[conn.element2 || '木']" stop-opacity="0.4" />
+                </linearGradient>
+                
+                <!-- 天干地支连线渐变定义（垂直渐变，从地支到天干） -->
+                <!-- 同柱天干-地支相生连线：按地支五行色直接描边（无需渐变） -->
               </defs>
               
               <!-- 天干关系连线（在天干上方绘制） -->
@@ -438,15 +464,17 @@
                 <template v-for="(conn, idx) in stemConnectionLines" :key="`stem-${idx}`">
                   <path 
                     :d="conn.path" 
-                    :class="['ganzi-line', `line-${conn.cssType}`]"
+                    :stroke="`url(#${conn.gradientId})`"
+                    stroke-width="2"
+                    stroke-linecap="round"
                     fill="none"
                   />
                   <!-- 使用 foreignObject 放置 pill -->
                   <foreignObject 
                     :x="conn.labelX - 35" 
-                    :y="conn.labelY - 9" 
+                    :y="conn.labelY - 11" 
                     width="70" 
-                    height="18"
+                    height="22"
                   >
                     <div class="relation-pill-container">
                       <span :class="['relation-pill', 'pill-sm', `pill-${conn.cssType}`]">
@@ -470,16 +498,18 @@
                 >{{ stem.name }}</text>
               </g>
 
-              <!-- 天干地支相生箭头（垂直） -->
-              <g class="stem-branch-arrows">
-                <template v-for="(arrow, idx) in stemBranchArrows" :key="`arrow-${idx}`">
+              <!-- 天干地支关系连线（垂直，相生为实线，相克为虚线） -->
+              <g class="stem-branch-lines">
+                <template v-for="(line, idx) in stemBranchLines" :key="`sb-line-${idx}`">
                   <line 
-                    :x1="arrow.x" 
-                    :y1="arrow.y1" 
-                    :x2="arrow.x" 
-                    :y2="arrow.y2"
-                    class="ganzi-arrow"
-                    marker-end="url(#arrow-up)"
+                    :x1="line.x" 
+                    :y1="line.y1" 
+                    :x2="line.x" 
+                    :y2="line.y2"
+                    :stroke="elementColorMap[line.element1 || '木']"
+                    stroke-opacity="0.55"
+                    stroke-width="2"
+                    stroke-linecap="round"
                   />
                 </template>
               </g>
@@ -502,15 +532,17 @@
                 <template v-for="(conn, idx) in branchConnectionLines" :key="`branch-${idx}`">
                   <path 
                     :d="conn.path" 
-                    :class="['ganzi-line', `line-${conn.cssType}`]"
+                    :stroke="`url(#${conn.gradientId})`"
+                    stroke-width="2"
+                    stroke-linecap="round"
                     fill="none"
                   />
                   <!-- 使用 foreignObject 放置 pill，垂直居中在水平线上 -->
                   <foreignObject 
                     :x="conn.labelX - 35" 
-                    :y="conn.labelY - 9" 
+                    :y="conn.labelY - 11" 
                     width="70" 
-                    height="18"
+                    height="22"
                   >
                     <div class="relation-pill-container">
                       <span :class="['relation-pill', 'pill-sm', `pill-${conn.cssType}`]">
@@ -898,10 +930,22 @@ interface ConnectionLine {
   label: string;
   labelX: number;
   labelY: number;
+  element1?: string; // 连线起点的五行元素
+  element2?: string; // 连线终点的五行元素
+  gradientId?: string; // 渐变 ID
 }
 
 // 圆角半径
 const cornerRadius = 6;
+
+// 五行元素颜色映射
+const elementColorMap: Record<string, string> = {
+  '木': '#7dd56f',
+  '火': '#ff6b6b',
+  '土': '#a47642',
+  '金': '#f2c14e',
+  '水': '#5aa9ff',
+};
 
 // 生成连接两个柱位置的折线路径（用于天干，在上方），带圆角
 const createStemArc = (pos1: number, pos2: number, level: number): string => {
@@ -962,11 +1006,19 @@ const stemConnectionLines = computed<ConnectionLine[]>(() => {
     let label = '';
     if (rel.type === '合化' && rel.element) {
       label = `合化${rel.element}`;
+    } else if (rel.type === '相冲') {
+      label = '冲';
     } else if (rel.type === '相克') {
       label = '克';
     }
     
     const cssType = getRelationCssType(rel.type);
+    
+    // 获取两端天干的五行元素
+    const stems = ganziStems.value;
+    const element1 = stems[pos1]?.element || '木';
+    const element2 = stems[pos2]?.element || '木';
+    const gradientId = `stem-gradient-${idx}`;
     
     lines.push({
       path,
@@ -975,6 +1027,9 @@ const stemConnectionLines = computed<ConnectionLine[]>(() => {
       label,
       labelX: midX,
       labelY,
+      element1,
+      element2,
+      gradientId,
     });
   }
   
@@ -988,6 +1043,7 @@ const branchConnectionLines = computed<ConnectionLine[]>(() => {
   const lines: ConnectionLine[] = [];
   
   // 每个关系独立分配一个 level（行号）
+  let segmentCounter = 0; // 用于生成唯一的渐变 ID
   for (let idx = 0; idx < relations.length; idx++) {
     const rel = relations[idx];
     if (rel.positions.length < 2) continue;
@@ -997,49 +1053,63 @@ const branchConnectionLines = computed<ConnectionLine[]>(() => {
     // 对于多位置关系（如三合），连接所有相邻对
     const positions = rel.positions.map(mapPosition).sort((a, b) => a - b);
     
-    // 计算中间位置用于放置标签
+    // 计算整个关系的中央 X 坐标（所有参与位置的平均值）
+    const relationCenterX = positions.reduce((sum, pos) => sum + getPillarX(pos), 0) / positions.length;
+    
+    // 生成关系标签（只生成一次）
+    let relationLabel = '';
+    if (rel.type === '六合' && rel.element) {
+      relationLabel = `合化${rel.element}`;
+    } else if (rel.type === '三合') {
+      relationLabel = rel.element ? `三合${rel.element}` : '三合';
+    } else if (rel.type === '半合') {
+      relationLabel = rel.element ? `半合${rel.element}` : '半合';
+    } else if (rel.type === '六冲') {
+      relationLabel = '冲';
+    } else if (rel.type === '相刑') {
+      relationLabel = '刑';
+    } else if (rel.type === '自刑') {
+      relationLabel = '自刑';
+    } else if (rel.type === '相害') {
+      relationLabel = '害';
+    } else if (rel.type === '三会') {
+      relationLabel = rel.element ? `会${rel.element}` : '会';
+    }
+    
+    // 对于多位置关系，将标签放在中间段
     const midIndex = Math.floor(positions.length / 2);
     const labelPosIdx = positions.length === 2 ? 0 : midIndex;
+    
+    const labelY = branchLineBaseY.value + level * 24;
     
     for (let i = 0; i < positions.length - 1; i++) {
       const p1 = positions[i];
       const p2 = positions[i + 1];
       
       const path = createBranchArc(p1, p2, level);
-      const midX = (getPillarX(p1) + getPillarX(p2)) / 2;
-      const labelY = branchLineBaseY.value + level * 24; // pill在折线中央（水平线上）
       
-      // 标签只在中间段显示
-      let label = '';
-      if (i === labelPosIdx) {
-        if (rel.type === '六合' && rel.element) {
-          label = `合化${rel.element}`;
-        } else if (rel.type === '三合') {
-          label = rel.element ? `三合${rel.element}` : '三合';
-        } else if (rel.type === '半合') {
-          label = rel.element ? `半合${rel.element}` : '半合';
-        } else if (rel.type === '六冲') {
-          label = '冲';
-        } else if (rel.type === '相刑') {
-          label = '刑';
-        } else if (rel.type === '自刑') {
-          label = '自刑';
-        } else if (rel.type === '相害') {
-          label = '害';
-        } else if (rel.type === '三会') {
-          label = rel.element ? `会${rel.element}` : '会';
-        }
-      }
+      // 标签只在中间段显示，且使用整个关系的中央 X 坐标
+      const label = (i === labelPosIdx) ? relationLabel : '';
+      const labelX = relationCenterX; // 使用整个关系的中央位置
       
       const cssType = getRelationCssType(rel.type);
+      
+      // 获取两端地支的五行元素
+      const branches = ganziBranches.value;
+      const element1 = branches[p1]?.element || '木';
+      const element2 = branches[p2]?.element || '木';
+      const gradientId = `branch-gradient-${segmentCounter++}`;
       
       lines.push({
         path,
         type: rel.type,
         cssType,
         label,
-        labelX: midX,
+        labelX,
         labelY,
+        element1,
+        element2,
+        gradientId,
       });
     }
   }
@@ -1047,30 +1117,47 @@ const branchConnectionLines = computed<ConnectionLine[]>(() => {
   return lines;
 });
 
-// 天干地支相生箭头
-const stemBranchArrows = computed(() => {
+// 天干地支连线（替代原来的箭头）
+interface StemBranchLine {
+  x: number;
+  y1: number;
+  y2: number;
+  element1: string; // 起点五行（地支）
+}
+
+const stemBranchLines = computed<StemBranchLine[]>(() => {
   if (!props.chart?.ganzi_relations) return [];
   const relations = props.chart.ganzi_relations.stem_branch_relations;
-  const arrows: { x: number; y1: number; y2: number }[] = [];
+  const lines: StemBranchLine[] = [];
   
-  for (const rel of relations) {
+  for (let i = 0; i < relations.length; i++) {
+    const rel = relations[i];
     if (rel.positions.length !== 1) continue;
     const pos = mapPosition(rel.positions[0]);
-    arrows.push({
+    
+    // 获取地支和天干的五行
+    const branch = ganziBranches.value[pos];
+    const branchElement = branch?.element || '木';
+
+    // 仅展示“地支生天干”的相生关系（后端也只会返回这一类）
+    if (rel.type !== '相生') continue;
+    
+    lines.push({
       x: getPillarX(pos),
       y1: branchY.value - 30, // 从地支上方开始
       y2: stemY.value + 30, // 到天干下方结束
+      element1: branchElement, // 起点（地支）
     });
   }
   
-  return arrows;
+  return lines;
 });
 
 // 根据关系类型获取 CSS 类型
 const getRelationCssType = (type: string): string => {
   if (['合化', '六合', '三合', '半合', '三会'].includes(type)) {
     return 'combine';
-  } else if (type === '六冲') {
+  } else if (['相冲', '六冲'].includes(type)) {
     return 'clash';
   } else if (['相刑', '自刑'].includes(type)) {
     return 'punish';

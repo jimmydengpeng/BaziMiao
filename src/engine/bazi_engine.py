@@ -244,7 +244,21 @@ class BaziPaipanEngine:
         ("戊", "癸"): "火",  # 戊癸合化火
     }
     
-    # 五行相克关系：A克B
+    # 天干相冲
+    STEM_CLASHES = [
+        ("甲", "庚"),  # 甲庚冲
+        ("乙", "辛"),  # 乙辛冲
+        ("壬", "丙"),  # 壬丙冲
+        ("癸", "丁"),  # 癸丁冲
+    ]
+    
+    # 天干相克（特定克制关系）
+    STEM_KE_PAIRS = [
+        ("丙", "庚"),  # 丙克庚（火克金）
+        ("丁", "辛"),  # 丁克辛（火克金）
+    ]
+    
+    # 五行相克关系：A克B（用于其他计算）
     # 金克木、木克土、土克水、水克火、火克金
     FIVE_ELEMENTS_克 = {
         "金": "木",
@@ -271,7 +285,7 @@ class BaziPaipanEngine:
         ("卯", "戌"): "火",  # 卯戌合化火
         ("辰", "酉"): "金",  # 辰酉合化金
         ("巳", "申"): "水",  # 巳申合化水
-        ("午", "未"): "土",  # 午未合土（日月合）
+        ("午", "未"): "火",  # 午未合化火（日月合）
     }
     
     # 地支三合：三个地支相合，化为某一五行
@@ -799,25 +813,41 @@ class BaziPaipanEngine:
                         ))
                         break
         
-        # 2. 天干相克
+        # 2. 天干相冲
+        for i in range(4):
+            for j in range(i + 1, 4):
+                pair = (stems[i], stems[j])
+                pair_rev = (stems[j], stems[i])
+                for clash_pair in self.STEM_CLASHES:
+                    if pair == clash_pair or pair_rev == clash_pair:
+                        stem_relations.append(GanZhiRelation(
+                            type="相冲",
+                            positions=[i, j],
+                            description=f"{stems[i]}{stems[j]}冲",
+                            element=None,
+                        ))
+                        break
+        
+        # 3. 天干相克（特定克制关系）
         for i in range(4):
             for j in range(4):
                 if i == j:
                     continue
-                stem_i_element = self.HEAVEN_STEM_ELEMENT_MAP[stems[i]]
-                stem_j_element = self.HEAVEN_STEM_ELEMENT_MAP[stems[j]]
-                # 检查 i 克 j
-                if self.FIVE_ELEMENTS_克.get(stem_i_element) == stem_j_element:
-                    stem_relations.append(GanZhiRelation(
-                        type="相克",
-                        positions=[i, j],
-                        description=f"{stems[i]}克{stems[j]}",
-                        element=None,
-                    ))
+                pair = (stems[i], stems[j])
+                # 检查是否是特定的克制对
+                for ke_pair in self.STEM_KE_PAIRS:
+                    if pair == ke_pair:
+                        stem_relations.append(GanZhiRelation(
+                            type="相克",
+                            positions=[i, j],
+                            description=f"{stems[i]}克{stems[j]}",
+                            element=None,
+                        ))
+                        break
         
         # ========== 地支关系计算 ==========
         
-        # 3. 地支六合
+        # 4. 地支六合
         for i in range(4):
             for j in range(i + 1, 4):
                 pair = (branches[i], branches[j])
@@ -832,7 +862,7 @@ class BaziPaipanEngine:
                         ))
                         break
         
-        # 4. 地支三合（需要三个地支都存在）
+        # 5. 地支三合（需要三个地支都存在）
         for combo_set, element in self.BRANCH_THREE_COMBINATIONS.items():
             positions = []
             for branch in combo_set:
@@ -859,7 +889,7 @@ class BaziPaipanEngine:
                         element=element,
                     ))
         
-        # 5. 地支三会（需要三个地支都存在）
+        # 6. 地支三会（需要三个地支都存在）
         for combo_set, element in self.BRANCH_THREE_MEETINGS.items():
             positions = []
             for branch in combo_set:
@@ -876,7 +906,7 @@ class BaziPaipanEngine:
                     element=element,
                 ))
         
-        # 6. 地支六冲
+        # 7. 地支六冲
         for i in range(4):
             for j in range(i + 1, 4):
                 pair = (branches[i], branches[j])
@@ -891,7 +921,7 @@ class BaziPaipanEngine:
                         ))
                         break
         
-        # 7. 地支相刑
+        # 8. 地支相刑
         for punishment_type, pairs in self.BRANCH_PUNISHMENTS.items():
             for pair in pairs:
                 if pair[0] == pair[1]:
@@ -916,7 +946,7 @@ class BaziPaipanEngine:
                             element=None,
                         ))
         
-        # 8. 地支相害
+        # 9. 地支相害
         for i in range(4):
             for j in range(i + 1, 4):
                 pair = (branches[i], branches[j])
@@ -931,11 +961,13 @@ class BaziPaipanEngine:
                         ))
                         break
         
-        # ========== 天干地支相生关系计算 ==========
-        # 判断同一柱内，地支五行是否生天干五行
+        # ========== 天干地支相生关系计算（同柱）==========
+        # 仅判断同一柱内：地支五行 是否 生 天干五行
+        # 说明：根据产品需求，仅展示“地支生天干”的相生连线；不展示相克，也不展示“天干生地支”等其他方向。
         for i in range(4):
             stem_element = self.HEAVEN_STEM_ELEMENT_MAP[stems[i]]
             branch_element = self.EARTH_BRANCH_ELEMENT_MAP[branches[i]]
+            
             # 检查地支生天干（branch_element 生 stem_element）
             if self.FIVE_ELEMENTS_生.get(branch_element) == stem_element:
                 stem_branch_relations.append(GanZhiRelation(
@@ -945,19 +977,128 @@ class BaziPaipanEngine:
                     element=stem_element,
                 ))
         
-        # 去除重复的关系（基于type + positions + description）
+        # 去除重复的关系（基于type + 排序后的positions）
         def dedupe(relations: List[GanZhiRelation]) -> List[GanZhiRelation]:
-            seen = set()
-            result = []
+            seen_dict = {}
             for r in relations:
-                key = (r.type, tuple(sorted(r.positions)), r.description)
-                if key not in seen:
-                    seen.add(key)
-                    result.append(r)
-            return result
+                # 使用排序后的 positions 作为去重的key
+                # 这样 "子刑卯" 和 "卯刑子" 会被认为是同一个关系
+                key = (r.type, tuple(sorted(r.positions)))
+                if key not in seen_dict:
+                    # 如果是首次遇到，直接添加
+                    seen_dict[key] = r
+                else:
+                    # 如果已存在，保留 positions 本身已经有序的那个（更规范）
+                    existing = seen_dict[key]
+                    if list(r.positions) == sorted(r.positions) and list(existing.positions) != sorted(existing.positions):
+                        # 当前的 positions 是有序的，替换之前无序的
+                        seen_dict[key] = r
+            return list(seen_dict.values())
         
         return GanZhiRelations(
             stem_relations=dedupe(stem_relations),
             branch_relations=dedupe(branch_relations),
             stem_branch_relations=dedupe(stem_branch_relations),
         )
+
+    def find_dates_by_pillars(
+        self,
+        year_pillar: str,
+        month_pillar: str,
+        day_pillar: str,
+        hour_pillar: str,
+        start_year: int = 1801,
+        end_year: int = 2099,
+    ) -> List[Dict[str, Any]]:
+        """
+        根据四柱八字查找对应的日期
+        
+        Args:
+            year_pillar: 年柱，如"甲子"
+            month_pillar: 月柱，如"乙丑"
+            day_pillar: 日柱，如"丙寅"
+            hour_pillar: 时柱，如"丁卯"
+            start_year: 查找起始年份
+            end_year: 查找结束年份
+            
+        Returns:
+            匹配的日期列表
+        """
+        matched_dates = []
+        
+        # 验证四柱格式
+        if (
+            len(year_pillar) != 2
+            or len(month_pillar) != 2
+            or len(day_pillar) != 2
+            or len(hour_pillar) != 2
+        ):
+            raise ValueError("四柱格式错误，每柱应为两个字符（天干+地支）")
+        
+        # 遍历每一年
+        for year in range(start_year, end_year + 1):
+            # 遍历每一天（使用简单的日期遍历）
+            for month in range(1, 13):
+                # 确定每月的天数
+                if month in [1, 3, 5, 7, 8, 10, 12]:
+                    days_in_month = 31
+                elif month in [4, 6, 9, 11]:
+                    days_in_month = 30
+                else:  # 2月
+                    # 判断闰年
+                    if (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0):
+                        days_in_month = 29
+                    else:
+                        days_in_month = 28
+                
+                for day in range(1, days_in_month + 1):
+                    # 尝试计算这一天的四柱
+                    try:
+                        birth_day = sxtwl.fromSolar(year, month, day)
+                        year_gz = birth_day.getYearGZ()
+                        month_gz = birth_day.getMonthGZ()
+                        day_gz = birth_day.getDayGZ()
+                        
+                        # 比对年柱、月柱、日柱
+                        year_str = f"{self.TIAN_GAN_NAMES[year_gz.tg]}{self.DI_ZHI_NAMES[year_gz.dz]}"
+                        month_str = f"{self.TIAN_GAN_NAMES[month_gz.tg]}{self.DI_ZHI_NAMES[month_gz.dz]}"
+                        day_str = f"{self.TIAN_GAN_NAMES[day_gz.tg]}{self.DI_ZHI_NAMES[day_gz.dz]}"
+                        
+                        # 只有年月日都匹配时，才检查时柱
+                        if (
+                            year_str == year_pillar
+                            and month_str == month_pillar
+                            and day_str == day_pillar
+                        ):
+                            # 遍历每个时辰（24小时，每2小时一个时辰）
+                            for hour in range(0, 24, 2):
+                                hour_gz = self._get_hour_gz(day_gz.tg, hour)
+                                hour_str = f"{self.TIAN_GAN_NAMES[hour_gz[0]]}{self.DI_ZHI_NAMES[hour_gz[1]]}"
+                                
+                                if hour_str == hour_pillar:
+                                    # 找到匹配的日期时间
+                                    # 计算农历信息用于显示
+                                    lunar_year = birth_day.getLunarYear()
+                                    lunar_month = birth_day.getLunarMonth()
+                                    lunar_day = birth_day.getLunarDay()
+                                    is_leap = birth_day.isLunarLeap()
+                                    
+                                    lunar_month_labels = [
+                                        "正月", "二月", "三月", "四月", "五月", "六月",
+                                        "七月", "八月", "九月", "十月", "冬月", "腊月"
+                                    ]
+                                    lunar_display = f"农历{lunar_year}年{'闰' if is_leap else ''}{lunar_month_labels[lunar_month - 1]}{lunar_day}日 {hour:02d}时"
+                                    
+                                    matched_dates.append({
+                                        "year": year,
+                                        "month": month,
+                                        "day": day,
+                                        "hour": hour,
+                                        "minute": 0,
+                                        "lunar_display": lunar_display,
+                                    })
+                    except Exception:
+                        # 跳过无效日期
+                        continue
+        
+        return matched_dates
