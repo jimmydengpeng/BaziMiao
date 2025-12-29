@@ -16,6 +16,10 @@ class ChartRequest(BaseModel):
     calendar: Literal["solar", "lunar"] = Field("solar", description="输入历法")
     is_leap_month: bool = Field(False, description="农历是否闰月")
     tz_offset_hours: int = Field(0, description="相对于 UTC 的小时偏移")
+    # 出生地点相关
+    birth_place: str = Field("", description="出生地点名称")
+    longitude: Optional[float] = Field(None, ge=-180, le=180, description="经度")
+    latitude: Optional[float] = Field(None, ge=-90, le=90, description="纬度")
 
 
 class ReportRequest(BaseModel):
@@ -31,7 +35,10 @@ class ReportRequest(BaseModel):
     calendar: Literal["solar", "lunar"] = Field("solar", description="输入历法")
     is_leap_month: bool = Field(False, description="农历是否闰月")
     tz_offset_hours: int = Field(0, description="相对于 UTC 的小时偏移")
-    focus: List[str] = Field(default_factory=list, description="用户关注方向，如事业/财富/感情")
+    # 出生地点相关
+    birth_place: str = Field("", description="出生地点名称")
+    longitude: Optional[float] = Field(None, ge=-180, le=180, description="经度")
+    latitude: Optional[float] = Field(None, ge=-90, le=90, description="纬度")
 
 
 class ChatTurn(BaseModel):

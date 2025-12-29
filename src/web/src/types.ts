@@ -46,6 +46,35 @@ export interface DestinyCycleInfo {
   is_forward: boolean;
 }
 
+// 纳音信息
+export interface NaYinInfo {
+  gan_zhi: string; // 干支，如"己亥"
+  na_yin: string; // 纳音，如"平地木"
+}
+
+// 节气信息
+export interface JieQiInfo {
+  prev_jieqi: string; // 前一个节气
+  prev_distance: string; // 距前一节气的时间
+  next_jieqi: string; // 后一个节气
+  next_distance: string; // 距后一节气的时间
+}
+
+// 干支关系（单个）
+export interface GanZhiRelation {
+  type: string; // 关系类型：合化、相克、六合、三合、三会、六冲、相刑、相害、相生
+  positions: number[]; // 涉及的柱位置索引 [0=年,1=月,2=日,3=时]
+  description: string; // 描述，如"癸戊合化火"
+  element?: string | null; // 合化后的五行（如有）
+}
+
+// 干支关系汇总
+export interface GanZhiRelations {
+  stem_relations: GanZhiRelation[]; // 天干关系
+  branch_relations: GanZhiRelation[]; // 地支关系
+  stem_branch_relations: GanZhiRelation[]; // 天干地支相生关系
+}
+
 export interface Chart {
   name?: string | null;
   gender: Gender;
@@ -59,6 +88,22 @@ export interface Chart {
   five_elements_count: Record<string, number>;
   five_elements_ratio: Record<string, number>;
   destiny_cycle: DestinyCycleInfo;
+  zodiac_animal: string; // 生肖属相
+  // 新增字段
+  true_solar_datetime?: string | null; // 真太阳时
+  birth_place?: string; // 出生地点
+  birth_jieqi?: JieQiInfo | null; // 出生节气信息
+  zodiac_sign?: string; // 星座
+  star_mansion?: string; // 星宿
+  day_master_display?: string; // 命主五行展示，如"癸阴水"
+  fortune_element?: string; // 天运五行（年柱纳音）
+  tai_yuan?: NaYinInfo | null; // 胎元
+  tai_xi?: NaYinInfo | null; // 胎息
+  shen_gong?: NaYinInfo | null; // 身宫
+  ming_gong?: NaYinInfo | null; // 命宫
+  ren_yuan_si_ling?: string; // 人元司令分野
+  kong_wang?: string; // 空亡
+  ganzi_relations?: GanZhiRelations | null; // 干支关系
 }
 
 export interface Analysis {

@@ -181,6 +181,17 @@
                 </div>
               </div>
             </div>
+            <!-- 出生地点选择 -->
+            <div class="field-group">
+              <label>出生地点</label>
+              <button class="date-display" type="button" @click="showRegionPicker = true">
+                <span>{{ birthPlace.fullName }}</span>
+                <span class="chevron">&gt;</span>
+              </button>
+              <span class="muted field-hint">
+                选择地区后将根据经度计算真太阳时，使排盘更加精确。
+              </span>
+            </div>
             <div class="cta-row center">
               <button class="btn primary cta-primary" :disabled="loading" @click="submit">
                 {{ loading ? "排盘中..." : "一键排盘" }}
@@ -190,6 +201,13 @@
           </div>
         </div>
       </section>
+
+      <!-- 地区选择器弹窗 -->
+      <RegionPicker
+        v-if="showRegionPicker"
+        v-model="birthPlace"
+        @close="showRegionPicker = false"
+      />
     </section>
 
     <section v-else class="main-shell">
@@ -415,6 +433,7 @@
 import { computed, onMounted, ref, watch } from "vue";
 import ChatPanel from "./components/ChatPanel.vue";
 import ChartPanel from "./components/ChartPanel.vue";
+import RegionPicker from "./components/RegionPicker.vue";
 import type {
   Analysis,
   Chart,
@@ -423,6 +442,7 @@ import type {
   ReportResponse,
   ReportStreamEvent
 } from "./types";
+import { getDefaultRegion, type SelectedRegion } from "./data/china-regions";
 import logoUrl from "./assets/logo-bazi_meow.png";
 import titleTextUrl from "./assets/title-text.png";
 
@@ -457,6 +477,8 @@ const form = ref({
   calendar: "solar",
   isLeapMonth: false
 });
+const birthPlace = ref<SelectedRegion>(getDefaultRegion());
+const showRegionPicker = ref(false);
 const focus = ref<string[]>([]);
 const loading = ref(false);
 const error = ref("");
@@ -688,21 +710,29 @@ const submit = async () => {
   error.value = "";
   loading.value = true;
   try {
+    // 构建请求体，包含出生地点信息
+    const requestBody: Record<string, unknown> = {
+      name: form.value.name,
+      gender: form.value.gender,
+      year: form.value.year,
+      month: form.value.month,
+      day: form.value.day,
+      hour: form.value.hour,
+      minute: form.value.minute,
+      calendar: form.value.calendar,
+      is_leap_month: form.value.isLeapMonth,
+      tz_offset_hours: 0,
+      birth_place: birthPlace.value.fullName
+    };
+    // 如果选择了具体地区，传递经纬度
+    if (birthPlace.value.province) {
+      requestBody.longitude = birthPlace.value.lng;
+      requestBody.latitude = birthPlace.value.lat;
+    }
     const chartRes = await fetch("/api/bazi/chart", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: form.value.name,
-        gender: form.value.gender,
-        year: form.value.year,
-        month: form.value.month,
-        day: form.value.day,
-        hour: form.value.hour,
-        minute: form.value.minute,
-        calendar: form.value.calendar,
-        is_leap_month: form.value.isLeapMonth,
-        tz_offset_hours: 0
-      })
+      body: JSON.stringify(requestBody)
     });
     if (!chartRes.ok) throw new Error(await chartRes.text());
     const chartData = (await chartRes.json()) as ChartResponse;

@@ -51,6 +51,9 @@ def generate_chart(payload: ChartRequest):
         gender=payload.gender,
         solar_datetime=solar_datetime,
         tz_offset_hours=payload.tz_offset_hours,
+        longitude=payload.longitude,
+        latitude=payload.latitude,
+        birth_place=payload.birth_place,
     )
     return {"chart": chart.model_dump()}
 
@@ -210,6 +213,9 @@ def _prepare_report_context(payload: ReportRequest):
                 gender=payload.gender,
                 solar_datetime=solar_datetime,
                 tz_offset_hours=payload.tz_offset_hours,
+                longitude=payload.longitude,
+                latitude=payload.latitude,
+                birth_place=payload.birth_place,
             )
         except Exception as exc:
             raise HTTPException(status_code=400, detail=f"排盘失败: {exc}") from exc

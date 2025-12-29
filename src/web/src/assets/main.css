@@ -337,6 +337,14 @@ button {
   margin-bottom: 6px;
 }
 
+.field-group .field-hint {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 8px;
+  opacity: 0.7;
+}
+
 .field-group input {
   width: 100%;
   padding: 12px 14px;
@@ -526,6 +534,553 @@ button {
   border-color: rgba(255, 255, 255, 0.2);
 }
 
+/* ========== 卡片式布局样式 ========== */
+
+.chart-panel-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chart-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 通用卡片头部 */
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent-2);
+}
+
+/* ========== 通用卡片背景样式（毛玻璃效果） ========== */
+
+.info-card,
+.bazi-card,
+.energy-card,
+.destiny-card {
+  background: rgba(18, 20, 28, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* ========== 基本信息卡片 ========== */
+
+.info-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* 信息卡片头部 */
+.info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border);
+}
+
+.info-header-left {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.info-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent-2);
+  letter-spacing: 1px;
+}
+
+.info-lunar-birth {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.info-header-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.info-header-action:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--text);
+}
+
+.chevron-icon {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* 信息区块 */
+.info-section {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.info-section:last-child {
+  border-bottom: none;
+}
+
+/* 信息条目 */
+.info-entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.info-entry.full-width {
+  grid-column: span 2;
+}
+
+/* Entry Label - Pill 样式 */
+.entry-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(60, 70, 100, 0.4);
+  border: 1px solid rgba(100, 120, 160, 0.3);
+  color: rgba(180, 190, 210, 0.9);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.entry-value {
+  font-size: 14px;
+  color: var(--text);
+  flex: 1;
+}
+
+.entry-value .muted {
+  font-size: 13px;
+  margin-left: 2px;
+}
+
+/* 性别样式 */
+.gender-value {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gender-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.gender-type {
+  color: var(--accent-2);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* 旧样式兼容（保留但不再使用） */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.info-item.full-width {
+  grid-column: span 2;
+}
+
+.info-label {
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+}
+
+.info-value {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.info-value.zodiac {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zodiac-icon {
+  font-size: 20px;
+}
+
+.day-master {
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+/* ========== 八字命盘卡片 ========== */
+
+.bazi-card {
+  /* 背景已在通用样式中定义 */
+}
+
+.bazi-table {
+  display: grid;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.bazi-row {
+  display: grid;
+  grid-template-columns: 64px repeat(4, minmax(0, 1fr));
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.bazi-row.header {
+  background: rgba(255, 255, 255, 0.06);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.bazi-row:not(.header) + .bazi-row {
+  border-top: 1px solid var(--border);
+}
+
+.bazi-cell {
+  padding: 12px 8px;
+  text-align: center;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.bazi-cell.label {
+  text-align: left;
+  align-items: flex-start;
+  color: var(--muted);
+  font-size: 12px;
+  padding-left: 12px;
+}
+
+.bazi-cell.stem,
+.bazi-cell.branch {
+  flex-direction: row;
+  gap: 6px;
+}
+
+.pillar-char {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.pillar-icon {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.hidden-stems,
+.sub-star-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.bazi-cell.star {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.bazi-cell.sub-star {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* 五行统计摘要 */
+.elements-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.element-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(15, 20, 33, 0.6);
+  font-size: 13px;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.element-badge:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.element-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.element-count {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* ========== 五行能量卡片 ========== */
+
+.energy-card {
+  /* 背景已在通用样式中定义 */
+}
+
+.energy-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.energy-radar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.radar-title,
+.breakdown-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.radar-stage {
+  display: flex;
+  justify-content: center;
+}
+
+.radar-svg {
+  width: 100%;
+  max-width: 280px;
+  height: auto;
+}
+
+.energy-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.energy-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.energy-bar-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.bar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bar-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+}
+
+.bar-name {
+  font-weight: 600;
+}
+
+.bar-relation {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.bar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bar-percent {
+  font-weight: 600;
+  min-width: 48px;
+  text-align: right;
+}
+
+.bar-count {
+  color: var(--muted);
+  font-size: 11px;
+  min-width: 28px;
+}
+
+.bar-track {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.bar-fill.element-wood {
+  background: linear-gradient(90deg, #5cb85c, #7dd56f);
+}
+
+.bar-fill.element-fire {
+  background: linear-gradient(90deg, #d9534f, #ff6b6b);
+}
+
+.bar-fill.element-earth {
+  background: linear-gradient(90deg, #8b6914, #a47642);
+}
+
+.bar-fill.element-metal {
+  background: linear-gradient(90deg, #daa520, #f2c14e);
+}
+
+.bar-fill.element-water {
+  background: linear-gradient(90deg, #337ab7, #5aa9ff);
+}
+
+/* ========== 大运卡片 ========== */
+
+.destiny-card {
+  /* 背景已在通用样式中定义 */
+}
+
+.destiny-grid {
+  display: grid;
+  /* 增加最小宽度以容纳更多内容（年龄+十神） */
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 12px;
+}
+
+.destiny-item {
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.destiny-item:hover {
+  transform: translateY(-2px);
+  border-color: rgba(214, 160, 96, 0.4);
+}
+
+.destiny-year {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.destiny-pillar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.destiny-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.destiny-char {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  line-height: 1.2;
+}
+
+.destiny-god {
+  font-size: 11px;
+  color: var(--accent-2);
+  font-weight: 500;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+/* ========== 旧样式兼容 ========== */
+
 .chart-meta {
   display: grid;
   gap: 6px;
@@ -584,9 +1139,7 @@ button {
 }
 
 .destiny-card {
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: var(--card);
+  /* 背景、border-radius、border 已在通用样式中定义 */
   padding: 12px;
   display: grid;
   gap: 6px;
@@ -728,7 +1281,8 @@ button {
 
 .main-shell {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr) 420px;
+  /* 使用auto让第一列自动适应侧边栏的实际宽度 */
+  grid-template-columns: auto minmax(0, 1fr) 420px;
   gap: 20px;
   align-items: flex-start;
   min-height: 74vh;
@@ -882,7 +1436,8 @@ button {
 }
 
 .side-nav {
-  width: 240px;
+  /* 响应式宽度：最小180px，理想值为视口宽度的18%，最大240px */
+  width: clamp(180px, 18vw, 240px);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -1181,6 +1736,16 @@ button {
 
   .energy-list {
     grid-template-columns: 1fr;
+  }
+
+  /* 五行能量卡片响应式 */
+  .energy-content {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .radar-svg {
+    max-width: 240px;
   }
 }
 
@@ -1510,6 +2075,94 @@ button {
   .pillar-main {
     font-size: 24px;
   }
+
+  /* 基本信息卡片响应式 */
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .info-item.full-width {
+    grid-column: span 1;
+  }
+
+  .info-section {
+    grid-template-columns: 1fr;
+  }
+
+  .info-entry.full-width {
+    grid-column: span 1;
+  }
+
+  .info-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .info-header-action {
+    align-self: flex-end;
+  }
+
+  /* 八字命盘表格响应式 */
+  .bazi-table {
+    overflow-x: auto;
+  }
+
+  .bazi-row {
+    grid-template-columns: 56px repeat(4, minmax(90px, 1fr));
+  }
+
+  .pillar-char {
+    font-size: 22px;
+  }
+
+  /* 大运卡片响应式 */
+  .destiny-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .destiny-item {
+    padding: 10px 8px;
+  }
+
+  .destiny-row {
+    gap: 6px;
+  }
+
+  .destiny-char {
+    font-size: 20px;
+  }
+
+  .destiny-god {
+    font-size: 10px;
+  }
+}
+
+/* 中等屏幕下侧边导航栏调整 */
+@media (max-width: 1200px) {
+  .side-nav {
+    /* 在中等屏幕下进一步减小宽度 */
+    width: clamp(160px, 16vw, 200px);
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .nav-btn {
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+
+  .brand-mini {
+    gap: 10px;
+  }
+
+  .brand-title {
+    font-size: 15px;
+  }
+
+  .nav-label {
+    font-size: 11px;
+  }
 }
 
 @media (max-width: 960px) {
@@ -1617,6 +2270,212 @@ button {
   .hero-btn {
     width: 100%;
     justify-content: center;
+  }
+}
+
+/* ========== 干支关系卡片样式 ========== */
+
+.ganzi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ganzi-diagram {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ganzi-labels {
+  display: flex;
+  justify-content: space-around;
+  padding: 0 30px;
+}
+
+.ganzi-label {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  width: 70px;
+}
+
+.ganzi-svg-container {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+.ganzi-svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.ganzi-char {
+  font-size: 32px;
+  font-weight: 700;
+  font-family: "Noto Serif SC", "Source Han Serif CN", serif;
+}
+
+.stem-char {
+  fill: currentColor;
+}
+
+.branch-char {
+  fill: currentColor;
+}
+
+/* 连线样式 */
+.ganzi-line {
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.ganzi-line.line-combine {
+  stroke: rgba(125, 213, 111, 0.7);
+}
+
+.ganzi-line.line-clash {
+  stroke: rgba(255, 107, 107, 0.7);
+}
+
+.ganzi-line.line-punish {
+  stroke: rgba(255, 193, 7, 0.7);
+}
+
+.ganzi-line.line-harm {
+  stroke: rgba(156, 39, 176, 0.7);
+}
+
+.ganzi-line.line-neutral {
+  stroke: rgba(150, 150, 150, 0.5);
+}
+
+.ganzi-line-label {
+  font-size: 11px;
+  fill: var(--muted);
+}
+
+/* 相生箭头 */
+.ganzi-arrow {
+  stroke: rgba(90, 169, 255, 0.6);
+  stroke-width: 2;
+}
+
+/* 关系摘要区域 */
+.ganzi-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ganzi-summary-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.summary-label {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+  min-width: 60px;
+  padding-top: 4px;
+}
+
+.summary-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.relation-pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.relation-pill.pill-sm {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  box-shadow: 0 0 0 2px var(--bg);
+}
+
+.relation-pill-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.relation-pill.pill-combine {
+  background: rgba(125, 213, 111, 0.15);
+  color: #7dd56f;
+  border: 1px solid rgba(125, 213, 111, 0.3);
+}
+
+.relation-pill.pill-clash {
+  background: rgba(255, 107, 107, 0.15);
+  color: #ff6b6b;
+  border: 1px solid rgba(255, 107, 107, 0.3);
+}
+
+.relation-pill.pill-punish {
+  background: rgba(255, 193, 7, 0.15);
+  color: #ffc107;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.relation-pill.pill-harm {
+  background: rgba(156, 39, 176, 0.15);
+  color: #ce93d8;
+  border: 1px solid rgba(156, 39, 176, 0.3);
+}
+
+.relation-pill.pill-neutral {
+  background: rgba(150, 150, 150, 0.15);
+  color: var(--muted);
+  border: 1px solid rgba(150, 150, 150, 0.3);
+}
+
+.ganzi-note {
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+/* 响应式调整 */
+@media (max-width: 480px) {
+  .ganzi-labels {
+    padding: 0 10px;
+  }
+  
+  .ganzi-label {
+    font-size: 12px;
+    width: 50px;
+  }
+  
+  .ganzi-char {
+    font-size: 24px;
+  }
+  
+  .ganzi-summary-item {
+    flex-direction: column;
+    gap: 4px;
   }
 }
 
