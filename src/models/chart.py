@@ -72,15 +72,18 @@ class JieQiInfo(BaseModel):
 class GanZhiRelation(BaseModel):
     """单个干支关系"""
     type: str = Field(description="关系类型：合化、相克、六合、三合、三会、六冲、相刑、相害、相生")
-    positions: List[int] = Field(description="涉及的柱位置索引 [0=年,1=月,2=日,3=时]")
+    pillars: List[str] = Field(description="涉及的柱标识: year, month, day, hour, destiny, year_fortune")
+    ganzi_items: List[str] = Field(description="涉及的干支名称，如 ['寅', '巳'] 或 ['甲', '己']")
     description: str = Field(description="描述，如'癸戊合化火'")
     element: Optional[str] = Field(default=None, description="合化后的五行（如有）")
+    category: str = Field(description="关系类别: stem(天干), branch(地支), stem_branch(天干地支)")
+    involves_fortune: bool = Field(default=False, description="是否涉及大运或流年")
 
 
 class GanZhiRelations(BaseModel):
-    """干支关系汇总"""
-    stem_relations: List[GanZhiRelation] = Field(default_factory=list, description="天干关系")
-    branch_relations: List[GanZhiRelation] = Field(default_factory=list, description="地支关系")
+    """干支关系汇总 - 一次性包含所有关系（本命+大运+流年）"""
+    stem_relations: List[GanZhiRelation] = Field(default_factory=list, description="天干关系（包含所有）")
+    branch_relations: List[GanZhiRelation] = Field(default_factory=list, description="地支关系（包含所有）")
     stem_branch_relations: List[GanZhiRelation] = Field(default_factory=list, description="天干地支相生关系")
 
 

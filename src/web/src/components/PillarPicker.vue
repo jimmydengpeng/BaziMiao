@@ -9,11 +9,11 @@
       <!-- 当前选择的步骤说明 -->
       <div class="pillar-progress">
         <div class="progress-text">
-          <span class="progress-step">步骤 {{ currentStep + 1 }}/8</span>
-          <span class="progress-hint">{{ stepHints[currentStep] }}</span>
+          <span class="progress-step">步骤 {{ Math.min(currentStep + 1, 8) }}/8</span>
+          <span class="progress-hint">{{ stepHints[Math.min(currentStep, 7)] }}</span>
         </div>
         <div class="progress-bar">
-          <div class="progress-fill" :style="{ width: `${(currentStep / 8) * 100}%` }"></div>
+          <div class="progress-fill" :style="{ width: `${Math.min(currentStep / 8, 1) * 100}%` }"></div>
         </div>
       </div>
 
@@ -165,7 +165,7 @@ const emit = defineEmits<{
   select: [date: MatchedDate];
 }>();
 
-const currentStep = ref(0); // 0-7: 年干、年支、月干、月支、日干、日支、时干、时支
+const currentStep = ref(0); // 0-8: 0表示第1步，7表示第8步，8表示所有步骤完成
 const pillars = ref<Pillar[]>([
   { stem: "", branch: "" },
   { stem: "", branch: "" },
@@ -228,8 +228,8 @@ const selectItem = (item: string) => {
     pillars.value[pillarIndex].branch = item;
   }
 
-  // 自动进入下一步
-  if (currentStep.value < 7) {
+  // 自动进入下一步（包括最后一步也要递增）
+  if (currentStep.value < 8) {
     currentStep.value++;
   }
 };
@@ -237,13 +237,19 @@ const selectItem = (item: string) => {
 // 返回上一步
 const goBack = () => {
   if (currentStep.value > 0) {
-    currentStep.value--;
-    const pillarIndex = Math.floor(currentStep.value / 2);
-    if (isSelectingStem.value) {
+    // 要撤销的是上一步（currentStep - 1）的选择
+    const prevStep = currentStep.value - 1;
+    const pillarIndex = Math.floor(prevStep / 2);
+    const shouldResetStem = prevStep % 2 === 0;
+    
+    if (shouldResetStem) {
       pillars.value[pillarIndex].stem = "";
     } else {
       pillars.value[pillarIndex].branch = "";
     }
+    
+    // 减少步骤
+    currentStep.value--;
   }
 };
 

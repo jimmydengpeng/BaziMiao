@@ -34,11 +34,11 @@ body {
 }
 
 html.page-landing {
-  background: url("./bg-hero.png") center / cover no-repeat fixed, #050505;
+  background: url("../assets/bg-hero.png") center / cover no-repeat fixed, #050505;
 }
 
 html.page-main {
-  background: url("./bg-cloud.png") center / cover no-repeat fixed, #050505;
+  background: url("../assets/bg-cloud.png") center / cover no-repeat fixed, #050505;
 }
 
 body::-webkit-scrollbar {
@@ -2282,24 +2282,82 @@ button {
   gap: 16px;
 }
 
+/* 模式切换开关（左右切换样式） */
+.mode-toggle-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 12px;
+  background: rgba(15, 17, 24, 0.9); /* 偏蓝的深色背景，与卡片色调一致 */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.mode-toggle-switch:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.mode-toggle-options {
+  position: relative;
+  display: flex;
+  z-index: 2;
+  width: 100%;
+}
+
+.mode-option {
+  position: relative;
+  flex: 1;
+  padding: 6px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.65); /* 未选中时稍暗的白色 */
+  white-space: nowrap;
+  transition: color 0.2s ease;
+  z-index: 1;
+  text-align: center;
+}
+
+.mode-option.active {
+  color: #ffffff; /* 选中时纯白色 */
+}
+
+/* 高亮的 pill 背景，可以左右移动 */
+.mode-toggle-pill {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  /* pill 宽度 = 50% (一个 option 的宽度) - 左右各 2px 间距 */
+  /* 注意：这里的 50% 是相对于 switch 的内容区域（100% - 8px padding） */
+  width: calc(50% - 4px);
+  height: calc(100% - 8px);
+  background: rgba(52, 59, 88, 0.65); /* 偏蓝的深色高亮背景，与整体卡片色调协调 */
+  border-radius: 8px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.mode-toggle-pill.right {
+  /* 移动到右侧：移动 pill 自身宽度（100%），使其与右侧 option 对齐 */
+  /* 左侧位置 4px + pill 宽度（50% - 4px）= 50%（中线），右、上、下间距均为 4px */
+  transform: translateX(100%);
+}
+
 .ganzi-diagram {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.ganzi-labels {
-  display: grid;
-  grid-template-columns: repeat(4, 90px);
-  gap: 0;
-  padding-left: 50px;
-  justify-content: start;
-}
+/* 柱标签现在在 SVG 中绘制，不再需要独立的 HTML 元素 */
+/* .ganzi-labels 和 .ganzi-label 已废弃 */
 
-.ganzi-label {
+.pillar-label-text {
   font-size: 13px;
-  color: var(--muted);
-  text-align: center;
+  fill: var(--muted);
+  font-weight: 400;
 }
 
 .ganzi-svg-container {
@@ -2404,13 +2462,18 @@ button {
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
+  /* 文字阴影：让半透明背景上的文字更清晰易读 */
+  text-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.8),
+    0 2px 6px rgba(0, 0, 0, 0.6),
+    0 0 8px rgba(0, 0, 0, 0.4);
 }
 
 .relation-pill.pill-sm {
   padding: 2px 8px;
   border-radius: 10px;
   font-size: 11px;
-  box-shadow: 0 0 0 2px var(--bg);
+  box-shadow: 0 0 0 1px var(--bg);
 }
 
 .relation-pill-container {
@@ -2462,12 +2525,7 @@ button {
 
 /* 响应式调整 */
 @media (max-width: 480px) {
-  .ganzi-labels {
-    grid-template-columns: repeat(4, 70px);
-    padding-left: 30px;
-  }
-  
-  .ganzi-label {
+  .pillar-label-text {
     font-size: 12px;
   }
   
@@ -2491,3 +2549,4 @@ button {
     transform: translateY(0);
   }
 }
+

@@ -44,6 +44,7 @@
 - 项目只有我一个人维护，我对前端不熟，代码中关键的业务逻辑和语法的地方可以加上注释，回答我前端相关的问题的时候也尽可能用我能理解的方式回答，适当说明背景知识、底层细节
 - 你可以随意修改本仓库的代码，不需要严格遵循现有的框架，一切以功能正常为准，但要保持代码和仓库整洁
 - 尽可能使用中文回复
+- 如果你需要运行终端Python命令，请确保conda环境langchain已激活
 
 ## Figma MCP Integration Rules
 These rules define how to translate Figma inputs into code for this project and must be followed for every Figma-driven change.

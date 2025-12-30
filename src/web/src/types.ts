@@ -63,15 +63,18 @@ export interface JieQiInfo {
 // 干支关系（单个）
 export interface GanZhiRelation {
   type: string; // 关系类型：合化、相克、六合、三合、三会、六冲、相刑、相害、相生
-  positions: number[]; // 涉及的柱位置索引 [0=年,1=月,2=日,3=时]
+  pillars: string[]; // 涉及的柱标识：year, month, day, hour, destiny, year_fortune
+  ganzi_items: string[]; // 涉及的干支名称
   description: string; // 描述，如"癸戊合化火"
   element?: string | null; // 合化后的五行（如有）
+  category: string; // 关系类别: stem(天干), branch(地支), stem_branch(天干地支)
+  involves_fortune: boolean; // 是否涉及大运或流年
 }
 
 // 干支关系汇总
 export interface GanZhiRelations {
-  stem_relations: GanZhiRelation[]; // 天干关系
-  branch_relations: GanZhiRelation[]; // 地支关系
+  stem_relations: GanZhiRelation[]; // 天干关系（包含所有）
+  branch_relations: GanZhiRelation[]; // 地支关系（包含所有）
   stem_branch_relations: GanZhiRelation[]; // 天干地支相生关系
 }
 

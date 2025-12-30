@@ -469,10 +469,26 @@ class BaziPaipanEngine:
         # 计算节气信息
         birth_jieqi = self._calculate_birth_jieqi(birth_day, adjusted_dt.hour, adjusted_dt.minute)
 
-        # 计算干支关系
-        ganzi_relations = self.calculate_ganzi_relations(
-            [year_pillar, month_pillar, day_pillar, hour_pillar]
-        )
+        # 计算干支关系（一次性计算所有关系：本命+大运+流年）
+        try:
+            # 获取当前大运
+            current_destiny = self.get_current_destiny_pillar(original_solar_datetime, destiny_cycle)
+            # 获取当前流年
+            current_year = self.get_current_year_pillar()
+            
+            # 计算所有关系
+            ganzi_relations = self.calculate_all_ganzi_relations(
+                year_pillar=year_pillar,
+                month_pillar=month_pillar,
+                day_pillar=day_pillar,
+                hour_pillar=hour_pillar,
+                destiny_pillar=current_destiny,
+                year_fortune_pillar=current_year
+            )
+        except Exception as e:
+            # 如果计算关系失败，返回空关系
+            print(f"Warning: Failed to calculate ganzi relations: {e}")
+            ganzi_relations = GanZhiRelations()
 
         return Chart(
             name=name,
@@ -782,142 +798,207 @@ class BaziPaipanEngine:
             next_distance=next_distance,
         )
 
-    def calculate_ganzi_relations(self, pillars: List[PillarInfo]) -> GanZhiRelations:
+    def calculate_all_ganzi_relations(
+        self,
+        year_pillar: PillarInfo,
+        month_pillar: PillarInfo,
+        day_pillar: PillarInfo,
+        hour_pillar: PillarInfo,
+        destiny_pillar: Optional[PillarInfo] = None,
+        year_fortune_pillar: Optional[PillarInfo] = None
+    ) -> GanZhiRelations:
         """
-        计算四柱之间的干支关系
-        pillars: [year_pillar, month_pillar, day_pillar, hour_pillar]
-        位置索引: 0=年, 1=月, 2=日, 3=时
+        一次性计算所有干支关系（本命四柱 + 大运 + 流年）
+        
+        Args:
+            year_pillar: 年柱
+            month_pillar: 月柱
+            day_pillar: 日柱
+            hour_pillar: 时柱
+            destiny_pillar: 大运柱（可选）
+            year_fortune_pillar: 流年柱（可选）
+        
+        Returns:
+            包含所有关系的GanZhiRelations对象
         """
         stem_relations: List[GanZhiRelation] = []
         branch_relations: List[GanZhiRelation] = []
         stem_branch_relations: List[GanZhiRelation] = []
         
-        # 提取四柱的天干和地支名称
-        stems = [p.heaven_stem.name for p in pillars]
-        branches = [p.earth_branch.name for p in pillars]
+        # 构建柱字典：{pillar_id: PillarInfo}
+        pillar_dict = {
+            "year": year_pillar,
+            "month": month_pillar,
+            "day": day_pillar,
+            "hour": hour_pillar,
+        }
+        if destiny_pillar:
+            pillar_dict["destiny"] = destiny_pillar
+        if year_fortune_pillar:
+            pillar_dict["year_fortune"] = year_fortune_pillar
+        
+        # 提取所有天干和地支
+        stem_dict = {pid: p.heaven_stem.name for pid, p in pillar_dict.items()}
+        branch_dict = {pid: p.earth_branch.name for pid, p in pillar_dict.items()}
+        
+        # 所有柱ID列表
+        all_pillar_ids = list(pillar_dict.keys())
         
         # ========== 天干关系计算 ==========
         
         # 1. 天干五合
-        for i in range(4):
-            for j in range(i + 1, 4):
-                pair = (stems[i], stems[j])
-                pair_rev = (stems[j], stems[i])
+        for i, pid1 in enumerate(all_pillar_ids):
+            for pid2 in all_pillar_ids[i+1:]:
+                stem1, stem2 = stem_dict[pid1], stem_dict[pid2]
+                pair = (stem1, stem2)
+                pair_rev = (stem2, stem1)
                 for combo_pair, element in self.STEM_COMBINATIONS.items():
                     if pair == combo_pair or pair_rev == combo_pair:
+                        involves_fortune = pid1 in ['destiny', 'year_fortune'] or pid2 in ['destiny', 'year_fortune']
                         stem_relations.append(GanZhiRelation(
                             type="合化",
-                            positions=[i, j],
-                            description=f"{stems[i]}{stems[j]}合化{element}",
+                            pillars=[pid1, pid2],
+                            ganzi_items=[stem1, stem2],
+                            description=f"{stem1}{stem2}合化{element}",
                             element=element,
+                            category="stem",
+                            involves_fortune=involves_fortune
                         ))
                         break
         
         # 2. 天干相冲
-        for i in range(4):
-            for j in range(i + 1, 4):
-                pair = (stems[i], stems[j])
-                pair_rev = (stems[j], stems[i])
+        for i, pid1 in enumerate(all_pillar_ids):
+            for pid2 in all_pillar_ids[i+1:]:
+                stem1, stem2 = stem_dict[pid1], stem_dict[pid2]
+                pair = (stem1, stem2)
+                pair_rev = (stem2, stem1)
                 for clash_pair in self.STEM_CLASHES:
                     if pair == clash_pair or pair_rev == clash_pair:
+                        involves_fortune = pid1 in ['destiny', 'year_fortune'] or pid2 in ['destiny', 'year_fortune']
                         stem_relations.append(GanZhiRelation(
                             type="相冲",
-                            positions=[i, j],
-                            description=f"{stems[i]}{stems[j]}冲",
+                            pillars=[pid1, pid2],
+                            ganzi_items=[stem1, stem2],
+                            description=f"{stem1}{stem2}冲",
                             element=None,
+                            category="stem",
+                            involves_fortune=involves_fortune
                         ))
                         break
         
-        # 3. 天干相克（特定克制关系）
-        for i in range(4):
-            for j in range(4):
-                if i == j:
+        # 3. 天干相克
+        for pid1 in all_pillar_ids:
+            for pid2 in all_pillar_ids:
+                if pid1 == pid2:
                     continue
-                pair = (stems[i], stems[j])
-                # 检查是否是特定的克制对
+                stem1, stem2 = stem_dict[pid1], stem_dict[pid2]
+                pair = (stem1, stem2)
                 for ke_pair in self.STEM_KE_PAIRS:
                     if pair == ke_pair:
+                        involves_fortune = pid1 in ['destiny', 'year_fortune'] or pid2 in ['destiny', 'year_fortune']
                         stem_relations.append(GanZhiRelation(
                             type="相克",
-                            positions=[i, j],
-                            description=f"{stems[i]}克{stems[j]}",
+                            pillars=[pid1, pid2],
+                            ganzi_items=[stem1, stem2],
+                            description=f"{stem1}克{stem2}",
                             element=None,
+                            category="stem",
+                            involves_fortune=involves_fortune
                         ))
                         break
         
         # ========== 地支关系计算 ==========
         
         # 4. 地支六合
-        for i in range(4):
-            for j in range(i + 1, 4):
-                pair = (branches[i], branches[j])
-                pair_rev = (branches[j], branches[i])
+        for i, pid1 in enumerate(all_pillar_ids):
+            for pid2 in all_pillar_ids[i+1:]:
+                branch1, branch2 = branch_dict[pid1], branch_dict[pid2]
+                pair = (branch1, branch2)
+                pair_rev = (branch2, branch1)
                 for combo_pair, element in self.BRANCH_SIX_COMBINATIONS.items():
                     if pair == combo_pair or pair_rev == combo_pair:
+                        involves_fortune = pid1 in ['destiny', 'year_fortune'] or pid2 in ['destiny', 'year_fortune']
                         branch_relations.append(GanZhiRelation(
                             type="六合",
-                            positions=[i, j],
-                            description=f"{branches[i]}{branches[j]}合化{element}",
+                            pillars=[pid1, pid2],
+                            ganzi_items=[branch1, branch2],
+                            description=f"{branch1}{branch2}合化{element}",
                             element=element,
+                            category="branch",
+                            involves_fortune=involves_fortune
                         ))
                         break
         
-        # 5. 地支三合（需要三个地支都存在）
+        # 5. 地支三合
         for combo_set, element in self.BRANCH_THREE_COMBINATIONS.items():
-            positions = []
+            found_pillars = []
             for branch in combo_set:
-                for idx, b in enumerate(branches):
-                    if b == branch and idx not in positions:
-                        positions.append(idx)
+                for pid in all_pillar_ids:
+                    if branch_dict[pid] == branch and pid not in found_pillars:
+                        found_pillars.append(pid)
                         break
-            # 如果存在至少两个成员，记录半合
-            if len(positions) >= 2:
-                found_branches = [branches[p] for p in positions]
-                if len(positions) == 3:
+            if len(found_pillars) >= 2:
+                found_branches = [branch_dict[pid] for pid in found_pillars]
+                involves_fortune = any(pid in ['destiny', 'year_fortune'] for pid in found_pillars)
+                if len(found_pillars) == 3:
                     branch_relations.append(GanZhiRelation(
                         type="三合",
-                        positions=sorted(positions),
+                        pillars=found_pillars,
+                        ganzi_items=found_branches,
                         description=f"{''.join(found_branches)}三合{element}局",
                         element=element,
+                        category="branch",
+                        involves_fortune=involves_fortune
                     ))
                 else:
-                    # 半合情况
                     branch_relations.append(GanZhiRelation(
                         type="半合",
-                        positions=sorted(positions),
+                        pillars=found_pillars,
+                        ganzi_items=found_branches,
                         description=f"{''.join(found_branches)}半合{element}局",
                         element=element,
+                        category="branch",
+                        involves_fortune=involves_fortune
                     ))
         
-        # 6. 地支三会（需要三个地支都存在）
+        # 6. 地支三会
         for combo_set, element in self.BRANCH_THREE_MEETINGS.items():
-            positions = []
+            found_pillars = []
             for branch in combo_set:
-                for idx, b in enumerate(branches):
-                    if b == branch and idx not in positions:
-                        positions.append(idx)
+                for pid in all_pillar_ids:
+                    if branch_dict[pid] == branch and pid not in found_pillars:
+                        found_pillars.append(pid)
                         break
-            if len(positions) == 3:
-                found_branches = [branches[p] for p in positions]
+            if len(found_pillars) == 3:
+                found_branches = [branch_dict[pid] for pid in found_pillars]
+                involves_fortune = any(pid in ['destiny', 'year_fortune'] for pid in found_pillars)
                 branch_relations.append(GanZhiRelation(
                     type="三会",
-                    positions=sorted(positions),
+                    pillars=found_pillars,
+                    ganzi_items=found_branches,
                     description=f"{''.join(found_branches)}三会{element}方",
                     element=element,
+                    category="branch",
+                    involves_fortune=involves_fortune
                 ))
         
         # 7. 地支六冲
-        for i in range(4):
-            for j in range(i + 1, 4):
-                pair = (branches[i], branches[j])
-                pair_rev = (branches[j], branches[i])
+        for i, pid1 in enumerate(all_pillar_ids):
+            for pid2 in all_pillar_ids[i+1:]:
+                branch1, branch2 = branch_dict[pid1], branch_dict[pid2]
+                pair = (branch1, branch2)
+                pair_rev = (branch2, branch1)
                 for clash_pair in self.BRANCH_SIX_CLASHES:
                     if pair == clash_pair or pair_rev == clash_pair:
+                        involves_fortune = pid1 in ['destiny', 'year_fortune'] or pid2 in ['destiny', 'year_fortune']
                         branch_relations.append(GanZhiRelation(
                             type="六冲",
-                            positions=[i, j],
-                            description=f"{branches[i]}{branches[j]}冲",
+                            pillars=[pid1, pid2],
+                            ganzi_items=[branch1, branch2],
+                            description=f"{branch1}{branch2}冲",
                             element=None,
+                            category="branch",
+                            involves_fortune=involves_fortune
                         ))
                         break
         
@@ -925,74 +1006,88 @@ class BaziPaipanEngine:
         for punishment_type, pairs in self.BRANCH_PUNISHMENTS.items():
             for pair in pairs:
                 if pair[0] == pair[1]:
-                    # 自刑：检查同一个地支出现两次
-                    positions = [idx for idx, b in enumerate(branches) if b == pair[0]]
-                    if len(positions) >= 2:
-                        branch_relations.append(GanZhiRelation(
-                            type="自刑",
-                            positions=positions[:2],
-                            description=f"{pair[0]}{pair[0]}自刑",
-                            element=None,
-                        ))
+                    # 自刑：检查同一个地支出现两次或以上
+                    found_pillars = [pid for pid in all_pillar_ids if branch_dict[pid] == pair[0]]
+                    if len(found_pillars) >= 2:
+                        # 每两个相同地支之间都存在自刑关系
+                        for i in range(len(found_pillars)-1):
+                            for j in range(i+1, len(found_pillars)):
+                                pid1, pid2 = found_pillars[i], found_pillars[j]
+                                involves_fortune = pid1 in ['destiny', 'year_fortune'] or pid2 in ['destiny', 'year_fortune']
+                                branch_relations.append(GanZhiRelation(
+                                    type="自刑",
+                                    pillars=[pid1, pid2],
+                                    ganzi_items=[pair[0], pair[0]],
+                                    description=f"{pair[0]}{pair[0]}自刑",
+                                    element=None,
+                                    category="branch",
+                                    involves_fortune=involves_fortune
+                                ))
                 else:
-                    # 其他刑：检查两个地支是否都存在
-                    pos1 = [idx for idx, b in enumerate(branches) if b == pair[0]]
-                    pos2 = [idx for idx, b in enumerate(branches) if b == pair[1]]
-                    if pos1 and pos2:
-                        branch_relations.append(GanZhiRelation(
-                            type="相刑",
-                            positions=[pos1[0], pos2[0]],
-                            description=f"{pair[0]}刑{pair[1]}（{punishment_type}）",
-                            element=None,
-                        ))
+                    # 其他刑：建立所有可能的组合关系
+                    pid1_list = [pid for pid in all_pillar_ids if branch_dict[pid] == pair[0]]
+                    pid2_list = [pid for pid in all_pillar_ids if branch_dict[pid] == pair[1]]
+                    # 为每对匹配的地支建立关系
+                    for pid1 in pid1_list:
+                        for pid2 in pid2_list:
+                            involves_fortune = pid1 in ['destiny', 'year_fortune'] or pid2 in ['destiny', 'year_fortune']
+                            branch_relations.append(GanZhiRelation(
+                                type="相刑",
+                                pillars=[pid1, pid2],
+                                ganzi_items=[pair[0], pair[1]],
+                                description=f"{pair[0]}刑{pair[1]}（{punishment_type}）",
+                                element=None,
+                                category="branch",
+                                involves_fortune=involves_fortune
+                            ))
         
         # 9. 地支相害
-        for i in range(4):
-            for j in range(i + 1, 4):
-                pair = (branches[i], branches[j])
-                pair_rev = (branches[j], branches[i])
+        for i, pid1 in enumerate(all_pillar_ids):
+            for pid2 in all_pillar_ids[i+1:]:
+                branch1, branch2 = branch_dict[pid1], branch_dict[pid2]
+                pair = (branch1, branch2)
+                pair_rev = (branch2, branch1)
                 for harm_pair in self.BRANCH_HARMS:
                     if pair == harm_pair or pair_rev == harm_pair:
+                        involves_fortune = pid1 in ['destiny', 'year_fortune'] or pid2 in ['destiny', 'year_fortune']
                         branch_relations.append(GanZhiRelation(
                             type="相害",
-                            positions=[i, j],
-                            description=f"{branches[i]}{branches[j]}害",
+                            pillars=[pid1, pid2],
+                            ganzi_items=[branch1, branch2],
+                            description=f"{branch1}{branch2}害",
                             element=None,
+                            category="branch",
+                            involves_fortune=involves_fortune
                         ))
                         break
         
         # ========== 天干地支相生关系计算（同柱）==========
-        # 仅判断同一柱内：地支五行 是否 生 天干五行
-        # 说明：根据产品需求，仅展示“地支生天干”的相生连线；不展示相克，也不展示“天干生地支”等其他方向。
-        for i in range(4):
-            stem_element = self.HEAVEN_STEM_ELEMENT_MAP[stems[i]]
-            branch_element = self.EARTH_BRANCH_ELEMENT_MAP[branches[i]]
+        for pid in all_pillar_ids:
+            stem = stem_dict[pid]
+            branch = branch_dict[pid]
+            stem_element = self.HEAVEN_STEM_ELEMENT_MAP[stem]
+            branch_element = self.EARTH_BRANCH_ELEMENT_MAP[branch]
             
-            # 检查地支生天干（branch_element 生 stem_element）
+            # 检查地支生天干
             if self.FIVE_ELEMENTS_生.get(branch_element) == stem_element:
+                involves_fortune = pid in ['destiny', 'year_fortune']
                 stem_branch_relations.append(GanZhiRelation(
                     type="相生",
-                    positions=[i],
-                    description=f"{branches[i]}{branch_element}生{stems[i]}{stem_element}",
+                    pillars=[pid],
+                    ganzi_items=[branch, stem],
+                    description=f"{branch}{branch_element}生{stem}{stem_element}",
                     element=stem_element,
+                    category="stem_branch",
+                    involves_fortune=involves_fortune
                 ))
         
-        # 去除重复的关系（基于type + 排序后的positions）
+        # 去重
         def dedupe(relations: List[GanZhiRelation]) -> List[GanZhiRelation]:
             seen_dict = {}
             for r in relations:
-                # 使用排序后的 positions 作为去重的key
-                # 这样 "子刑卯" 和 "卯刑子" 会被认为是同一个关系
-                key = (r.type, tuple(sorted(r.positions)))
+                key = (r.type, tuple(sorted(r.pillars)), tuple(sorted(r.ganzi_items)))
                 if key not in seen_dict:
-                    # 如果是首次遇到，直接添加
                     seen_dict[key] = r
-                else:
-                    # 如果已存在，保留 positions 本身已经有序的那个（更规范）
-                    existing = seen_dict[key]
-                    if list(r.positions) == sorted(r.positions) and list(existing.positions) != sorted(existing.positions):
-                        # 当前的 positions 是有序的，替换之前无序的
-                        seen_dict[key] = r
             return list(seen_dict.values())
         
         return GanZhiRelations(
@@ -1102,3 +1197,303 @@ class BaziPaipanEngine:
                         continue
         
         return matched_dates
+
+    def get_current_year_pillar(self, year: Optional[int] = None) -> PillarInfo:
+        """
+        获取流年干支柱
+        
+        注意：流年以立春为界，立春之前属于上一年，立春之后才是新年。
+        因此应该使用当前日期来计算，而不是1月1日。
+        
+        Args:
+            year: 年份，默认为None（使用当前日期）。如果指定年份，会使用该年立春后的日期
+        
+        Returns:
+            流年的干支柱信息
+        """
+        # 使用当前日期计算流年（sxtwl会自动根据立春判断年份）
+        now = datetime.now()
+        if year is not None:
+            # 如果指定了年份，使用该年立春后的日期（通常立春在2月4-5日）
+            # 使用2月5日确保在立春之后，获取正确的流年
+            day = sxtwl.fromSolar(year, 2, 5)
+        else:
+            # 使用当前日期，sxtwl会自动根据立春判断
+            day = sxtwl.fromSolar(now.year, now.month, now.day)
+        
+        year_gz = day.getYearGZ()
+        
+        stem_name = self.TIAN_GAN_NAMES[year_gz.tg]
+        branch_name = self.DI_ZHI_NAMES[year_gz.dz]
+        
+        # 构建天干信息
+        heaven_stem = HeavenStemInfo(
+            name=stem_name,
+            element=self.HEAVEN_STEM_ELEMENT_MAP[stem_name],
+            yinyang=self.TIAN_GAN_YIN_YANG[stem_name],
+            ten_god="",  # 流年不需要十神
+        )
+        
+        # 构建地支信息
+        earth_branch = EarthBranchInfo(
+            name=branch_name,
+            element=self.EARTH_BRANCH_ELEMENT_MAP[branch_name],
+            yinyang=self.DI_ZHI_YIN_YANG[branch_name],
+            hidden_stems=[],  # 简化处理，不计算藏干
+        )
+        
+        return PillarInfo(heaven_stem=heaven_stem, earth_branch=earth_branch)
+
+    def get_current_destiny_pillar(
+        self, 
+        birth_datetime: datetime, 
+        destiny_cycle: DestinyCycleInfo
+    ) -> Optional[PillarInfo]:
+        """
+        获取当前大运柱
+        
+        Args:
+            birth_datetime: 出生日期时间
+            destiny_cycle: 大运信息
+        
+        Returns:
+            当前大运柱，如果还未起运则返回 None
+        """
+        now = datetime.now()
+        
+        # 计算起运日期
+        start_age = destiny_cycle.start_age
+        qiyun_date = birth_datetime + timedelta(
+            days=start_age.year * 365 + start_age.month * 30 + start_age.day
+        )
+        
+        # 如果还未起运，返回 None
+        if now < qiyun_date:
+            return None
+        
+        # 计算当前年龄（周岁）
+        age = now.year - birth_datetime.year
+        if now.month < birth_datetime.month or (
+            now.month == birth_datetime.month and now.day < birth_datetime.day
+        ):
+            age -= 1
+        
+        # 计算处于第几步大运（每步10年）
+        years_after_qiyun = age - start_age.year
+        destiny_index = years_after_qiyun // 10
+        
+        # 获取对应的大运
+        if 0 <= destiny_index < len(destiny_cycle.destiny_pillars):
+            destiny_pillar_info = destiny_cycle.destiny_pillars[destiny_index]
+            return PillarInfo(
+                heaven_stem=destiny_pillar_info.heaven_stem,
+                earth_branch=destiny_pillar_info.earth_branch,
+            )
+        
+        return None
+
+    def calculate_extended_ganzi_relations_DEPRECATED(
+        self, 
+        pillars: List[PillarInfo]
+    ) -> Dict[str, List[GanZhiRelation]]:
+        """
+        计算包含大运和流年的干支关系（6柱）
+        
+        Args:
+            pillars: 包含6个柱的列表 [年,月,日,时,大运,流年]
+                    位置索引: 0=年, 1=月, 2=日, 3=时, 4=大运, 5=流年
+        
+        Returns:
+            包含扩展关系的字典
+        """
+        num_pillars = len(pillars)
+        stem_relations: List[GanZhiRelation] = []
+        branch_relations: List[GanZhiRelation] = []
+        
+        # 提取天干和地支名称
+        stems = [p.heaven_stem.name for p in pillars]
+        branches = [p.earth_branch.name for p in pillars]
+        
+        # 位置名称映射（用于生成描述）
+        position_names = ["年", "月", "日", "时", "运", "流"]
+        
+        # ========== 天干关系计算 ==========
+        
+        # 1. 天干五合
+        for i in range(num_pillars):
+            for j in range(i + 1, num_pillars):
+                pair = (stems[i], stems[j])
+                pair_rev = (stems[j], stems[i])
+                for combo_pair, element in self.STEM_COMBINATIONS.items():
+                    if pair == combo_pair or pair_rev == combo_pair:
+                        pos_desc = f"{position_names[i]}{stems[i]}-{position_names[j]}{stems[j]}"
+                        stem_relations.append(GanZhiRelation(
+                            type="合化",
+                            positions=[i, j],
+                            description=f"{pos_desc} 合化{element}",
+                            element=element,
+                        ))
+                        break
+        
+        # 2. 天干相冲
+        for i in range(num_pillars):
+            for j in range(i + 1, num_pillars):
+                pair = (stems[i], stems[j])
+                pair_rev = (stems[j], stems[i])
+                for clash_pair in self.STEM_CLASHES:
+                    if pair == clash_pair or pair_rev == clash_pair:
+                        pos_desc = f"{position_names[i]}{stems[i]}-{position_names[j]}{stems[j]}"
+                        stem_relations.append(GanZhiRelation(
+                            type="相冲",
+                            positions=[i, j],
+                            description=f"{pos_desc} 冲",
+                            element=None,
+                        ))
+                        break
+        
+        # 3. 天干相克
+        for i in range(num_pillars):
+            for j in range(num_pillars):
+                if i == j:
+                    continue
+                pair = (stems[i], stems[j])
+                for ke_pair in self.STEM_KE_PAIRS:
+                    if pair == ke_pair:
+                        pos_desc = f"{position_names[i]}{stems[i]}-{position_names[j]}{stems[j]}"
+                        stem_relations.append(GanZhiRelation(
+                            type="相克",
+                            positions=[i, j],
+                            description=f"{pos_desc} 克",
+                            element=None,
+                        ))
+                        break
+        
+        # ========== 地支关系计算 ==========
+        
+        # 4. 地支六合
+        for i in range(num_pillars):
+            for j in range(i + 1, num_pillars):
+                pair = (branches[i], branches[j])
+                pair_rev = (branches[j], branches[i])
+                for combo_pair, element in self.BRANCH_SIX_COMBINATIONS.items():
+                    if pair == combo_pair or pair_rev == combo_pair:
+                        pos_desc = f"{position_names[i]}{branches[i]}-{position_names[j]}{branches[j]}"
+                        branch_relations.append(GanZhiRelation(
+                            type="六合",
+                            positions=[i, j],
+                            description=f"{pos_desc} 合化{element}",
+                            element=element,
+                        ))
+                        break
+        
+        # 5. 地支三合（检查所有可能的三元组合）
+        for combo_set, element in self.BRANCH_THREE_COMBINATIONS.items():
+            positions = []
+            for branch in combo_set:
+                for idx, b in enumerate(branches):
+                    if b == branch and idx not in positions:
+                        positions.append(idx)
+                        break
+            
+            if len(positions) >= 2:
+                found_branches = [branches[p] for p in positions]
+                sorted_pos = sorted(positions)
+                pos_desc = "".join([f"{position_names[p]}{branches[p]}" for p in sorted_pos])
+                
+                if len(positions) == 3:
+                    branch_relations.append(GanZhiRelation(
+                        type="三合",
+                        positions=sorted_pos,
+                        description=f"{pos_desc} 三合{element}",
+                        element=element,
+                    ))
+                else:
+                    branch_relations.append(GanZhiRelation(
+                        type="半合",
+                        positions=sorted_pos,
+                        description=f"{pos_desc} 半合{element}",
+                        element=element,
+                    ))
+        
+        # 6. 地支三会
+        for combo_set, element in self.BRANCH_THREE_MEETINGS.items():
+            positions = []
+            for branch in combo_set:
+                for idx, b in enumerate(branches):
+                    if b == branch and idx not in positions:
+                        positions.append(idx)
+                        break
+            
+            if len(positions) == 3:
+                sorted_pos = sorted(positions)
+                pos_desc = "".join([f"{position_names[p]}{branches[p]}" for p in sorted_pos])
+                branch_relations.append(GanZhiRelation(
+                    type="三会",
+                    positions=sorted_pos,
+                    description=f"{pos_desc} 会{element}方",
+                    element=element,
+                ))
+        
+        # 7. 地支六冲
+        for i in range(num_pillars):
+            for j in range(i + 1, num_pillars):
+                pair = (branches[i], branches[j])
+                pair_rev = (branches[j], branches[i])
+                for clash_pair in self.BRANCH_SIX_CLASHES:
+                    if pair == clash_pair or pair_rev == clash_pair:
+                        pos_desc = f"{position_names[i]}{branches[i]}-{position_names[j]}{branches[j]}"
+                        branch_relations.append(GanZhiRelation(
+                            type="六冲",
+                            positions=[i, j],
+                            description=f"{pos_desc} 冲",
+                            element=None,
+                        ))
+                        break
+        
+        # 8. 地支相刑
+        for punishment_type, pairs in self.BRANCH_PUNISHMENTS.items():
+            for pair in pairs:
+                if pair[0] == pair[1]:
+                    # 自刑：检查同一个地支出现两次
+                    positions = [idx for idx, b in enumerate(branches) if b == pair[0]]
+                    if len(positions) >= 2:
+                        pos_desc = "".join([f"{position_names[p]}{branches[p]}" for p in positions[:2]])
+                        branch_relations.append(GanZhiRelation(
+                            type="自刑",
+                            positions=positions[:2],
+                            description=f"{pos_desc} 自刑",
+                            element=None,
+                        ))
+                else:
+                    # 其他刑：检查两个地支是否都存在
+                    pos1 = [idx for idx, b in enumerate(branches) if b == pair[0]]
+                    pos2 = [idx for idx, b in enumerate(branches) if b == pair[1]]
+                    if pos1 and pos2:
+                        pos_desc = f"{position_names[pos1[0]]}{branches[pos1[0]]}-{position_names[pos2[0]]}{branches[pos2[0]]}"
+                        branch_relations.append(GanZhiRelation(
+                            type="相刑",
+                            positions=[pos1[0], pos2[0]],
+                            description=f"{pos_desc} {punishment_type}",
+                            element=None,
+                        ))
+        
+        # 9. 地支相害
+        for i in range(num_pillars):
+            for j in range(i + 1, num_pillars):
+                pair = (branches[i], branches[j])
+                pair_rev = (branches[j], branches[i])
+                for harm_pair in self.BRANCH_HARMS:
+                    if pair == harm_pair or pair_rev == harm_pair:
+                        pos_desc = f"{position_names[i]}{branches[i]}-{position_names[j]}{branches[j]}"
+                        branch_relations.append(GanZhiRelation(
+                            type="相害",
+                            positions=[i, j],
+                            description=f"{pos_desc} 害",
+                            element=None,
+                        ))
+                        break
+        
+        return {
+            "extended_stem_relations": stem_relations,
+            "extended_branch_relations": branch_relations,
+        }

@@ -411,19 +411,17 @@
       <div class="panel ganzi-card">
         <div class="card-header">
           <div class="card-title">干支关系</div>
-          <span class="badge">本命</span>
+          <div class="mode-toggle-switch" @click="toggleGanziMode">
+            <div class="mode-toggle-options">
+              <span :class="['mode-option', { 'active': !isCurrentMode }]">本命</span>
+              <span :class="['mode-option', { 'active': isCurrentMode }]">当前</span>
+            </div>
+            <div :class="['mode-toggle-pill', { 'right': isCurrentMode }]"></div>
+          </div>
         </div>
         
         <div class="ganzi-diagram">
-          <!-- 柱标签行 -->
-          <div class="ganzi-labels">
-            <div class="ganzi-label">年柱</div>
-            <div class="ganzi-label">月柱</div>
-            <div class="ganzi-label">日柱</div>
-            <div class="ganzi-label">时柱</div>
-          </div>
-
-          <!-- SVG 连线层 + 天干地支显示 -->
+          <!-- SVG 连线层 + 天干地支显示 + 柱标签（统一在 SVG 中绘制） -->
           <div class="ganzi-svg-container">
             <svg class="ganzi-svg" :viewBox="`0 0 ${svgWidth} ${svgHeight}`" :style="{ minHeight: svgHeight + 'px' }" preserveAspectRatio="xMidYMid meet">
               <defs>
@@ -459,6 +457,19 @@
                 <!-- 同柱天干-地支相生连线：按地支五行色直接描边（无需渐变） -->
               </defs>
               
+              <!-- 柱标签（年柱、月柱、日柱、时柱） -->
+              <g class="pillar-labels">
+                <text 
+                  v-for="(label, idx) in pillarLabels" 
+                  :key="`label-${idx}`"
+                  :x="getPillarX(idx)" 
+                  :y="labelY"
+                  text-anchor="middle"
+                  dominant-baseline="middle"
+                  class="pillar-label-text"
+                >{{ label }}</text>
+              </g>
+
               <!-- 天干关系连线（在天干上方绘制） -->
               <g class="stem-connections">
                 <template v-for="(conn, idx) in stemConnectionLines" :key="`stem-${idx}`">
@@ -558,29 +569,79 @@
 
         <!-- 关系说明区域 -->
         <div class="ganzi-summary">
-          <div v-if="stemRelationsData.length" class="ganzi-summary-item">
-            <span class="summary-label">天干本命</span>
-            <div class="summary-pills">
-              <span 
-                v-for="(rel, idx) in stemRelationsData" 
-                :key="`stem-rel-${idx}`"
-                :class="['relation-pill', `pill-${rel.cssType}`]"
-              >{{ rel.description }}</span>
+          <!-- 本命模式 -->
+          <template v-if="!isCurrentMode">
+            <div v-if="stemRelationsData.length" class="ganzi-summary-item">
+              <span class="summary-label">天干本命</span>
+              <div class="summary-pills">
+                <span 
+                  v-for="(rel, idx) in stemRelationsData" 
+                  :key="`stem-rel-${idx}`"
+                  :class="['relation-pill', `pill-${rel.cssType}`]"
+                >{{ rel.description }}</span>
+              </div>
             </div>
-          </div>
-          <div v-if="branchRelationsData.length" class="ganzi-summary-item">
-            <span class="summary-label">地支本命</span>
-            <div class="summary-pills">
-              <span 
-                v-for="(rel, idx) in branchRelationsData" 
-                :key="`branch-rel-${idx}`"
-                :class="['relation-pill', `pill-${rel.cssType}`]"
-              >{{ rel.description }}</span>
+            <div v-if="branchRelationsData.length" class="ganzi-summary-item">
+              <span class="summary-label">地支本命</span>
+              <div class="summary-pills">
+                <span 
+                  v-for="(rel, idx) in branchRelationsData" 
+                  :key="`branch-rel-${idx}`"
+                  :class="['relation-pill', `pill-${rel.cssType}`]"
+                >{{ rel.description }}</span>
+              </div>
             </div>
-          </div>
-          <div v-if="!stemRelationsData.length && !branchRelationsData.length" class="muted">
-            本命四柱无明显刑冲合会关系
-          </div>
+            <div v-if="!stemRelationsData.length && !branchRelationsData.length" class="muted">
+              本命四柱无明显刑冲合会关系
+            </div>
+          </template>
+          
+          <!-- 当前模式：显示本命和运势 -->
+          <template v-else>
+            <div v-if="stemRelationsData.length" class="ganzi-summary-item">
+              <span class="summary-label">天干本命</span>
+              <div class="summary-pills">
+                <span 
+                  v-for="(rel, idx) in stemRelationsData" 
+                  :key="`stem-rel-${idx}`"
+                  :class="['relation-pill', `pill-${rel.cssType}`]"
+                >{{ rel.description }}</span>
+              </div>
+            </div>
+            <div v-if="branchRelationsData.length" class="ganzi-summary-item">
+              <span class="summary-label">地支本命</span>
+              <div class="summary-pills">
+                <span 
+                  v-for="(rel, idx) in branchRelationsData" 
+                  :key="`branch-rel-${idx}`"
+                  :class="['relation-pill', `pill-${rel.cssType}`]"
+                >{{ rel.description }}</span>
+              </div>
+            </div>
+            <div v-if="stemFortuneRelationsData.length" class="ganzi-summary-item">
+              <span class="summary-label">天干运势</span>
+              <div class="summary-pills">
+                <span 
+                  v-for="(rel, idx) in stemFortuneRelationsData" 
+                  :key="`stem-fortune-${idx}`"
+                  :class="['relation-pill', `pill-${rel.cssType}`]"
+                >{{ rel.description }}</span>
+              </div>
+            </div>
+            <div v-if="branchFortuneRelationsData.length" class="ganzi-summary-item">
+              <span class="summary-label">地支运势</span>
+              <div class="summary-pills">
+                <span 
+                  v-for="(rel, idx) in branchFortuneRelationsData" 
+                  :key="`branch-fortune-${idx}`"
+                  :class="['relation-pill', `pill-${rel.cssType}`]"
+                >{{ rel.description }}</span>
+              </div>
+            </div>
+            <div v-if="!stemRelationsData.length && !branchRelationsData.length && !stemFortuneRelationsData.length && !branchFortuneRelationsData.length" class="muted">
+              当前无明显刑冲合会关系
+            </div>
+          </template>
         </div>
 
         <div class="ganzi-note muted">
@@ -592,8 +653,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-import type { Chart } from "../types";
+import { computed, ref } from "vue";
+import type { Chart, GanZhiRelation, PillarInfo, HeavenStemInfo, EarthBranchInfo } from "../types";
 // 导入性别图标
 import maleIconUrl from "../assets/male-icon.png";
 import femaleIconUrl from "../assets/female-icon.png";
@@ -601,6 +662,13 @@ import femaleIconUrl from "../assets/female-icon.png";
 const props = defineProps<{
   chart: Chart | null;
 }>();
+
+// 干支关系模式切换：false=本命(4柱), true=当前(6柱，包含大运和流年)
+const isCurrentMode = ref(false);
+
+const toggleGanziMode = () => {
+  isCurrentMode.value = !isCurrentMode.value;
+};
 
 // 农历数字转中文
 const lunarMonthNames = [
@@ -858,45 +926,151 @@ const elementIcon = (element: string) => {
 
 // ========== 干支关系卡片相关 ==========
 
-// SVG 尺寸配置
-const svgWidth = 400;
-const pillarSpacing = 90; // 柱之间的间距
+// 计算年份对应的天干地支（用于流年）
+const getYearGanZhi = (year: number): PillarInfo => {
+  const stems = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+  const branches = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+  const stemElements = ['木', '木', '火', '火', '土', '土', '金', '金', '水', '水'];
+  const branchElements = ['水', '土', '木', '木', '土', '火', '火', '土', '金', '金', '土', '水'];
+  
+  // 天干：从甲子年（1984年，年份%10=4对应甲）开始计算
+  const stemIndex = (year - 4) % 10;
+  // 地支：从甲子年（1984年，年份%12=0对应子）开始计算
+  const branchIndex = (year - 4) % 12;
+  
+  return {
+    heaven_stem: {
+      name: stems[stemIndex],
+      element: stemElements[stemIndex],
+      yinyang: stemIndex % 2 === 0 ? '阳' : '阴',
+      ten_god: '', // 流年不需要十神
+    },
+    earth_branch: {
+      name: branches[branchIndex],
+      element: branchElements[branchIndex],
+      yinyang: branchIndex % 2 === 0 ? '阳' : '阴',
+      hidden_stems: [], // 简化处理，不计算藏干
+    },
+  };
+};
+
+// 获取当前大运（根据当前日期）
+const getCurrentDestinyPillar = computed((): PillarInfo | null => {
+  if (!props.chart?.destiny_cycle) return null;
+  
+  const birthDate = new globalThis.Date(props.chart.solar_datetime);
+  const now = new globalThis.Date();
+  
+  // 计算起运时间
+  const startAge = props.chart.destiny_cycle.start_age;
+  const qiyunDate = new globalThis.Date(birthDate);
+  qiyunDate.setFullYear(birthDate.getFullYear() + startAge.year);
+  qiyunDate.setMonth(birthDate.getMonth() + startAge.month);
+  qiyunDate.setDate(birthDate.getDate() + startAge.day);
+  
+  // 如果还未起运，返回null
+  if (now < qiyunDate) return null;
+  
+  // 计算当前年龄（周岁）
+  let age = now.getFullYear() - birthDate.getFullYear();
+  if (now.getMonth() < birthDate.getMonth() || 
+     (now.getMonth() === birthDate.getMonth() && now.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  
+  // 计算处于第几步大运（每步10年）
+  const yearsAfterQiyun = age - startAge.year;
+  const destinyIndex = globalThis.Math.floor(yearsAfterQiyun / 10);
+  
+  // 获取对应的大运
+  const pillars = props.chart.destiny_cycle.destiny_pillars;
+  if (destinyIndex < 0 || destinyIndex >= pillars.length) return null;
+  
+  const destinyPillar = pillars[destinyIndex];
+  return {
+    heaven_stem: destinyPillar.heaven_stem,
+    earth_branch: destinyPillar.earth_branch,
+  };
+});
+
+// 获取当前流年
+const getCurrentYearPillar = computed((): PillarInfo => {
+  const currentYear = new globalThis.Date().getFullYear();
+  return getYearGanZhi(currentYear);
+});
+
+// SVG 尺寸配置（动态根据模式调整）
+const pillarCount = computed(() => isCurrentMode.value ? 6 : 4);
+const pillarSpacing = computed(() => isCurrentMode.value ? 70 : 90); // 6柱时间距缩小
+const svgWidth = computed(() => {
+  return pillarSpacing.value * (pillarCount.value - 1) + 100; // 左右各留50px
+});
 const startX = 50; // 第一个柱的 X 坐标
 
-// 动态计算天干关系区域需要的高度
+// 动态计算天干关系区域需要的高度（包括顶部标签空间）
 const stemAreaHeight = computed(() => {
-  if (!props.chart?.ganzi_relations) return 40;
-  const stemCount = props.chart.ganzi_relations.stem_relations.length;
-  return stemCount > 0 ? stemCount * 25 + 40 : 40; // 每行25px + 基础空间
+  if (!props.chart?.ganzi_relations) return 60;
+  const relations = visibleStemRelations.value;
+  // 使用行分配算法计算实际需要的行数
+  const rowMap = allocateRelationsToRows(relations);
+  const rowCount = rowMap.size;
+  return rowCount > 0 ? rowCount * 25 + 60 : 60; // 每行25px + 基础空间（包含标签空间）
 });
 
 // Y 坐标配置（动态）
+const labelY = 20; // 柱标签 Y 坐标（固定在顶部）
 const stemLineBaseY = computed(() => stemAreaHeight.value); // 天干连线基准 Y
 const stemY = computed(() => stemAreaHeight.value + 40); // 天干 Y 坐标
 const branchY = computed(() => stemAreaHeight.value + 110); // 地支 Y 坐标  
 const branchLineBaseY = computed(() => stemAreaHeight.value + 160); // 地支连线基准 Y（下方）
 
+// 柱标签文本（动态根据模式）
+const pillarLabels = computed(() => {
+  if (isCurrentMode.value) {
+    return ['流年', '大运', '年柱', '月柱', '日柱', '时柱'];
+  }
+  return ['年柱', '月柱', '日柱', '时柱'];
+});
+
 // 动态计算 SVG 高度：根据关系数量调整
 const svgHeight = computed(() => {
   if (!props.chart?.ganzi_relations) return 200;
-  // 每个关系占一行，统计总行数
-  const branchCount = props.chart.ganzi_relations.branch_relations.length;
+  
+  // 使用行分配算法计算实际需要的行数
+  const branchRowMap = allocateRelationsToRows(visibleBranchRelations.value);
+  const branchRowCount = branchRowMap.size;
   
   // 天干区域高度（已在 stemAreaHeight 中计算）
   // 字符区域：天干+地支 = 110px
   // 地支关系区域高度：每行24px + 基础空间
   const charAreaHeight = 110;
-  const branchAreaHeight = branchCount > 0 ? branchCount * 24 + 40 : 40;
+  const branchAreaHeight = branchRowCount > 0 ? branchRowCount * 24 + 40 : 40;
   
   return stemAreaHeight.value + charAreaHeight + branchAreaHeight;
 });
 
-// 获取柱的 X 坐标（0=时,1=日,2=月,3=年）
-const getPillarX = (index: number) => startX + index * pillarSpacing;
+// 获取柱的 X 坐标
+const getPillarX = (index: number) => startX + index * pillarSpacing.value;
 
-// 四柱天干信息（按年月日时顺序，从左到右）
-const ganziStems = computed(() => {
+// 天干信息（动态根据模式：4柱或6柱）
+const ganziStems = computed((): HeavenStemInfo[] => {
   if (!props.chart) return [];
+  
+  // 当前模式：流年、大运、年柱、月柱、日柱、时柱
+  if (isCurrentMode.value) {
+    const destinyPillar = getCurrentDestinyPillar.value;
+    const yearPillar = getCurrentYearPillar.value;
+    return [
+      yearPillar.heaven_stem, // 流年
+      destinyPillar ? destinyPillar.heaven_stem : yearPillar.heaven_stem, // 大运
+      props.chart.year_pillar.heaven_stem, // 年柱
+      props.chart.month_pillar.heaven_stem, // 月柱
+      props.chart.day_pillar.heaven_stem, // 日柱
+      props.chart.hour_pillar.heaven_stem, // 时柱
+    ];
+  }
+  
+  // 本命模式：年柱、月柱、日柱、时柱
   return [
     props.chart.year_pillar.heaven_stem,
     props.chart.month_pillar.heaven_stem,
@@ -905,9 +1079,25 @@ const ganziStems = computed(() => {
   ];
 });
 
-// 四柱地支信息（按年月日时顺序，从左到右）
-const ganziBranches = computed(() => {
+// 地支信息（动态根据模式：4柱或6柱）
+const ganziBranches = computed((): EarthBranchInfo[] => {
   if (!props.chart) return [];
+  
+  // 当前模式：流年、大运、年柱、月柱、日柱、时柱
+  if (isCurrentMode.value) {
+    const destinyPillar = getCurrentDestinyPillar.value;
+    const yearPillar = getCurrentYearPillar.value;
+    return [
+      yearPillar.earth_branch, // 流年
+      destinyPillar ? destinyPillar.earth_branch : yearPillar.earth_branch, // 大运
+      props.chart.year_pillar.earth_branch, // 年柱
+      props.chart.month_pillar.earth_branch, // 月柱
+      props.chart.day_pillar.earth_branch, // 日柱
+      props.chart.hour_pillar.earth_branch, // 时柱
+    ];
+  }
+  
+  // 本命模式：年柱、月柱、日柱、时柱
   return [
     props.chart.year_pillar.earth_branch,
     props.chart.month_pillar.earth_branch,
@@ -916,11 +1106,63 @@ const ganziBranches = computed(() => {
   ];
 });
 
-// 位置索引映射：后端返回的位置索引（0=年,1=月,2=日,3=时）与前端显示顺序一致
-const mapPosition = (backendPos: number): number => {
-  // 后端和前端顺序一致: 0=年, 1=月, 2=日, 3=时
-  return backendPos;
+// 柱标识到显示位置的映射（根据模式动态）
+const pillarPositionMap = computed(() => {
+  if (isCurrentMode.value) {
+    // 当前模式：流年、大运、年、月、日、时
+    return {
+      'year_fortune': 0,
+      'destiny': 1,
+      'year': 2,
+      'month': 3,
+      'day': 4,
+      'hour': 5
+    };
+  } else {
+    // 本命模式：年、月、日、时
+    return {
+      'year': 0,
+      'month': 1,
+      'day': 2,
+      'hour': 3
+    };
+  }
+});
+
+// 根据柱标识获取显示位置
+const getPillarPosition = (pillarId: string): number | undefined => {
+  return pillarPositionMap.value[pillarId as keyof typeof pillarPositionMap.value];
 };
+
+// 将关系的柱标识转换为显示位置数组
+const getRelationPositions = (relation: GanZhiRelation): number[] => {
+  return relation.pillars
+    .map(pillarId => getPillarPosition(pillarId))
+    .filter((pos): pos is number => pos !== undefined)
+    .sort((a, b) => a - b);
+};
+
+// 过滤可见的关系
+const getVisibleRelations = (relations: GanZhiRelation[]): GanZhiRelation[] => {
+  if (!relations) return [];
+  if (isCurrentMode.value) {
+    // 当前模式：显示所有关系
+    return relations;
+  } else {
+    // 本命模式：只显示不涉及大运流年的关系
+    return relations.filter(rel => !rel.involves_fortune);
+  }
+};
+
+// 可见的天干关系
+const visibleStemRelations = computed(() => {
+  return getVisibleRelations(props.chart?.ganzi_relations?.stem_relations || []);
+});
+
+// 可见的地支关系
+const visibleBranchRelations = computed(() => {
+  return getVisibleRelations(props.chart?.ganzi_relations?.branch_relations || []);
+});
 
 // 连线数据结构
 interface ConnectionLine {
@@ -982,137 +1224,278 @@ const createBranchArc = (pos1: number, pos2: number, level: number): string => {
           L ${x2} ${y1}`;
 };
 
-// 天干连线数据（每个关系独立占一行）
+// 关系行分配算法：让不重叠的关系共享同一行
+// 使用"格子模型"：四柱之间有3个空位 [年-月, 月-日, 日-时]
+interface RelationWithSpan {
+  relation: GanZhiRelation;
+  positions: number[]; // 排序后的位置
+  span: number; // 跨度（最大位置 - 最小位置）
+  minPos: number;
+  maxPos: number;
+}
+
+// 计算关系占用的格子（0-based，3个格子：0=年月间，1=月日间，2=日时间）
+const getOccupiedSlots = (minPos: number, maxPos: number): number[] => {
+  const slots: number[] = [];
+  for (let i = minPos; i < maxPos; i++) {
+    slots.push(i);
+  }
+  return slots;
+};
+
+// 分配关系到行（使用优化的算法，尝试找到更紧凑的布局）
+const allocateRelationsToRows = (relations: GanZhiRelation[]): Map<number, GanZhiRelation[]> => {
+  // 1. 计算每个关系的跨度，过滤无效关系
+  const relationsWithSpan: RelationWithSpan[] = relations
+    .map(rel => {
+      const positions = getRelationPositions(rel);
+      if (positions.length < 2) return null;
+
+      const minPos = positions[0];
+      const maxPos = positions[positions.length - 1];
+      return {
+        relation: rel,
+        positions,
+        span: maxPos - minPos,
+        minPos,
+        maxPos,
+      };
+    })
+    .filter((item): item is RelationWithSpan => item !== null);
+
+  // 2. 使用多重策略排序
+  // 主要策略：优先处理占据重要位置（如当前模式的早期位置）的关系
+  relationsWithSpan.sort((a, b) => {
+    // 优先级1：跨度越小越优先（短关系优先）
+    const spanDiff = a.span - b.span;
+    if (spanDiff !== 0) return spanDiff;
+
+    // 优先级2：最小位置越靠前越优先（从左到右顺序）
+    const minPosDiff = a.minPos - b.minPos;
+    if (minPosDiff !== 0) return minPosDiff;
+
+    // 优先级3：最大位置越靠前越优先（避免过长关系被积压）
+    return a.maxPos - b.maxPos;
+  });
+
+  // 3. 使用优化的行分配算法
+  const rows: Map<number, GanZhiRelation[]> = new Map();
+  const rowOccupancy: Set<number>[] = []; // 每行的占用格子集合
+
+  // 尝试为每个关系找到最佳行（保持顺序但寻找空隙）
+  for (const item of relationsWithSpan) {
+    const requiredSlots = getOccupiedSlots(item.minPos, item.maxPos);
+
+    // 寻找可以容纳该关系的最佳行
+    let bestRow = -1;
+    let bestFitScore = Infinity;
+
+    // 检查所有已存在的行
+    for (let row = 0; row < rowOccupancy.length; row++) {
+      const occupied = rowOccupancy[row];
+
+      // 计算重叠度（已有关系与当前关系的交集）
+      let overlap = 0;
+      for (const slot of requiredSlots) {
+        if (occupied.has(slot)) {
+          overlap++;
+        }
+      }
+
+      // 如果无重叠，这是一个候选行
+      if (overlap === 0) {
+        // 计算适配分数：优先考虑靠近已占用区域的行（紧凑布局）
+        const occupiedArray = Array.from(occupied).sort((a, b) => a - b);
+        const minOccupied = occupiedArray[0] || 0;
+        const maxOccupied = occupiedArray[occupiedArray.length - 1] || 0;
+
+        // 计算关系位置与已占用位置的"距离"，越小越好
+        const distanceAfter = Math.max(0, item.minPos - maxOccupied);
+        const distanceBefore = Math.max(0, minOccupied - item.maxPos);
+
+        // 优先选择可以紧密连接的行
+        const fitScore = Math.min(
+          distanceAfter === 0 ? 0 : distanceAfter + 100, // 给予紧密连接更高优先级
+          distanceBefore === 0 ? 0 : distanceBefore + 100
+        );
+
+        if (fitScore < bestFitScore) {
+          bestRow = row;
+          bestFitScore = fitScore;
+        }
+      }
+    }
+
+    // 如果找到合适的行，使用它；否则创建新行
+    if (bestRow >= 0) {
+      // 使用最佳行
+      if (!rows.has(bestRow)) {
+        rows.set(bestRow, []);
+      }
+      rows.get(bestRow)!.push(item.relation);
+
+      // 标记格子为已占用
+      requiredSlots.forEach(slot => rowOccupancy[bestRow].add(slot));
+    } else {
+      // 创建新行
+      const newRow = rowOccupancy.length;
+
+      if (!rows.has(newRow)) {
+        rows.set(newRow, []);
+      }
+      rows.get(newRow)!.push(item.relation);
+
+      // 创建新行的占用集合
+      const newOccupied = new Set<number>();
+      requiredSlots.forEach(slot => newOccupied.add(slot));
+      rowOccupancy.push(newOccupied);
+    }
+  }
+
+  return rows;
+};
+
+// 天干连线数据（使用优化的行分配算法）
 const stemConnectionLines = computed<ConnectionLine[]>(() => {
   if (!props.chart?.ganzi_relations) return [];
-  const relations = props.chart.ganzi_relations.stem_relations;
+  
+  const relations = visibleStemRelations.value;
   const lines: ConnectionLine[] = [];
   
-  // 每个关系独立分配一个 level（行号）
-  for (let idx = 0; idx < relations.length; idx++) {
-    const rel = relations[idx];
-    if (rel.positions.length < 2) continue;
-    
-    const level = idx; // 每个关系独立占一行
-    const pos1 = mapPosition(rel.positions[0]);
-    const pos2 = mapPosition(rel.positions[1]);
-    const [p1, p2] = pos1 < pos2 ? [pos1, pos2] : [pos2, pos1];
-    
-    const path = createStemArc(p1, p2, level);
-    const midX = (getPillarX(p1) + getPillarX(p2)) / 2;
-    const labelY = stemLineBaseY.value - level * 25; // pill在折线顶部
-    
-    // 显示完整关系描述（简化版）
-    let label = '';
-    if (rel.type === '合化' && rel.element) {
-      label = `合化${rel.element}`;
-    } else if (rel.type === '相冲') {
-      label = '冲';
-    } else if (rel.type === '相克') {
-      label = '克';
-    }
-    
-    const cssType = getRelationCssType(rel.type);
-    
-    // 获取两端天干的五行元素
-    const stems = ganziStems.value;
-    const element1 = stems[pos1]?.element || '木';
-    const element2 = stems[pos2]?.element || '木';
-    const gradientId = `stem-gradient-${idx}`;
-    
-    lines.push({
-      path,
-      type: rel.type,
-      cssType,
-      label,
-      labelX: midX,
-      labelY,
-      element1,
-      element2,
-      gradientId,
-    });
-  }
+  // 使用优化算法分配关系到行
+  const rowMap = allocateRelationsToRows(relations);
   
-  return lines;
-});
-
-// 地支连线数据（每个关系独立占一行）
-const branchConnectionLines = computed<ConnectionLine[]>(() => {
-  if (!props.chart?.ganzi_relations) return [];
-  const relations = props.chart.ganzi_relations.branch_relations;
-  const lines: ConnectionLine[] = [];
+  let gradientCounter = 0;
   
-  // 每个关系独立分配一个 level（行号）
-  let segmentCounter = 0; // 用于生成唯一的渐变 ID
-  for (let idx = 0; idx < relations.length; idx++) {
-    const rel = relations[idx];
-    if (rel.positions.length < 2) continue;
-    
-    const level = idx; // 每个关系独立占一行
-    
-    // 对于多位置关系（如三合），连接所有相邻对
-    const positions = rel.positions.map(mapPosition).sort((a, b) => a - b);
-    
-    // 计算整个关系的中央 X 坐标（所有参与位置的平均值）
-    const relationCenterX = positions.reduce((sum, pos) => sum + getPillarX(pos), 0) / positions.length;
-    
-    // 生成关系标签（只生成一次）
-    let relationLabel = '';
-    if (rel.type === '六合' && rel.element) {
-      relationLabel = `合化${rel.element}`;
-    } else if (rel.type === '三合') {
-      relationLabel = rel.element ? `三合${rel.element}` : '三合';
-    } else if (rel.type === '半合') {
-      relationLabel = rel.element ? `半合${rel.element}` : '半合';
-    } else if (rel.type === '六冲') {
-      relationLabel = '冲';
-    } else if (rel.type === '相刑') {
-      relationLabel = '刑';
-    } else if (rel.type === '自刑') {
-      relationLabel = '自刑';
-    } else if (rel.type === '相害') {
-      relationLabel = '害';
-    } else if (rel.type === '三会') {
-      relationLabel = rel.element ? `会${rel.element}` : '会';
-    }
-    
-    // 对于多位置关系，将标签放在中间段
-    const midIndex = Math.floor(positions.length / 2);
-    const labelPosIdx = positions.length === 2 ? 0 : midIndex;
-    
-    const labelY = branchLineBaseY.value + level * 24;
-    
-    for (let i = 0; i < positions.length - 1; i++) {
-      const p1 = positions[i];
-      const p2 = positions[i + 1];
+  // 遍历每一行，绘制该行的所有关系
+  rowMap.forEach((rowRelations, level) => {
+    for (const rel of rowRelations) {
+      const positions = getRelationPositions(rel);
+      if (positions.length < 2) continue;
       
-      const path = createBranchArc(p1, p2, level);
+      const p1 = positions[0];
+      const p2 = positions[positions.length - 1];
       
-      // 标签只在中间段显示，且使用整个关系的中央 X 坐标
-      const label = (i === labelPosIdx) ? relationLabel : '';
-      const labelX = relationCenterX; // 使用整个关系的中央位置
+      const path = createStemArc(p1, p2, level);
+      const midX = (getPillarX(p1) + getPillarX(p2)) / 2;
+      const labelY = stemLineBaseY.value - level * 25;
+      
+      // 显示完整关系描述（简化版）
+      let label = '';
+      if (rel.type === '合化' && rel.element) {
+        label = `合化${rel.element}`;
+      } else if (rel.type === '相冲') {
+        label = '冲';
+      } else if (rel.type === '相克') {
+        label = '克';
+      }
       
       const cssType = getRelationCssType(rel.type);
       
-      // 获取两端地支的五行元素
-      const branches = ganziBranches.value;
-      const element1 = branches[p1]?.element || '木';
-      const element2 = branches[p2]?.element || '木';
-      const gradientId = `branch-gradient-${segmentCounter++}`;
+      // 获取两端天干的五行元素
+      const stems = ganziStems.value;
+      const element1 = stems[p1]?.element || '木';
+      const element2 = stems[p2]?.element || '木';
+      const gradientId = `stem-gradient-${gradientCounter++}`;
       
       lines.push({
         path,
         type: rel.type,
         cssType,
         label,
-        labelX,
+        labelX: midX,
         labelY,
         element1,
         element2,
         gradientId,
       });
     }
-  }
+  });
+  
+  return lines;
+});
+
+// 地支连线数据（使用优化的行分配算法）
+const branchConnectionLines = computed<ConnectionLine[]>(() => {
+  if (!props.chart?.ganzi_relations) return [];
+  
+  const relations = visibleBranchRelations.value;
+  const lines: ConnectionLine[] = [];
+  
+  // 使用优化算法分配关系到行
+  const rowMap = allocateRelationsToRows(relations);
+  
+  let segmentCounter = 0; // 用于生成唯一的渐变 ID
+  
+  // 遍历每一行，绘制该行的所有关系
+  rowMap.forEach((rowRelations, level) => {
+    for (const rel of rowRelations) {
+      // 对于多位置关系（如三合），连接所有相邻对
+      const positions = getRelationPositions(rel);
+      if (positions.length < 2) continue;
+      
+      // 计算整个关系的中央 X 坐标（所有参与位置的平均值）
+      const relationCenterX = positions.reduce((sum: number, pos: number) => sum + getPillarX(pos), 0) / positions.length;
+      
+      // 生成关系标签（只生成一次）
+      let relationLabel = '';
+      if (rel.type === '六合' && rel.element) {
+        relationLabel = `合化${rel.element}`;
+      } else if (rel.type === '三合') {
+        relationLabel = rel.element ? `三合${rel.element}` : '三合';
+      } else if (rel.type === '半合') {
+        relationLabel = rel.element ? `半合${rel.element}` : '半合';
+      } else if (rel.type === '六冲') {
+        relationLabel = '冲';
+      } else if (rel.type === '相刑') {
+        relationLabel = '刑';
+      } else if (rel.type === '自刑') {
+        relationLabel = '自刑';
+      } else if (rel.type === '相害') {
+        relationLabel = '害';
+      } else if (rel.type === '三会') {
+        relationLabel = rel.element ? `会${rel.element}` : '会';
+      }
+      
+      // 对于多位置关系，将标签放在中间段
+      const midIndex = Math.floor(positions.length / 2);
+      const labelPosIdx = positions.length === 2 ? 0 : midIndex;
+      
+      const labelY = branchLineBaseY.value + level * 24;
+      
+      // 绘制关系的所有线段（对于三元关系如三合，需要绘制多条线段）
+      for (let i = 0; i < positions.length - 1; i++) {
+        const p1 = positions[i];
+        const p2 = positions[i + 1];
+        
+        const path = createBranchArc(p1, p2, level);
+        
+        // 标签只在中间段显示，且使用整个关系的中央 X 坐标
+        const label = (i === labelPosIdx) ? relationLabel : '';
+        const labelX = relationCenterX; // 使用整个关系的中央位置
+        
+        const cssType = getRelationCssType(rel.type);
+        
+        // 获取两端地支的五行元素
+        const branches = ganziBranches.value;
+        const element1 = branches[p1]?.element || '木';
+        const element2 = branches[p2]?.element || '木';
+        const gradientId = `branch-gradient-${segmentCounter++}`;
+        
+        lines.push({
+          path,
+          type: rel.type,
+          cssType,
+          label,
+          labelX,
+          labelY,
+          element1,
+          element2,
+          gradientId,
+        });
+      }
+    }
+  });
   
   return lines;
 });
@@ -1127,19 +1510,24 @@ interface StemBranchLine {
 
 const stemBranchLines = computed<StemBranchLine[]>(() => {
   if (!props.chart?.ganzi_relations) return [];
-  const relations = props.chart.ganzi_relations.stem_branch_relations;
+  
+  // 过滤可见的关系
+  const allRelations = props.chart.ganzi_relations.stem_branch_relations || [];
+  const relations = getVisibleRelations(allRelations);
+  
   const lines: StemBranchLine[] = [];
   
-  for (let i = 0; i < relations.length; i++) {
-    const rel = relations[i];
-    if (rel.positions.length !== 1) continue;
-    const pos = mapPosition(rel.positions[0]);
+  for (const rel of relations) {
+    if (rel.pillars.length !== 1) continue;
+    
+    const pos = getPillarPosition(rel.pillars[0]);
+    if (pos === undefined) continue;
     
     // 获取地支和天干的五行
     const branch = ganziBranches.value[pos];
     const branchElement = branch?.element || '木';
 
-    // 仅展示“地支生天干”的相生关系（后端也只会返回这一类）
+    // 仅展示"地支生天干"的相生关系（后端也只会返回这一类）
     if (rel.type !== '相生') continue;
     
     lines.push({
@@ -1169,21 +1557,47 @@ const getRelationCssType = (type: string): string => {
   return 'neutral';
 };
 
-// 天干关系数据（带 CSS 类型）
+// 天干关系数据（本命，带 CSS 类型）
 const stemRelationsData = computed(() => {
   if (!props.chart?.ganzi_relations) return [];
-  return props.chart.ganzi_relations.stem_relations.map(rel => ({
-    description: rel.description,
-    cssType: getRelationCssType(rel.type),
-  }));
+  return props.chart.ganzi_relations.stem_relations
+    .filter(rel => !rel.involves_fortune)
+    .map(rel => ({
+      description: rel.description,
+      cssType: getRelationCssType(rel.type),
+    }));
 });
 
-// 地支关系数据（带 CSS 类型）
+// 地支关系数据（本命，带 CSS 类型）
 const branchRelationsData = computed(() => {
   if (!props.chart?.ganzi_relations) return [];
-  return props.chart.ganzi_relations.branch_relations.map(rel => ({
-    description: rel.description,
-    cssType: getRelationCssType(rel.type),
-  }));
+  return props.chart.ganzi_relations.branch_relations
+    .filter(rel => !rel.involves_fortune)
+    .map(rel => ({
+      description: rel.description,
+      cssType: getRelationCssType(rel.type),
+    }));
+});
+
+// 天干运势关系数据（涉及大运或流年天干的关系）
+const stemFortuneRelationsData = computed(() => {
+  if (!props.chart?.ganzi_relations || !isCurrentMode.value) return [];
+  return props.chart.ganzi_relations.stem_relations
+    .filter(rel => rel.involves_fortune)
+    .map(rel => ({
+      description: rel.description,
+      cssType: getRelationCssType(rel.type),
+    }));
+});
+
+// 地支运势关系数据（涉及大运或流年地支的关系）
+const branchFortuneRelationsData = computed(() => {
+  if (!props.chart?.ganzi_relations || !isCurrentMode.value) return [];
+  return props.chart.ganzi_relations.branch_relations
+    .filter(rel => rel.involves_fortune)
+    .map(rel => ({
+      description: rel.description,
+      cssType: getRelationCssType(rel.type),
+    }));
 });
 </script>
