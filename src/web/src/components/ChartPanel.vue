@@ -541,18 +541,30 @@
               <!-- 地支关系连线（在地支下方绘制） -->
               <g class="branch-connections">
                 <template v-for="(conn, idx) in branchConnectionLines" :key="`branch-${idx}`">
-                  <path 
-                    :d="conn.path" 
+                  <!-- 主连线（圆角矩形） -->
+                  <path
+                    :d="conn.path"
                     :stroke="`url(#${conn.gradientId})`"
                     stroke-width="2"
                     stroke-linecap="round"
                     fill="none"
                   />
-                  <!-- 使用 foreignObject 放置 pill，垂直居中在水平线上 -->
-                  <foreignObject 
-                    :x="conn.labelX - 35" 
-                    :y="conn.labelY - 11" 
-                    width="70" 
+                  <!-- 三合/三会的中间竖线（如果存在） -->
+                  <path
+                    v-if="conn.middleLinePath"
+                    :d="conn.middleLinePath"
+                    :stroke="elementColorMap[conn.middleLineElement || '木']"
+                    stroke-opacity="0.4"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    fill="none"
+                  />
+                  <!-- 使用 foreignObject 放置 pill -->
+                  <foreignObject
+                    v-if="conn.label"
+                    :x="conn.labelX - 35"
+                    :y="conn.labelY - 11"
+                    width="70"
                     height="22"
                   >
                     <div class="relation-pill-container">
@@ -1175,10 +1187,13 @@ interface ConnectionLine {
   element1?: string; // 连线起点的五行元素
   element2?: string; // 连线终点的五行元素
   gradientId?: string; // 渐变 ID
+  // 三合/三会关系的中间竖线（可选）
+  middleLinePath?: string;
+  middleLineElement?: string;
 }
 
 // 圆角半径
-const cornerRadius = 6;
+const cornerRadius = 10;
 
 // 五行元素颜色映射
 const elementColorMap: Record<string, string> = {
@@ -1430,14 +1445,10 @@ const branchConnectionLines = computed<ConnectionLine[]>(() => {
   // 遍历每一行，绘制该行的所有关系
   rowMap.forEach((rowRelations, level) => {
     for (const rel of rowRelations) {
-      // 对于多位置关系（如三合），连接所有相邻对
       const positions = getRelationPositions(rel);
       if (positions.length < 2) continue;
-      
-      // 计算整个关系的中央 X 坐标（所有参与位置的平均值）
-      const relationCenterX = positions.reduce((sum: number, pos: number) => sum + getPillarX(pos), 0) / positions.length;
-      
-      // 生成关系标签（只生成一次）
+
+      // 生成关系标签
       let relationLabel = '';
       if (rel.type === '六合' && rel.element) {
         relationLabel = `合化${rel.element}`;
@@ -1456,43 +1467,88 @@ const branchConnectionLines = computed<ConnectionLine[]>(() => {
       } else if (rel.type === '三会') {
         relationLabel = rel.element ? `会${rel.element}` : '会';
       }
-      
-      // 对于多位置关系，将标签放在中间段
-      const midIndex = Math.floor(positions.length / 2);
-      const labelPosIdx = positions.length === 2 ? 0 : midIndex;
-      
-      const labelY = branchLineBaseY.value + level * 24;
-      
-      // 绘制关系的所有线段（对于三元关系如三合，需要绘制多条线段）
-      for (let i = 0; i < positions.length - 1; i++) {
-        const p1 = positions[i];
-        const p2 = positions[i + 1];
-        
-        const path = createBranchArc(p1, p2, level);
-        
-        // 标签只在中间段显示，且使用整个关系的中央 X 坐标
-        const label = (i === labelPosIdx) ? relationLabel : '';
-        const labelX = relationCenterX; // 使用整个关系的中央位置
-        
-        const cssType = getRelationCssType(rel.type);
-        
-        // 获取两端地支的五行元素
-        const branches = ganziBranches.value;
+
+      const cssType = getRelationCssType(rel.type);
+      const branches = ganziBranches.value;
+
+      // 对于三合/三会关系（3个位置）：使用新的绘制方式
+      if (positions.length === 3 && (rel.type === '三合' || rel.type === '三会')) {
+        const p1 = positions[0]; // 左端
+        const p2 = positions[1]; // 中间
+        const p3 = positions[2]; // 右端
+
+        // 1. 绘制连接两端的圆角矩形连线（p1 -> p3）
+        const mainPath = createBranchArc(p1, p3, level);
+
+        // 2. 计算中间竖线的路径（从中间地支连接到横线）
+        const x2 = getPillarX(p2);
+        const y2 = branchY.value + 25; // 中间地支下方
+        const yBottom = branchLineBaseY.value + level * 24; // 横线的 Y 坐标
+        const middleLinePath = `M ${x2} ${y2} L ${x2} ${yBottom}`;
+
+        // 3. 标签放在交点上方（交点即为 x2, yBottom）
+        const labelX = x2;
+        const labelY = yBottom;
+
+        // 4. 获取三个地支的五行元素
         const element1 = branches[p1]?.element || '木';
         const element2 = branches[p2]?.element || '木';
+        const element3 = branches[p3]?.element || '木';
         const gradientId = `branch-gradient-${segmentCounter++}`;
-        
+
         lines.push({
-          path,
+          path: mainPath,
           type: rel.type,
           cssType,
-          label,
+          label: relationLabel,
           labelX,
           labelY,
           element1,
-          element2,
+          element2: element3, // 主连线的两端
           gradientId,
+          middleLinePath, // 中间竖线路径
+          middleLineElement: element2, // 中间元素的五行
         });
+      }
+      // 对于其他关系（2个位置或其他多位置关系）：使用原有逻辑
+      else {
+        // 计算整个关系的中央 X 坐标（所有参与位置的平均值）
+        const relationCenterX = positions.reduce((sum: number, pos: number) => sum + getPillarX(pos), 0) / positions.length;
+
+        // 对于多位置关系，将标签放在中间段
+        const midIndex = Math.floor(positions.length / 2);
+        const labelPosIdx = positions.length === 2 ? 0 : midIndex;
+
+        const labelY = branchLineBaseY.value + level * 24;
+
+        // 绘制关系的所有线段
+        for (let i = 0; i < positions.length - 1; i++) {
+          const p1 = positions[i];
+          const p2 = positions[i + 1];
+
+          const path = createBranchArc(p1, p2, level);
+
+          // 标签只在中间段显示，且使用整个关系的中央 X 坐标
+          const label = (i === labelPosIdx) ? relationLabel : '';
+          const labelX = relationCenterX;
+
+          // 获取两端地支的五行元素
+          const element1 = branches[p1]?.element || '木';
+          const element2 = branches[p2]?.element || '木';
+          const gradientId = `branch-gradient-${segmentCounter++}`;
+
+          lines.push({
+            path,
+            type: rel.type,
+            cssType,
+            label,
+            labelX,
+            labelY,
+            element1,
+            element2,
+            gradientId,
+          });
+        }
       }
     }
   });

@@ -3,7 +3,7 @@
     class="app-shell"
     :class="{
       'landing-layout': stage === 'landing',
-      'main-layout': stage === 'detail' || stage === 'archive'
+      'main-layout': stage === 'detail' || stage === 'archive' || stage === 'master-chat'
     }"
   >
     <section v-if="stage === 'landing'" class="hero hero-landing">
@@ -263,6 +263,14 @@
           >
             档案列表
           </button>
+          <button
+            class="nav-btn"
+            type="button"
+            :class="{ active: stage === 'master-chat' }"
+            @click="goToMasterChat"
+          >
+            🐱 神喵大师
+          </button>
         </div>
         <div class="nav-section nav-section-muted">
           <div class="nav-label">更多模块</div>
@@ -278,7 +286,7 @@
       </aside>
 
       <main class="main-content">
-        <section v-if="stage === 'archive'" class="archive-panel">
+        <section v-show="stage === 'archive'" class="archive-panel">
           <header class="archive-header">
             <div class="brand-left">
               <div>
@@ -337,7 +345,13 @@
           </div>
         </section>
 
-        <section v-else>
+        <section v-show="stage === 'master-chat'" class="master-chat-page">
+          <keep-alive>
+            <MasterChat v-if="stage === 'master-chat'" />
+          </keep-alive>
+        </section>
+
+        <section v-show="stage === 'detail'">
           <div v-if="activeTab === 'chart'" class="detail-panel">
             <ChartPanel :chart="chart" />
             <div class="panel stack">
@@ -412,11 +426,11 @@
         </section>
       </main>
 
-      <aside class="chat-column" :aria-hidden="stage === 'detail' ? !chatOpen : undefined">
+      <aside v-if="stage !== 'master-chat'" class="chat-column" :aria-hidden="stage === 'detail' ? !chatOpen : undefined">
         <div v-if="stage === 'detail'" class="chat-window" :class="{ open: chatOpen }">
           <ChatPanel :chart="chart" :analysis="analysis" :focus="focus" />
         </div>
-        <div v-else class="archive-preview panel">
+        <div v-else-if="stage === 'archive'" class="archive-preview panel">
           <div class="archive-preview-title">档案提示</div>
           <p class="muted">
             选中某个档案后会进入命盘展示页，可继续生成报告或发起对话。
@@ -450,6 +464,7 @@ import ChatPanel from "./components/ChatPanel.vue";
 import ChartPanel from "./components/ChartPanel.vue";
 import RegionPicker from "./components/RegionPicker.vue";
 import PillarPicker from "./components/PillarPicker.vue";
+import MasterChat from "./components/MasterChat.vue";
 import type {
   Analysis,
   Chart,
@@ -479,7 +494,7 @@ type ArchiveEntry = {
   chart: Chart;
 };
 
-const stage = ref<"landing" | "form" | "detail" | "archive">("landing");
+const stage = ref<"landing" | "form" | "detail" | "archive" | "master-chat">("landing");
 const formStep = ref<"choice" | "edit">("choice");
 const activeTab = ref<"chart" | "report">("chart");
 const chatOpen = ref(false);
@@ -598,6 +613,12 @@ const goToArchive = () => {
 const goToDetail = (tab: "chart" | "report" = "chart") => {
   stage.value = "detail";
   activeTab.value = tab;
+  chatOpen.value = false;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+const goToMasterChat = () => {
+  stage.value = "master-chat";
   chatOpen.value = false;
   window.scrollTo({ top: 0, behavior: "smooth" });
 };

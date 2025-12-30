@@ -11,7 +11,7 @@ from typing import Any, Dict, Iterator, List, Optional, Union
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 
-from src.api.schemas import ChartRequest, ChatRequest, ReportRequest, PillarSearchRequest
+from src.api.schemas import ChartRequest, ChatRequest, ReportRequest, PillarSearchRequest, GeneralChatRequest
 from src.engine.bazi_engine import BaziPaipanEngine
 from src.knowledge.base import retrieve_knowledge
 from src.llm import OllamaError, chat, stream_chat_with_reasoning
@@ -159,6 +159,50 @@ def chat_with_chart_stream(payload: ChatRequest):
         reply_text = "".join(chunks).strip()
         if not reply_text:
             reply_text = "已收到。"
+        yield json.dumps(
+            {"type": "done", "reply": reply_text, "thinking": "".join(thinking_chunks).strip()},
+            ensure_ascii=False,
+        ) + "\n"
+
+    return StreamingResponse(_event_stream(), media_type="application/x-ndjson")
+
+
+@app.post("/api/bazi/general-chat/stream")
+def general_chat_stream(payload: GeneralChatRequest):
+    """通用聊天接口（无需命盘），用于喵大师等场景"""
+    default_system = (
+        "你是神机喵算的AI助手「喵大师」，精通中国传统八字命理学。"
+        "你的回答应该：1）专业且易懂，用现代语言解释传统命理概念；"
+        "2）客观中肯，不夸大也不贬低；3）注重实用建议和启发思考；"
+        "4）保持友好、耐心的对话风格。"
+    )
+    system_prompt = payload.system_prompt or default_system
+
+    # 构建对话消息
+    messages = [{"role": "system", "content": system_prompt}]
+    for turn in payload.history:
+        messages.append({"role": turn.role, "content": turn.content})
+
+    def _event_stream() -> Iterator[str]:
+        chunks: List[str] = []
+        thinking_chunks: List[str] = []
+        try:
+            for chunk in stream_chat_with_reasoning(messages):
+                if chunk.reasoning:
+                    thinking_chunks.append(chunk.reasoning)
+                    yield json.dumps(
+                        {"type": "thinking", "text": chunk.reasoning}, ensure_ascii=False
+                    ) + "\n"
+                if chunk.content:
+                    chunks.append(chunk.content)
+                    yield json.dumps({"type": "delta", "text": chunk.content}, ensure_ascii=False) + "\n"
+        except OllamaError as exc:
+            yield json.dumps({"type": "error", "message": str(exc)}, ensure_ascii=False) + "\n"
+            return
+
+        reply_text = "".join(chunks).strip()
+        if not reply_text:
+            reply_text = "我明白了，请问还有什么想了解的吗？"
         yield json.dumps(
             {"type": "done", "reply": reply_text, "thinking": "".join(thinking_chunks).strip()},
             ensure_ascii=False,

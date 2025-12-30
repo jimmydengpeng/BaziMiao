@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from itertools import product
 from typing import Dict, List, Optional, Tuple
 
 import sxtwl
@@ -931,56 +932,75 @@ class BaziPaipanEngine:
         
         # 5. 地支三合
         for combo_set, element in self.BRANCH_THREE_COMBINATIONS.items():
-            found_pillars = []
+            # 找到每个地支在哪些柱位出现
+            branch_positions = {}  # {地支: [柱位列表]}
             for branch in combo_set:
-                for pid in all_pillar_ids:
-                    if branch_dict[pid] == branch and pid not in found_pillars:
-                        found_pillars.append(pid)
-                        break
-            if len(found_pillars) >= 2:
-                found_branches = [branch_dict[pid] for pid in found_pillars]
-                involves_fortune = any(pid in ['destiny', 'year_fortune'] for pid in found_pillars)
-                if len(found_pillars) == 3:
-                    branch_relations.append(GanZhiRelation(
-                        type="三合",
-                        pillars=found_pillars,
-                        ganzi_items=found_branches,
-                        description=f"{''.join(found_branches)}三合{element}局",
-                        element=element,
-                        category="branch",
-                        involves_fortune=involves_fortune
-                    ))
-                else:
-                    branch_relations.append(GanZhiRelation(
-                        type="半合",
-                        pillars=found_pillars,
-                        ganzi_items=found_branches,
-                        description=f"{''.join(found_branches)}半合{element}局",
-                        element=element,
-                        category="branch",
-                        involves_fortune=involves_fortune
-                    ))
+                branch_positions[branch] = [pid for pid in all_pillar_ids if branch_dict[pid] == branch]
+
+            # 生成所有可能的三合组合
+            # 例如：寅在[大运,时柱]，午在[月柱]，戌在[日柱]
+            # 应该生成：[(大运,月柱,日柱), (时柱,月柱,日柱)]
+            branches_list = list(combo_set)
+            positions_list = [branch_positions[b] for b in branches_list]
+
+            # 使用笛卡尔积生成所有组合
+            for combo in product(*positions_list):
+                # combo 是一个元组，如 (大运, 月柱, 日柱)
+                unique_pillars = list(dict.fromkeys(combo))  # 去重并保持顺序
+
+                if len(unique_pillars) >= 2:
+                    found_branches = [branch_dict[pid] for pid in unique_pillars]
+                    involves_fortune = any(pid in ['destiny', 'year_fortune'] for pid in unique_pillars)
+
+                    if len(unique_pillars) == 3:
+                        branch_relations.append(GanZhiRelation(
+                            type="三合",
+                            pillars=unique_pillars,
+                            ganzi_items=found_branches,
+                            description=f"{''.join(found_branches)}三合{element}局",
+                            element=element,
+                            category="branch",
+                            involves_fortune=involves_fortune
+                        ))
+                    elif len(unique_pillars) == 2:
+                        branch_relations.append(GanZhiRelation(
+                            type="半合",
+                            pillars=unique_pillars,
+                            ganzi_items=found_branches,
+                            description=f"{''.join(found_branches)}半合{element}局",
+                            element=element,
+                            category="branch",
+                            involves_fortune=involves_fortune
+                        ))
         
         # 6. 地支三会
         for combo_set, element in self.BRANCH_THREE_MEETINGS.items():
-            found_pillars = []
+            # 找到每个地支在哪些柱位出现
+            branch_positions = {}  # {地支: [柱位列表]}
             for branch in combo_set:
-                for pid in all_pillar_ids:
-                    if branch_dict[pid] == branch and pid not in found_pillars:
-                        found_pillars.append(pid)
-                        break
-            if len(found_pillars) == 3:
-                found_branches = [branch_dict[pid] for pid in found_pillars]
-                involves_fortune = any(pid in ['destiny', 'year_fortune'] for pid in found_pillars)
-                branch_relations.append(GanZhiRelation(
-                    type="三会",
-                    pillars=found_pillars,
-                    ganzi_items=found_branches,
-                    description=f"{''.join(found_branches)}三会{element}方",
-                    element=element,
-                    category="branch",
-                    involves_fortune=involves_fortune
-                ))
+                branch_positions[branch] = [pid for pid in all_pillar_ids if branch_dict[pid] == branch]
+
+            # 生成所有可能的三会组合
+            branches_list = list(combo_set)
+            positions_list = [branch_positions[b] for b in branches_list]
+
+            # 使用笛卡尔积生成所有组合
+            for combo in product(*positions_list):
+                # combo 是一个元组，如 (大运, 月柱, 日柱)
+                unique_pillars = list(dict.fromkeys(combo))  # 去重并保持顺序
+
+                if len(unique_pillars) == 3:
+                    found_branches = [branch_dict[pid] for pid in unique_pillars]
+                    involves_fortune = any(pid in ['destiny', 'year_fortune'] for pid in unique_pillars)
+                    branch_relations.append(GanZhiRelation(
+                        type="三会",
+                        pillars=unique_pillars,
+                        ganzi_items=found_branches,
+                        description=f"{''.join(found_branches)}三会{element}方",
+                        element=element,
+                        category="branch",
+                        involves_fortune=involves_fortune
+                    ))
         
         # 7. 地支六冲
         for i, pid1 in enumerate(all_pillar_ids):

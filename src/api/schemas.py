@@ -53,6 +53,12 @@ class ChatRequest(BaseModel):
     focus: List[str] = Field(default_factory=list)
 
 
+class GeneralChatRequest(BaseModel):
+    """通用聊天请求（无需命盘）"""
+    history: List[ChatTurn]
+    system_prompt: Optional[str] = Field(None, description="自定义系统提示词")
+
+
 class PillarSearchRequest(BaseModel):
     """四柱反查请求"""
     year_pillar: str = Field(..., min_length=2, max_length=2, description="年柱（如：甲子）")
