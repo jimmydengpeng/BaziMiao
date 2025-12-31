@@ -1,10 +1,17 @@
 <template>
   <div
-    class="app-shell"
-    :class="{
-      'landing-layout': stage === 'landing',
-      'main-layout': stage === 'detail' || stage === 'archive' || stage === 'master-chat'
-    }"
+    class="app-shell mx-auto flex min-h-screen flex-col gap-5"
+    :class="[
+      {
+        'landing-layout': stage === 'landing',
+        'main-layout': stage === 'detail' || stage === 'archive' || stage === 'master-chat'
+      },
+      stage === 'landing'
+        ? 'max-w-full p-0 h-screen overflow-hidden'
+        : stage === 'detail' || stage === 'archive' || stage === 'master-chat'
+          ? 'max-w-[1600px] p-6 h-screen overflow-hidden'
+          : 'max-w-[1100px] px-5 pt-8 pb-20'
+    ]"
   >
     <section v-if="stage === 'landing'" class="landing-page">
       <!-- 装饰性背景元素 - 粒子系统 -->
@@ -257,7 +264,10 @@
       />
     </section>
 
-    <section v-else class="main-shell">
+    <section
+      v-else
+      class="main-shell grid h-full grid-cols-[auto_minmax(0,1fr)] items-start gap-5 overflow-hidden max-[960px]:grid-cols-1"
+    >
       <aside class="side-nav main-nav">
         <div class="brand-mini">
           <div class="logo-placeholder logo-image logo-mini">
@@ -317,8 +327,10 @@
         </div>
       </aside>
 
-      <div class="workspace" :class="{ 'chat-open': chatOpen }">
-        <main class="main-content">
+      <div class="workspace flex h-full min-w-0 gap-5 overflow-hidden" :class="{ 'chat-open': chatOpen }">
+        <main
+          class="main-content relative h-full w-full min-w-0 max-w-[720px] overflow-y-auto overflow-x-hidden"
+        >
           <section v-show="stage === 'archive'" class="archive-panel">
           <header class="archive-header">
             <div class="brand-left">
