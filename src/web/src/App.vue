@@ -6,12 +6,44 @@
       'main-layout': stage === 'detail' || stage === 'archive' || stage === 'master-chat'
     }"
   >
-    <section v-if="stage === 'landing'" class="hero hero-landing">
-      <div class="hero-content">
-        <img class="hero-title-image" :src="titleTextUrl" alt="神机喵算" />
-        <p class="subtitle hero-slogan">用 AI 读懂八字，看到趋势与选择</p>
-        <div class="hero-actions">
-          <button class="btn primary hero-btn" type="button" @click="goToForm">我们开始吧</button>
+    <section v-if="stage === 'landing'" class="landing-page">
+      <!-- 装饰性背景元素 - 粒子系统 -->
+      <div class="landing-decoration">
+        <!-- 金色粒子点 - 使用 v-for 生成 -->
+        <div
+          v-for="i in particleCount"
+          :key="`particle-${i}`"
+          class="gold-particle"
+          :style="getParticleStyle(i)"
+        ></div>
+      </div>
+
+      <!-- 主内容 -->
+      <div class="landing-content">
+
+        <!-- 项目名称 - 使用书法字体 -->
+        <h1 class="landing-title">神机喵算</h1>
+
+        <!-- 英文副标题 -->
+        <div class="landing-subtitle-en">BaziMiao</div>
+
+        <!-- 简介 -->
+        <p class="landing-intro">基于八字排盘的 AI 命理 WebApp</p>
+
+        <!-- Slogan -->
+        <p class="landing-slogan">用 AI 读懂八字，看到趋势与选择</p>
+
+        <!-- 开始按钮 -->
+        <button class="landing-cta" type="button" @click="goToForm">
+          <span class="cta-text">开始探索</span>
+          <span class="cta-arrow">→</span>
+        </button>
+
+        <!-- 底部装饰文字 -->
+        <div class="landing-footer">
+          <span class="footer-divider">—</span>
+          <span class="footer-text">命由天定 · 运在人为</span>
+          <span class="footer-divider">—</span>
         </div>
       </div>
     </section>
@@ -285,8 +317,9 @@
         </div>
       </aside>
 
-      <main class="main-content">
-        <section v-show="stage === 'archive'" class="archive-panel">
+      <div class="workspace" :class="{ 'chat-open': chatOpen }">
+        <main class="main-content">
+          <section v-show="stage === 'archive'" class="archive-panel">
           <header class="archive-header">
             <div class="brand-left">
               <div>
@@ -343,116 +376,112 @@
               </button>
             </div>
           </div>
-        </section>
+          </section>
 
-        <section v-show="stage === 'master-chat'" class="master-chat-page">
-          <keep-alive>
-            <MasterChat v-if="stage === 'master-chat'" />
-          </keep-alive>
-        </section>
+          <section v-show="stage === 'master-chat'" class="master-chat-page">
+            <keep-alive>
+              <MasterChat v-if="stage === 'master-chat'" />
+            </keep-alive>
+          </section>
 
-        <section v-show="stage === 'detail'">
-          <div v-if="activeTab === 'chart'" class="detail-panel">
-            <ChartPanel :chart="chart" />
-            <div class="panel stack">
-              <div class="status-line">
-                <strong>AI智能解析</strong>
-                <span class="muted">基于当前命盘生成详细报告</span>
-              </div>
-              <div class="cta-row matrix">
-                <button
-                  class="btn primary ai-primary"
-                  type="button"
-                  :disabled="reportLoading || reportStreaming"
-                  @click="generateReport"
-                >
-                  {{ reportLoading || reportStreaming ? "解析中..." : "AI智能解析" }}
-                </button>
-                <span v-if="error" class="muted cta-message">{{ error }}</span>
-              </div>
-            </div>
-          </div>
-          <div v-else class="panel stack">
-            <div class="status-line">
-              <strong>命理报告</strong>
-              <span class="badge">LLM 解释器</span>
-            </div>
-            <div v-if="error" class="muted">{{ error }}</div>
-            <div v-if="reportStreaming" class="sections">
-              <div v-if="reportThinking" class="section-card thinking-card">
-                <div class="thinking-header">
-                  <h3>模型思考</h3>
+          <section v-show="stage === 'detail'">
+            <div v-if="activeTab === 'chart'" class="detail-panel">
+              <ChartPanel :chart="chart" />
+              <div class="panel stack">
+                <div class="status-line">
+                  <strong>AI智能解析</strong>
+                  <span class="muted">基于当前命盘生成详细报告</span>
                 </div>
-                <div class="streaming-text thinking">
-                  {{ reportThinking }}
-                </div>
-              </div>
-              <div class="section-card">
-                <h3>生成中...</h3>
-                <div class="streaming-text">
-                  {{ reportDraft || "正在生成，请稍候..." }}
-                </div>
-              </div>
-            </div>
-            <div v-else-if="report" class="report-layout">
-              <div v-if="reportThinking" class="section-card thinking-card">
-                <div class="thinking-header">
-                  <h3>模型思考</h3>
+                <div class="cta-row matrix">
                   <button
-                    class="btn ghost"
+                    class="btn primary ai-primary"
                     type="button"
-                    @click="reportThinkingCollapsed = !reportThinkingCollapsed"
+                    :disabled="reportLoading || reportStreaming"
+                    @click="generateReport"
                   >
-                    {{ reportThinkingCollapsed ? "展开" : "收起" }}
+                    {{ reportLoading || reportStreaming ? "解析中..." : "AI智能解析" }}
                   </button>
-                </div>
-                <div v-if="!reportThinkingCollapsed" class="streaming-text thinking">
-                  {{ reportThinking }}
-                </div>
-              </div>
-              <div v-if="report.energy_chart" class="section-card">
-                <h3>五行能量图</h3>
-                <pre class="energy-chart">{{ report.energy_chart }}</pre>
-              </div>
-              <div class="sections">
-                <div class="section-card" v-for="(sec, idx) in report.sections" :key="idx">
-                  <h3>{{ sec.title }}</h3>
-                  <div class="markdown-body" v-html="renderMarkdown(sec.content)"></div>
+                  <span v-if="error" class="muted cta-message">{{ error }}</span>
                 </div>
               </div>
             </div>
-            <div v-else class="muted">生成报告后，将在此处展示详细解读。</div>
-          </div>
-        </section>
-      </main>
+            <div v-else class="panel stack">
+              <div class="status-line">
+                <strong>命理报告</strong>
+                <span class="badge">LLM 解释器</span>
+              </div>
+              <div v-if="error" class="muted">{{ error }}</div>
+              <div v-if="reportStreaming" class="sections">
+                <div v-if="reportThinking" class="section-card thinking-card">
+                  <div class="thinking-header">
+                    <h3>模型思考</h3>
+                  </div>
+                  <div class="streaming-text thinking">
+                    {{ reportThinking }}
+                  </div>
+                </div>
+                <div class="section-card">
+                  <h3>生成中...</h3>
+                  <div class="streaming-text">
+                    {{ reportDraft || "正在生成，请稍候..." }}
+                  </div>
+                </div>
+              </div>
+              <div v-else-if="report" class="report-layout">
+                <div v-if="reportThinking" class="section-card thinking-card">
+                  <div class="thinking-header">
+                    <h3>模型思考</h3>
+                    <button
+                      class="btn ghost"
+                      type="button"
+                      @click="reportThinkingCollapsed = !reportThinkingCollapsed"
+                    >
+                      {{ reportThinkingCollapsed ? "展开" : "收起" }}
+                    </button>
+                  </div>
+                  <div v-if="!reportThinkingCollapsed" class="streaming-text thinking">
+                    {{ reportThinking }}
+                  </div>
+                </div>
+                <div v-if="report.energy_chart" class="section-card">
+                  <h3>五行能量图</h3>
+                  <pre class="energy-chart">{{ report.energy_chart }}</pre>
+                </div>
+                <div class="sections">
+                  <div class="section-card" v-for="(sec, idx) in report.sections" :key="idx">
+                    <h3>{{ sec.title }}</h3>
+                    <div class="markdown-body" v-html="renderMarkdown(sec.content)"></div>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="muted">生成报告后，将在此处展示详细解读。</div>
+            </div>
+          </section>
+        </main>
 
-      <aside v-if="stage !== 'master-chat'" class="chat-column" :aria-hidden="stage === 'detail' ? !chatOpen : undefined">
-        <div v-if="stage === 'detail'" class="chat-window" :class="{ open: chatOpen }">
-          <ChatPanel :chart="chart" :analysis="analysis" :focus="focus" />
-        </div>
-        <div v-else-if="stage === 'archive'" class="archive-preview panel">
-          <div class="archive-preview-title">档案提示</div>
-          <p class="muted">
-            选中某个档案后会进入命盘展示页，可继续生成报告或发起对话。
-          </p>
-          <div class="archive-tags">
-            <span class="pill">四柱</span>
-            <span class="pill">五行</span>
-            <span class="pill">命盘</span>
-          </div>
-        </div>
-      </aside>
+        <aside
+          v-if="stage !== 'master-chat'"
+          class="chat-column"
+          :class="{ open: chatOpen }"
+          :aria-hidden="!chatOpen"
+        >
+          <SideChat :open="chatOpen" @close="closeChat" />
+        </aside>
+      </div>
 
       <button
-        v-if="stage === 'detail'"
+        v-if="stage !== 'master-chat' && !chatOpen"
         class="chat-fab"
         type="button"
-        :class="{ active: chatOpen }"
-        :disabled="!canChat"
-        aria-label="打开聊天"
-        @click="toggleChat"
+        aria-label="智能解析"
+        @click="openChat"
       >
-        聊
+        <span class="chat-fab__icon" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </span>
+        <span class="chat-fab__label">智能解析</span>
       </button>
     </section>
   </div>
@@ -460,11 +489,11 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import ChatPanel from "./components/ChatPanel.vue";
 import ChartPanel from "./components/ChartPanel.vue";
 import RegionPicker from "./components/RegionPicker.vue";
 import PillarPicker from "./components/PillarPicker.vue";
 import MasterChat from "./components/MasterChat.vue";
+import SideChat from "./components/SideChat.vue";
 import type {
   Analysis,
   Chart,
@@ -498,6 +527,45 @@ const stage = ref<"landing" | "form" | "detail" | "archive" | "master-chat">("la
 const formStep = ref<"choice" | "edit">("choice");
 const activeTab = ref<"chart" | "report">("chart");
 const chatOpen = ref(false);
+
+// 粒子系统配置
+const particleCount = 128;
+
+// 生成粒子样式的函数
+const getParticleStyle = (index: number) => {
+  // 使用索引作为随机种子，确保每次渲染位置一致
+  const seed = index * 9876543;
+  const random = (min: number, max: number, offset: number = 0) => {
+    const x = Math.sin(seed + offset) * 10000;
+    return min + (Math.abs(x) % (max - min));
+  };
+
+  // 随机位置（覆盖整个页面）
+  const top = random(5, 95, 1);
+  const left = random(5, 95, 2);
+
+  // 随机大小（2-6px）
+  const size = Math.floor(random(2, 7, 3));
+
+  // 随机动画延迟（0-10s）
+  const delay = random(0, 10, 4);
+
+  // 随机动画时长（6-12s）
+  const duration = random(6, 12, 5);
+
+  // 随机透明度变化范围
+  const opacity = random(0.4, 0.9, 6);
+
+  return {
+    top: `${top}%`,
+    left: `${left}%`,
+    width: `${size}px`,
+    height: `${size}px`,
+    animationDelay: `${delay}s`,
+    animationDuration: `${duration}s`,
+    '--particle-opacity': opacity
+  };
+};
 const form = ref({
   name: "",
   year: 2000,
@@ -648,9 +716,12 @@ const openArchive = (entry: ArchiveEntry) => {
   goToDetail("chart");
 };
 
-const toggleChat = () => {
-  if (!canChat.value) return;
-  chatOpen.value = !chatOpen.value;
+const openChat = () => {
+  chatOpen.value = true;
+};
+
+const closeChat = () => {
+  chatOpen.value = false;
 };
 
 const setToday = () => {
