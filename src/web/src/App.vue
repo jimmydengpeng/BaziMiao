@@ -1,22 +1,44 @@
 <template>
-  <div
-    class="app-shell mx-auto flex min-h-screen flex-col gap-5"
-    :class="[
-      {
-        'landing-layout': stage === 'landing',
-        'main-layout': stage === 'detail' || stage === 'archive' || stage === 'master-chat'
-      },
-      stage === 'landing'
-        ? 'max-w-full p-0 h-screen overflow-hidden'
-        : stage === 'detail' || stage === 'archive' || stage === 'master-chat'
-          ? 'max-w-[1600px] p-6 h-screen overflow-hidden'
-          : 'max-w-[1100px] px-5 pt-8 pb-20'
-    ]"
-  >
-    <section
-      v-if="stage === 'landing'"
-      class="landing-page relative flex h-screen items-center justify-center overflow-hidden px-4"
+  <div class="app-root min-h-screen">
+    <!-- 顶部导航栏（所有页面都显示） -->
+    <TopNav
+      :active-module="activeModule"
+      :is-landing="activeModule === 'bazi' && stage === 'landing'"
+      @navigate="handleModuleNavigate"
+      @toggle-side-nav="sideNavOpen = !sideNavOpen"
+      @go-home="goToLanding"
+    />
+
+    <!-- 主内容区域：预留 TopNav 高度，其他内容随 body 滚动，避免被遮挡 -->
+    <div
+      class="app-shell mx-auto flex min-h-screen flex-col gap-5 pt-14 lg:pt-16"
+      :class="[
+        {
+          'landing-layout': activeModule === 'bazi' && stage === 'landing',
+          'main-layout': activeModule === 'bazi' && (stage === 'detail' || stage === 'archive' || stage === 'master-chat')
+        },
+        activeModule !== 'bazi'
+          ? 'max-w-[1200px] px-4 pb-8 lg:px-6'
+          : stage === 'landing'
+            ? 'max-w-full px-0 pt-14 pb-10 lg:pt-16 lg:pb-12 min-h-screen overflow-hidden'
+            : stage === 'detail' || stage === 'archive' || stage === 'master-chat'
+              ? 'max-w-[1600px] px-4 pb-10 lg:px-6'
+              : 'max-w-[1100px] px-5 pb-16'
+      ]"
     >
+      <!-- 双人合盘模块 -->
+      <CompatibilityPage v-if="activeModule === 'compatibility'" />
+
+      <!-- 我的页面模块 -->
+      <ProfilePage v-else-if="activeModule === 'profile'" />
+
+      <!-- 命理报告模块（原有内容） -->
+      <template v-else>
+        <!-- Landing 页面 -->
+        <section
+          v-if="stage === 'landing'"
+          class="landing-page relative flex min-h-screen items-center justify-center overflow-hidden px-4"
+        >
       <!-- 装饰性背景元素 - 粒子系统 -->
       <div class="landing-decoration pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <!-- 金色粒子点 - 使用 v-for 生成 -->
@@ -293,139 +315,19 @@
 
     <section
       v-else
-      class="main-shell grid h-full grid-cols-1 items-start gap-5 overflow-hidden lg:grid-cols-[auto_minmax(0,1fr)]"
+      class="main-shell grid grid-cols-1 items-start gap-5 lg:grid-cols-[auto_minmax(0,1fr)]"
     >
-      <!-- 移动端顶部栏：品牌 + 菜单按钮 -->
-      <div
-        class="flex items-center justify-between gap-3 rounded-2xl border border-[rgba(255,255,255,0.14)] bg-[rgba(18,22,33,0.72)] px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.3)] backdrop-blur-xl lg:hidden"
-      >
-        <div class="flex items-center gap-3">
-          <div class="logo-placeholder logo-image logo-mini">
-            <img :src="logoUrl" alt="神机喵算 Logo" />
-          </div>
-          <div class="flex flex-col leading-tight">
-            <span class="text-[15px] font-semibold text-[var(--accent-2)]">神机喵算</span>
-            <span class="text-[12px] text-[var(--muted)]">命盘与报告</span>
-          </div>
-        </div>
-        <button
-          class="inline-flex items-center justify-center rounded-xl border border-[rgba(255,255,255,0.2)] bg-white/5 px-3 py-2 text-sm text-white transition hover:bg-white/10"
-          type="button"
-          @click="navOpen = !navOpen"
-          aria-label="打开导航"
-        >
-          <svg v-if="!navOpen" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
-            <line x1="3" y1="6" x2="17" y2="6"/>
-            <line x1="3" y1="10" x2="17" y2="10"/>
-            <line x1="3" y1="14" x2="17" y2="14"/>
-          </svg>
-          <svg v-else width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
-            <line x1="5" y1="5" x2="15" y2="15"/>
-            <line x1="15" y1="5" x2="5" y2="15"/>
-          </svg>
-        </button>
-      </div>
+      <!-- 模块级侧边导航（使用 SideNav 组件） -->
+      <SideNav
+        :open="sideNavOpen"
+        :current-page="currentSideNavPage"
+        :can-view-report="canViewReport"
+        @navigate="handleSideNavNavigate"
+        @close="sideNavOpen = false"
+      />
 
-      <!-- 侧边导航 / 抽屉 -->
-      <aside
-        :class="[
-          'main-nav z-40 flex h-full flex-col gap-3 border border-[rgba(255,255,255,0.14)] bg-[rgba(18,22,33,0.62)] px-4 py-4 backdrop-blur-xl shadow-[0_18px_40px_rgba(0,0,0,0.35)] lg:static lg:h-full lg:w-[clamp(180px,18vw,240px)] lg:translate-x-0 lg:rounded-2xl lg:p-4',
-          navOpen ? 'fixed inset-y-0 left-0 w-[78%] max-w-[320px] translate-x-0 rounded-r-2xl' : 'fixed inset-y-0 left-0 w-[78%] max-w-[320px] -translate-x-full',
-          'transition-transform duration-300 ease-in-out overflow-y-auto'
-        ]"
-      >
-        <div class="flex items-center gap-3 border-b border-[var(--border)] pb-3">
-          <div class="logo-placeholder logo-image logo-mini">
-            <img :src="logoUrl" alt="神机喵算 Logo" />
-          </div>
-          <div class="grid gap-1 leading-tight">
-            <span class="text-[16px] font-semibold text-[var(--accent-2)]">神机喵算</span>
-            <span class="text-[12px] text-[var(--muted)]">命盘与报告</span>
-          </div>
-        </div>
-
-        <div class="grid gap-3">
-          <div class="grid gap-2">
-            <div class="text-[11px] uppercase tracking-[0.12em] text-white/60">核心功能</div>
-            <button
-              class="flex w-full items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-left text-[15px] text-white transition hover:bg-white/5"
-              type="button"
-              :class="{ 'border-[rgba(255,255,255,0.25)] bg-[rgba(214,160,96,0.22)] text-[var(--accent-2)]': stage === 'detail' && activeTab === 'chart' }"
-              @click="goToDetail('chart'); navOpen = false"
-            >
-              八字命盘
-            </button>
-            <button
-              class="flex w-full items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-left text-[15px] text-white transition hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
-              type="button"
-              :class="{ 'border-[rgba(255,255,255,0.25)] bg-[rgba(214,160,96,0.22)] text-[var(--accent-2)]': stage === 'detail' && activeTab === 'report' }"
-              :disabled="!canViewReport"
-              @click="goToDetail('report'); navOpen = false"
-            >
-              命理报告
-            </button>
-            <button
-              class="flex w-full items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-left text-[15px] text-white transition hover:bg-white/5"
-              type="button"
-              :class="{ 'border-[rgba(255,255,255,0.25)] bg-[rgba(214,160,96,0.22)] text-[var(--accent-2)]': stage === 'archive' }"
-              @click="goToArchive(); navOpen = false"
-            >
-              档案列表
-            </button>
-            <button
-              class="flex w-full items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-left text-[15px] text-white transition hover:bg-white/5"
-              type="button"
-              :class="{ 'border-[rgba(255,255,255,0.25)] bg-[rgba(214,160,96,0.22)] text-[var(--accent-2)]': stage === 'master-chat' }"
-              @click="goToMasterChat(); navOpen = false"
-            >
-              🐱 神喵大师
-            </button>
-          </div>
-
-          <div class="grid gap-2 opacity-80">
-            <div class="text-[11px] uppercase tracking-[0.12em] text-white/60">更多模块</div>
-            <button class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[15px] text-white/60" type="button" disabled>
-              运势测算
-            </button>
-            <button class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[15px] text-white/60" type="button" disabled>
-              今日运势
-            </button>
-            <button class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[15px] text-white/60" type="button" disabled>
-              命理百科
-            </button>
-          </div>
-
-          <div class="grid gap-2">
-            <div class="text-[11px] uppercase tracking-[0.12em] text-white/60">快捷入口</div>
-            <button
-              class="flex w-full items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-left text-[15px] text-white transition hover:bg-white/5"
-              type="button"
-              @click="goToForm(); navOpen = false"
-            >
-              新建排盘
-            </button>
-            <button
-              class="flex w-full items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-left text-[15px] text-white transition hover:bg-white/5"
-              type="button"
-              @click="goToLanding(); navOpen = false"
-            >
-              回到欢迎
-            </button>
-          </div>
-        </div>
-      </aside>
-
-      <!-- 抽屉遮罩 -->
-      <div
-        v-if="navOpen"
-        class="fixed inset-0 z-30 bg-black/50 backdrop-blur-[2px] lg:hidden"
-        @click="navOpen = false"
-      ></div>
-
-      <div class="workspace flex h-full min-w-0 gap-5 overflow-hidden" :class="{ 'chat-open': chatOpen }">
-        <main
-          class="main-content relative h-full w-full min-w-0 max-w-[720px] overflow-y-auto overflow-x-hidden"
-        >
+      <div class="workspace flex min-w-0 gap-5 lg:items-start" :class="{ 'chat-open': chatOpen }">
+        <main class="main-content relative w-full min-w-0 max-w-[900px] space-y-5">
           <section v-show="stage === 'archive'" class="archive-panel">
           <header class="archive-header">
             <div class="brand-left">
@@ -591,6 +493,8 @@
         <span class="chat-fab__label">智能解析</span>
       </button>
     </section>
+      </template>
+    </div>
   </div>
 </template>
 
@@ -601,6 +505,10 @@ import RegionPicker from "./components/RegionPicker.vue";
 import PillarPicker from "./components/PillarPicker.vue";
 import MasterChat from "./components/MasterChat.vue";
 import SideChat from "./components/SideChat.vue";
+import TopNav from "./components/TopNav.vue";
+import SideNav from "./components/SideNav.vue";
+import CompatibilityPage from "./components/CompatibilityPage.vue";
+import ProfilePage from "./components/ProfilePage.vue";
 import type {
   Analysis,
   Chart,
@@ -612,7 +520,6 @@ import type {
 } from "./types";
 import { getDefaultRegion, type SelectedRegion } from "./data/china-regions";
 import logoUrl from "./assets/logo-bazi_meow.png";
-import titleTextUrl from "./assets/title-text.png";
 
 type ArchivePillar = {
   stem: string;
@@ -630,11 +537,23 @@ type ArchiveEntry = {
   chart: Chart;
 };
 
+// 顶层模块：bazi（命理报告）、compatibility（双人合盘）、profile（我的）
+const activeModule = ref<"bazi" | "compatibility" | "profile">("bazi");
+
+// 命理报告模块内的页面状态
 const stage = ref<"landing" | "form" | "detail" | "archive" | "master-chat">("landing");
 const formStep = ref<"choice" | "edit">("choice");
 const activeTab = ref<"chart" | "report">("chart");
 const chatOpen = ref(false);
-const navOpen = ref(false);
+const sideNavOpen = ref(false); // 移动端侧边栏抽屉状态
+
+// 计算当前侧边栏显示的页面（用于 SideNav 组件）
+const currentSideNavPage = computed(() => {
+  if (stage.value === 'detail') {
+    return activeTab.value as 'chart' | 'report';
+  }
+  return stage.value as 'archive' | 'master-chat' | 'form' | 'landing';
+});
 
 // 粒子系统配置
 const particleCount = 128;
@@ -770,6 +689,41 @@ const updateBodyClass = (value: typeof stage.value) => {
   }
 };
 
+// 顶层模块导航处理
+const handleModuleNavigate = (module: "bazi" | "compatibility" | "profile") => {
+  activeModule.value = module;
+  sideNavOpen.value = false;
+  // 切换到命理报告模块时，如果当前是 landing 页则保持，否则跳到 detail
+  if (module === "bazi" && stage.value === "landing") {
+    // 保持 landing 状态
+  }
+};
+
+// 侧边栏导航处理（仅命理报告模块内使用）
+const handleSideNavNavigate = (page: 'chart' | 'report' | 'archive' | 'master-chat' | 'form' | 'landing') => {
+  sideNavOpen.value = false;
+  switch (page) {
+    case 'chart':
+      goToDetail('chart');
+      break;
+    case 'report':
+      goToDetail('report');
+      break;
+    case 'archive':
+      goToArchive();
+      break;
+    case 'master-chat':
+      goToMasterChat();
+      break;
+    case 'form':
+      goToForm();
+      break;
+    case 'landing':
+      goToLanding();
+      break;
+  }
+};
+
 const goToForm = () => {
   stage.value = "form";
   formStep.value = "choice";
@@ -777,8 +731,10 @@ const goToForm = () => {
 };
 
 const goToLanding = () => {
+  activeModule.value = "bazi"; // 确保切换到命理报告模块
   stage.value = "landing";
   chatOpen.value = false;
+  sideNavOpen.value = false;
 };
 
 const goToArchive = () => {

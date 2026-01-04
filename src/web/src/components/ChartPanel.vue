@@ -668,8 +668,8 @@
 import { computed, ref } from "vue";
 import type { Chart, GanZhiRelation, PillarInfo, HeavenStemInfo, EarthBranchInfo } from "../types";
 // 导入性别图标
-import maleIconUrl from "../assets/male-icon.png";
-import femaleIconUrl from "../assets/female-icon.png";
+import maleIconUrl from "../assets/gender-male.png";
+import femaleIconUrl from "../assets/gender-female.png";
 
 const props = defineProps<{
   chart: Chart | null;

@@ -77,15 +77,15 @@ button {
 .app-shell.landing-layout {
   max-width: 100%;
   padding: 0;
-  height: 100vh;
+  min-height: 100vh;
   overflow: hidden;
 }
 
 .app-shell.main-layout {
   max-width: 1600px;
   padding: 24px;
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
+  overflow: visible;
 }
 
 .hero {
@@ -1289,8 +1289,7 @@ button {
   display: flex;
   gap: 20px;
   min-width: 0;
-  height: 100%;
-  overflow: hidden;
+  align-items: flex-start;
 }
 
 .archive-panel {
@@ -1443,10 +1442,7 @@ button {
   min-width: 0;
   position: relative;
   width: 100%;
-  max-width: 720px;
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
+  min-height: 0;
 }
 
 .master-chat-page {

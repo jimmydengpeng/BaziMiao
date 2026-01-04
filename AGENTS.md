@@ -45,6 +45,7 @@
 - 你可以随意修改本仓库的代码，不需要严格遵循现有的框架，一切以功能正常为准，但要保持代码和仓库整洁
 - 尽可能使用中文回复
 - 如果你需要运行终端Python命令，请确保conda环境langchain已激活
+- 本项目前端正在逐步从CSS样式迁移到tailwindcss，新生成的页面样式请使用tailwindcss实现
 
 ## Figma MCP Integration Rules
 These rules define how to translate Figma inputs into code for this project and must be followed for every Figma-driven change.
