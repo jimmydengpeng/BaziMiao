@@ -3,10 +3,13 @@
     <!-- 顶部导航栏（所有页面都显示） -->
     <TopNav
       :active-module="activeModule"
-      :is-landing="activeModule === 'bazi' && stage === 'landing'"
+      :is-home="activeModule === 'bazi' && stage === 'home'"
+      :is-authenticated="isAuthenticated"
       @navigate="handleModuleNavigate"
       @toggle-side-nav="sideNavOpen = !sideNavOpen"
-      @go-home="goToLanding"
+      @go-home="goToHome"
+      @start="goToForm"
+      @go-login="goToLogin"
     />
 
     <!-- 主内容区域：预留 TopNav 高度，其他内容随 body 滚动，避免被遮挡 -->
@@ -14,12 +17,12 @@
       class="app-shell mx-auto flex min-h-screen flex-col gap-5 pt-14 lg:pt-16"
       :class="[
         {
-          'landing-layout': activeModule === 'bazi' && stage === 'landing',
+          'home-layout': activeModule === 'bazi' && stage === 'home',
           'main-layout': activeModule === 'bazi' && (stage === 'detail' || stage === 'archive' || stage === 'master-chat')
         },
         activeModule !== 'bazi'
           ? 'max-w-[1200px] px-4 pb-8 lg:px-6'
-          : stage === 'landing'
+          : stage === 'home'
             ? 'max-w-full px-0 pt-14 pb-10 lg:pt-16 lg:pb-12 min-h-screen overflow-hidden'
             : stage === 'detail' || stage === 'archive' || stage === 'master-chat'
               ? 'max-w-[1600px] px-4 pb-10 lg:px-6'
@@ -30,17 +33,17 @@
       <CompatibilityPage v-if="activeModule === 'compatibility'" />
 
       <!-- 我的页面模块 -->
-      <ProfilePage v-else-if="activeModule === 'profile'" />
+      <LoginPage v-else-if="activeModule === 'profile'" :is-authenticated="isAuthenticated" @login="handleLoginSuccess" />
 
       <!-- 命理报告模块（原有内容） -->
       <template v-else>
-        <!-- Landing 页面 -->
-        <section
-          v-if="stage === 'landing'"
-          class="landing-page relative flex min-h-screen items-center justify-center overflow-hidden px-4"
-        >
+        <!-- Home 页面 -->
+        <template v-if="stage === 'home'">
+          <section
+            class="home-page relative flex min-h-screen items-center justify-center overflow-hidden px-4"
+          >
       <!-- 装饰性背景元素 - 粒子系统 -->
-      <div class="landing-decoration pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+      <div class="home-decoration pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <!-- 金色粒子点 - 使用 v-for 生成 -->
         <div
           v-for="i in particleCount"
@@ -85,7 +88,7 @@
 
         <!-- 开始按钮 -->
         <button
-          class="landing-cta group relative inline-flex items-center gap-3 rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] px-12 py-4 text-lg font-semibold tracking-[0.08em] text-[#0a0604] shadow-[0_8px_24px_rgba(214,160,96,0.3),0_0_60px_rgba(214,160,96,0.2),inset_0_1px_0_rgba(255,255,255,0.3)] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] opacity-0 animate-[fade-in-up_1s_ease-out_1s_forwards] hover:-translate-y-[3px] hover:scale-[1.02] active:-translate-y-[1px]"
+          class="home-cta group relative inline-flex items-center gap-3 rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] px-12 py-4 text-lg font-semibold tracking-[0.08em] text-[#0a0604] shadow-[0_8px_24px_rgba(214,160,96,0.3),0_0_60px_rgba(214,160,96,0.2),inset_0_1px_0_rgba(255,255,255,0.3)] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] opacity-0 animate-[fade-in-up_1s_ease-out_1s_forwards] hover:-translate-y-[3px] hover:scale-[1.02] active:-translate-y-[1px]"
           type="button"
           @click="goToForm"
         >
@@ -102,20 +105,35 @@
           <span class="text-[var(--accent)] opacity-50 max-[480px]:hidden">—</span>
         </div>
       </div>
-    </section>
+          </section>
+
+          <!-- Home 页内联表单 -->
+          <div
+            v-if="showHomeForm"
+            ref="homeFormRef"
+            class="relative z-10 mx-auto mt-10 w-full max-w-[920px] px-4 lg:mt-12"
+          >
+            <BirthFormCard
+              :loading="loading"
+              :error="error"
+              title="填写生辰，立即排盘"
+              subtitle="仅用于排盘，不会长期存储"
+              helper="支持公历/农历切换，点击出生时间即可选择或输入"
+              @submit="submit"
+            />
+            <div class="mt-4 flex justify-center">
+              <button
+                class="inline-flex items-center gap-2 rounded-full border border-[rgba(255,255,255,0.12)] bg-white/5 px-4 py-2 text-sm text-white/80 transition hover:bg-white/10"
+                type="button"
+                @click="goToLogin"
+              >
+                已有账号？去登录 / Google 登录
+              </button>
+            </div>
+          </div>
+        </template>
 
     <section v-else-if="stage === 'form'" class="form-page stack">
-      <header class="brand-bar">
-        <div class="brand-left">
-          <div class="logo-placeholder logo-image logo-mini">
-            <img :src="logoUrl" alt="神机喵算 Logo" />
-          </div>
-          <div>
-            <div class="brand-title">神机喵算</div>
-            <div class="muted">输入生辰，生成命理报告</div>
-          </div>
-        </div>
-      </header>
       <section v-if="formStep === 'choice'" class="form-entry panel">
         <div class="form-entry-title">选择开始方式</div>
         <p class="muted">新建会进入填写生辰页面，也可以从档案中直接选择。</p>
@@ -129,188 +147,12 @@
         </div>
       </section>
       <section v-else class="form-shell">
-        <div class="form-intro">
-          <div class="status-line">
-            <strong>填写生辰</strong>
-            <span class="muted">仅用于排盘，不会长期存储</span>
-          </div>
-          <p class="muted">支持公历/农历切换，点击出生时间唤起选择器。</p>
-        </div>
-        <div class="form-layout">
-          <div class="panel form-card stack">
-            <div class="field-group">
-              <label>姓名</label>
-              <input v-model.trim="form.name" placeholder="请输入姓名" />
-            </div>
-            <div class="field-row">
-              <div class="field-group">
-                <label>性别</label>
-                <div class="segmented">
-                  <button
-                    class="segmented-btn"
-                    :class="{ active: form.gender === 'male' }"
-                    type="button"
-                    @click="form.gender = 'male'"
-                  >
-                    男
-                  </button>
-                  <button
-                    class="segmented-btn"
-                    :class="{ active: form.gender === 'female' }"
-                    type="button"
-                    @click="form.gender = 'female'"
-                  >
-                    女
-                  </button>
-                </div>
-              </div>
-              <div class="field-group calendar-row">
-                <label>历法</label>
-                <div class="segmented">
-                  <button
-                    class="segmented-btn"
-                    :class="{ active: form.calendar === 'solar' }"
-                    type="button"
-                    @click="form.calendar = 'solar'"
-                  >
-                    公历
-                  </button>
-                  <button
-                    class="segmented-btn"
-                    :class="{ active: form.calendar === 'lunar' }"
-                    type="button"
-                    @click="form.calendar = 'lunar'"
-                  >
-                    农历
-                  </button>
-                  <button
-                    class="segmented-btn"
-                    :class="{ active: form.calendar === 'pillar' }"
-                    type="button"
-                    @click="openPillarPicker"
-                  >
-                    四柱
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div class="field-group">
-              <label>出生时间（必填）</label>
-              <button class="date-display" type="button" @click="pickerOpen = !pickerOpen">
-                <span>{{ displayDate }}</span>
-                <span v-if="!pickerOpen" class="chevron">&gt;</span>
-              </button>
-            </div>
-            <div v-if="pickerOpen" class="picker-overlay" role="dialog" aria-modal="true">
-              <div class="panel picker-card open">
-                <div class="picker-head">
-                  <div class="segmented">
-                    <button
-                      class="segmented-btn"
-                      :class="{ active: form.calendar === 'solar' }"
-                      type="button"
-                      @click="form.calendar = 'solar'"
-                    >
-                      公历
-                    </button>
-                    <button
-                      class="segmented-btn"
-                      :class="{ active: form.calendar === 'lunar' }"
-                      type="button"
-                      @click="form.calendar = 'lunar'"
-                    >
-                      农历
-                    </button>
-                  </div>
-                  <button class="btn ghost today-btn" type="button" @click="setToday">今天</button>
-                </div>
-                <div class="picker-grid">
-                  <div class="picker-column">
-                    <span class="picker-label">年</span>
-                    <select v-model.number="form.year" class="picker-select">
-                      <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
-                    </select>
-                  </div>
-                  <div class="picker-column">
-                    <span class="picker-label">月</span>
-                    <select v-model.number="form.month" class="picker-select">
-                      <option v-for="month in monthOptions" :key="month.value" :value="month.value">
-                        {{ month.label }}
-                      </option>
-                    </select>
-                  </div>
-                  <div class="picker-column">
-                    <span class="picker-label">日</span>
-                    <select v-model.number="form.day" class="picker-select">
-                      <option v-for="day in days" :key="day" :value="day">{{ day }}</option>
-                    </select>
-                  </div>
-                  <div class="picker-column">
-                    <span class="picker-label">时</span>
-                    <select v-model.number="form.hour" class="picker-select">
-                      <option v-for="hour in hours" :key="hour" :value="hour">
-                        {{ hour.toString().padStart(2, "0") }}
-                      </option>
-                    </select>
-                  </div>
-                  <div class="picker-column">
-                    <span class="picker-label">分</span>
-                    <select v-model.number="form.minute" class="picker-select">
-                      <option v-for="minute in minutes" :key="minute" :value="minute">
-                        {{ minute.toString().padStart(2, "0") }}
-                      </option>
-                    </select>
-                  </div>
-                </div>
-                <div v-if="isLunar" class="field-group">
-                  <label>闰月</label>
-                  <label class="check">
-                    <input v-model="form.isLeapMonth" type="checkbox" />
-                    <span>本月为闰月</span>
-                  </label>
-                </div>
-                <div class="picker-footer">
-                  <span class="muted picker-note">选择好后点击确定收起。</span>
-                  <button class="btn primary" type="button" @click="pickerOpen = false">
-                    确定
-                  </button>
-                </div>
-              </div>
-            </div>
-            <!-- 出生地点选择 -->
-            <div class="field-group">
-              <label>出生地点</label>
-              <button class="date-display" type="button" @click="showRegionPicker = true">
-                <span>{{ birthPlace.fullName }}</span>
-                <span class="chevron">&gt;</span>
-              </button>
-              <span class="muted field-hint">
-                选择地区后将根据经度计算真太阳时，使排盘更加精确。
-              </span>
-            </div>
-            <div class="cta-row center">
-              <button class="btn primary cta-primary" :disabled="loading" @click="submit">
-                {{ loading ? "排盘中..." : "一键排盘" }}
-              </button>
-              <span class="muted" v-if="error">{{ error }}</span>
-            </div>
-          </div>
-        </div>
+        <BirthFormCard
+          :loading="loading"
+          :error="error"
+          @submit="submit"
+        />
       </section>
-
-      <!-- 地区选择器弹窗 -->
-      <RegionPicker
-        v-if="showRegionPicker"
-        v-model="birthPlace"
-        @close="showRegionPicker = false"
-      />
-
-      <!-- 四柱输入选择器 -->
-      <PillarPicker
-        v-if="showPillarPicker"
-        @close="showPillarPicker = false"
-        @select="handlePillarSelect"
-      />
     </section>
 
     <section
@@ -499,27 +341,24 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import ChartPanel from "./components/ChartPanel.vue";
-import RegionPicker from "./components/RegionPicker.vue";
-import PillarPicker from "./components/PillarPicker.vue";
 import MasterChat from "./components/MasterChat.vue";
 import SideChat from "./components/SideChat.vue";
 import TopNav from "./components/TopNav.vue";
 import SideNav from "./components/SideNav.vue";
 import CompatibilityPage from "./components/CompatibilityPage.vue";
-import ProfilePage from "./components/ProfilePage.vue";
+import BirthFormCard from "./components/BirthFormCard.vue";
+import LoginPage from "./components/LoginPage.vue";
 import type {
   Analysis,
   Chart,
   ChartResponse,
   Report,
   ReportResponse,
-  ReportStreamEvent,
-  MatchedDate
+  ReportStreamEvent
 } from "./types";
-import { getDefaultRegion, type SelectedRegion } from "./data/china-regions";
-import logoUrl from "./assets/logo-bazi_meow.png";
+import { lunarMonthLabels, type BirthFormValues } from "./types/forms";
 
 type ArchivePillar = {
   stem: string;
@@ -541,7 +380,7 @@ type ArchiveEntry = {
 const activeModule = ref<"bazi" | "compatibility" | "profile">("bazi");
 
 // 命理报告模块内的页面状态
-const stage = ref<"landing" | "form" | "detail" | "archive" | "master-chat">("landing");
+const stage = ref<"home" | "form" | "detail" | "archive" | "master-chat">("home");
 const formStep = ref<"choice" | "edit">("choice");
 const activeTab = ref<"chart" | "report">("chart");
 const chatOpen = ref(false);
@@ -552,7 +391,7 @@ const currentSideNavPage = computed(() => {
   if (stage.value === 'detail') {
     return activeTab.value as 'chart' | 'report';
   }
-  return stage.value as 'archive' | 'master-chat' | 'form' | 'landing';
+  return stage.value as 'archive' | 'master-chat' | 'form' | 'home';
 });
 
 // 粒子系统配置
@@ -593,20 +432,6 @@ const getParticleStyle = (index: number) => {
     '--particle-opacity': opacity
   };
 };
-const form = ref({
-  name: "",
-  year: 2000,
-  month: 1,
-  day: 1,
-  hour: 0,
-  minute: 0,
-  gender: "male",
-  calendar: "solar",
-  isLeapMonth: false
-});
-const birthPlace = ref<SelectedRegion>(getDefaultRegion());
-const showRegionPicker = ref(false);
-const showPillarPicker = ref(false);
 const focus = ref<string[]>([]);
 const loading = ref(false);
 const error = ref("");
@@ -621,69 +446,19 @@ const reportLoading = ref(false);
 const archives = ref<ArchiveEntry[]>([]);
 const activeArchiveId = ref<number | null>(null);
 const archiveCounter = ref(0);
+const showHomeForm = ref(false);
+const homeFormRef = ref<HTMLElement | null>(null);
+const isAuthenticated = ref(false);
 
 const canChat = computed(() => !!chart.value && !!analysis.value);
 const canViewReport = computed(() => reportStreaming.value || !!report.value);
-const nowYear = new Date().getFullYear();
-// 年份范围从 1801 到当前年份，与四柱查找范围一致
-const years = Array.from({ length: nowYear - 1801 + 1 }, (_, idx) => nowYear - idx);
-const hours = Array.from({ length: 24 }, (_, idx) => idx);
-const minutes = Array.from({ length: 60 }, (_, idx) => idx);
-const lunarMonthLabels = [
-  "正月",
-  "二月",
-  "三月",
-  "四月",
-  "五月",
-  "六月",
-  "七月",
-  "八月",
-  "九月",
-  "十月",
-  "冬月",
-  "腊月"
-];
-const monthOptions = computed(() =>
-  Array.from({ length: 12 }, (_, idx) => {
-    const value = idx + 1;
-    const label =
-      form.value.calendar === "lunar"
-        ? lunarMonthLabels[idx]
-        : `${value.toString().padStart(2, "0")}月`;
-    return { value, label };
-  })
-);
-const days = computed(() => {
-  if (form.value.calendar === "lunar") {
-    return Array.from({ length: 30 }, (_, idx) => idx + 1);
-  }
-  const lastDay = new Date(form.value.year, form.value.month, 0).getDate();
-  return Array.from({ length: lastDay }, (_, idx) => idx + 1);
-});
-
-const isLunar = computed(() => form.value.calendar === "lunar");
-const pickerOpen = ref(false);
-
-const displayDate = computed(() => {
-  const year = form.value.year;
-  const monthLabel =
-    form.value.calendar === "lunar"
-      ? `${form.value.isLeapMonth ? "闰" : ""}${lunarMonthLabels[form.value.month - 1]}`
-      : form.value.month.toString().padStart(2, "0");
-  const day = form.value.day.toString().padStart(2, "0");
-  const hour = form.value.hour.toString().padStart(2, "0");
-  const minute = form.value.minute.toString().padStart(2, "0");
-  return form.value.calendar === "lunar"
-    ? `${year}年 ${monthLabel} ${day}日 ${hour}:${minute}`
-    : `${year}-${monthLabel}-${day} ${hour}:${minute}`;
-});
 
 const updateBodyClass = (value: typeof stage.value) => {
   if (typeof document === "undefined") return;
   const classList = document.documentElement.classList;
-  classList.remove("page-landing", "page-main");
-  if (value === "landing") {
-    classList.add("page-landing");
+  classList.remove("page-home", "page-main");
+  if (value === "home") {
+    classList.add("page-home");
   } else {
     classList.add("page-main");
   }
@@ -691,16 +466,25 @@ const updateBodyClass = (value: typeof stage.value) => {
 
 // 顶层模块导航处理
 const handleModuleNavigate = (module: "bazi" | "compatibility" | "profile") => {
+  if (!isAuthenticated.value && module !== "profile") {
+    goToLogin();
+    return;
+  }
   activeModule.value = module;
   sideNavOpen.value = false;
-  // 切换到命理报告模块时，如果当前是 landing 页则保持，否则跳到 detail
-  if (module === "bazi" && stage.value === "landing") {
-    // 保持 landing 状态
+  showHomeForm.value = module === "bazi" ? showHomeForm.value : false;
+  // 切换到命理报告模块时，如果当前是 home 页则保持，否则跳到 detail
+  if (module === "bazi" && stage.value === "home") {
+    // 保持 home 状态
   }
 };
 
 // 侧边栏导航处理（仅命理报告模块内使用）
-const handleSideNavNavigate = (page: 'chart' | 'report' | 'archive' | 'master-chat' | 'form' | 'landing') => {
+const handleSideNavNavigate = (page: 'chart' | 'report' | 'archive' | 'master-chat' | 'form' | 'home') => {
+  if (!isAuthenticated.value) {
+    goToLogin();
+    return;
+  }
   sideNavOpen.value = false;
   switch (page) {
     case 'chart':
@@ -718,45 +502,79 @@ const handleSideNavNavigate = (page: 'chart' | 'report' | 'archive' | 'master-ch
     case 'form':
       goToForm();
       break;
-    case 'landing':
-      goToLanding();
+    case 'home':
+      goToHome();
       break;
   }
 };
 
 const goToForm = () => {
+  activeModule.value = "bazi";
+  error.value = "";
+  if (stage.value === "home") {
+    showHomeForm.value = true;
+    formStep.value = "edit";
+    chatOpen.value = false;
+    nextTick(() => {
+      homeFormRef.value?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return;
+  }
   stage.value = "form";
   formStep.value = "choice";
   chatOpen.value = false;
+  sideNavOpen.value = false;
 };
 
-const goToLanding = () => {
+const goToHome = () => {
   activeModule.value = "bazi"; // 确保切换到命理报告模块
-  stage.value = "landing";
+  stage.value = "home";
   chatOpen.value = false;
   sideNavOpen.value = false;
+  showHomeForm.value = false;
+  error.value = "";
+};
+
+const goToLogin = () => {
+  activeModule.value = "profile";
+  stage.value = "detail";
+  chatOpen.value = false;
+  sideNavOpen.value = false;
+  showHomeForm.value = false;
+  error.value = "";
+};
+
+const handleLoginSuccess = () => {
+  isAuthenticated.value = true;
+  activeModule.value = "profile";
+  showHomeForm.value = false;
+  error.value = "";
 };
 
 const goToArchive = () => {
   stage.value = "archive";
   chatOpen.value = false;
+  showHomeForm.value = false;
 };
 
 const goToDetail = (tab: "chart" | "report" = "chart") => {
   stage.value = "detail";
   activeTab.value = tab;
   chatOpen.value = false;
+  showHomeForm.value = false;
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
 const goToMasterChat = () => {
   stage.value = "master-chat";
   chatOpen.value = false;
+  showHomeForm.value = false;
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
 const startNewForm = () => {
   formStep.value = "edit";
+  error.value = "";
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
@@ -764,6 +582,8 @@ const startNewFormFlow = () => {
   stage.value = "form";
   formStep.value = "edit";
   chatOpen.value = false;
+  showHomeForm.value = false;
+  error.value = "";
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
@@ -786,33 +606,6 @@ const openChat = () => {
 
 const closeChat = () => {
   chatOpen.value = false;
-};
-
-const setToday = () => {
-  const now = new Date();
-  form.value.calendar = "solar";
-  form.value.isLeapMonth = false;
-  form.value.year = now.getFullYear();
-  form.value.month = now.getMonth() + 1;
-  form.value.day = now.getDate();
-  form.value.hour = now.getHours();
-  form.value.minute = now.getMinutes();
-};
-
-const openPillarPicker = () => {
-  form.value.calendar = "pillar";
-  showPillarPicker.value = true;
-};
-
-const handlePillarSelect = (date: MatchedDate) => {
-  // 用户从四柱查找结果中选择了一个日期
-  form.value.calendar = "solar";
-  form.value.year = date.year;
-  form.value.month = date.month;
-  form.value.day = date.day;
-  form.value.hour = date.hour;
-  form.value.minute = date.minute;
-  showPillarPicker.value = false;
 };
 
 const renderMarkdown = (text: string) => {
@@ -880,45 +673,28 @@ const renderMarkdown = (text: string) => {
   return html;
 };
 
-watch([() => form.value.year, () => form.value.month, () => form.value.calendar], () => {
-  const maxDay =
-    form.value.calendar === "lunar" ? 30 : new Date(form.value.year, form.value.month, 0).getDate();
-  if (form.value.day > maxDay) {
-    form.value.day = maxDay;
-  }
-});
-
-watch(
-  () => form.value.calendar,
-  (value) => {
-    if (value === "solar") {
-      form.value.isLeapMonth = false;
-    }
-  }
-);
-
-const submit = async () => {
+const submit = async (payload: BirthFormValues) => {
   error.value = "";
   loading.value = true;
   try {
     // 构建请求体，包含出生地点信息
     const requestBody: Record<string, unknown> = {
-      name: form.value.name,
-      gender: form.value.gender,
-      year: form.value.year,
-      month: form.value.month,
-      day: form.value.day,
-      hour: form.value.hour,
-      minute: form.value.minute,
-      calendar: form.value.calendar,
-      is_leap_month: form.value.isLeapMonth,
+      name: payload.name,
+      gender: payload.gender,
+      year: payload.year,
+      month: payload.month,
+      day: payload.day,
+      hour: payload.hour,
+      minute: payload.minute,
+      calendar: payload.calendar,
+      is_leap_month: payload.isLeapMonth,
       tz_offset_hours: 0,
-      birth_place: birthPlace.value.fullName
+      birth_place: payload.birthPlace.fullName
     };
     // 如果选择了具体地区，传递经纬度
-    if (birthPlace.value.province) {
-      requestBody.longitude = birthPlace.value.lng;
-      requestBody.latitude = birthPlace.value.lat;
+    if (payload.birthPlace.province) {
+      requestBody.longitude = payload.birthPlace.lng;
+      requestBody.latitude = payload.birthPlace.lat;
     }
     const chartRes = await fetch("/api/bazi/chart", {
       method: "POST",
@@ -928,7 +704,7 @@ const submit = async () => {
     if (!chartRes.ok) throw new Error(await chartRes.text());
     const chartData = (await chartRes.json()) as ChartResponse;
     chart.value = chartData.chart;
-    saveArchive(chartData.chart);
+    saveArchive(payload, chartData.chart);
     analysis.value = null;
     report.value = null;
     reportDraft.value = "";
@@ -944,22 +720,22 @@ const submit = async () => {
   }
 };
 
-const saveArchive = (chartData: Chart) => {
-  const name = form.value.name.trim();
+const saveArchive = (formValues: BirthFormValues, chartData: Chart) => {
+  const name = formValues.name.trim();
   const displayName = name || `命主${archiveCounter.value + 1}`;
   archiveCounter.value += 1;
 
-  const year = form.value.year;
-  const month = form.value.month;
-  const day = form.value.day;
-  const hour = form.value.hour;
-  const minute = form.value.minute;
+  const year = formValues.year;
+  const month = formValues.month;
+  const day = formValues.day;
+  const hour = formValues.hour;
+  const minute = formValues.minute;
   const minuteLabel = minute.toString().padStart(2, "0");
   const hourLabel = hour.toString().padStart(2, "0");
 
   const birthLabel =
-    form.value.calendar === "lunar"
-      ? `农历${year}年${form.value.isLeapMonth ? "闰" : ""}${
+    formValues.calendar === "lunar"
+      ? `农历${year}年${formValues.isLeapMonth ? "闰" : ""}${
           lunarMonthLabels[month - 1]
         }${day}日 ${hourLabel}:${minuteLabel}`
       : `阳历${year}年${month}月${day}日 ${hourLabel}:${minuteLabel}`;

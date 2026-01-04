@@ -13,17 +13,6 @@
       'transition-transform duration-300 ease-in-out overflow-y-auto'
     ]"
   >
-    <!-- 侧边栏头部：品牌信息 -->
-    <div class="flex items-center gap-3 border-b border-[var(--border)] pb-3">
-      <div class="logo-placeholder logo-image logo-mini">
-        <img :src="logoUrl" alt="神机喵算 Logo" />
-      </div>
-      <div class="grid gap-1 leading-tight">
-        <span class="text-[16px] font-semibold text-[var(--accent-2)]">神机喵算</span>
-        <span class="text-[12px] text-[var(--muted)]">命盘与报告</span>
-      </div>
-    </div>
-
     <!-- 核心功能导航 -->
     <div class="grid gap-3">
       <div class="grid gap-2">
@@ -110,9 +99,9 @@
         <button
           class="flex w-full items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-left text-[15px] text-white transition hover:bg-white/5"
           type="button"
-          @click="handleNav('landing')"
+          @click="handleNav('home')"
         >
-          回到欢迎
+          回到首页
         </button>
       </div>
     </div>
@@ -127,7 +116,6 @@
 </template>
 
 <script setup lang="ts">
-import logoUrl from '../assets/logo-bazi_meow.png';
 import baziChartIconUrl from '../assets/bazi-chart.png';
 import reportIconUrl from '../assets/report.png';
 import archiveIconUrl from '../assets/archive.png';
@@ -136,13 +124,13 @@ import chatIconUrl from '../assets/chat-dot-square.png';
 // Props
 defineProps<{
   open: boolean; // 移动端抽屉是否打开
-  currentPage: 'chart' | 'report' | 'archive' | 'master-chat' | 'form' | 'landing';
+  currentPage: 'chart' | 'report' | 'archive' | 'master-chat' | 'form' | 'home';
   canViewReport: boolean; // 是否可以查看报告（需要已生成报告）
 }>();
 
 // 事件
 const emit = defineEmits<{
-  (e: 'navigate', page: 'chart' | 'report' | 'archive' | 'master-chat' | 'form' | 'landing'): void;
+  (e: 'navigate', page: 'chart' | 'report' | 'archive' | 'master-chat' | 'form' | 'home'): void;
   (e: 'close'): void;
 }>();
 
@@ -154,7 +142,7 @@ const navBtnActive =
 const navIconClass = 'flex h-10 w-10 items-center justify-center rounded-lg shrink-0';
 
 // 处理导航点击
-const handleNav = (page: 'chart' | 'report' | 'archive' | 'master-chat' | 'form' | 'landing') => {
+const handleNav = (page: 'chart' | 'report' | 'archive' | 'master-chat' | 'form' | 'home') => {
   emit('navigate', page);
   emit('close'); // 移动端点击后自动关闭抽屉
 };

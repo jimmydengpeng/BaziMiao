@@ -34,7 +34,7 @@ body {
   scrollbar-gutter: stable both-edges;
 }
 
-html.page-landing {
+html.page-home {
   background: url("../assets/bg-hero.png") center / cover no-repeat fixed, #050505;
 }
 
@@ -74,7 +74,7 @@ button {
   gap: 20px;
 }
 
-.app-shell.landing-layout {
+.app-shell.home-layout {
   max-width: 100%;
   padding: 0;
   min-height: 100vh;
@@ -103,14 +103,14 @@ button {
   box-shadow: 0 28px 70px rgba(0, 0, 0, 0.35);
 }
 
-.hero-landing {
+.hero-home {
   min-height: 72vh;
   width: min(100%, 720px);
   align-self: flex-start;
   margin-left: 32px;
 }
 
-.hero-landing::before {
+.hero-home::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -1255,24 +1255,6 @@ button {
   gap: 12px;
 }
 
-.brand-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 16px;
-  border-radius: 16px;
-  border: 1px solid var(--border);
-  background: rgba(15, 20, 33, 0.5);
-}
-
-.brand-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
 .brand-left {
   display: flex;
   align-items: center;
@@ -2224,7 +2206,7 @@ button {
     max-width: 100%;
   }
 
-  .app-shell.landing-layout {
+  .app-shell.home-layout {
     padding: 0;
     height: 100vh;
   }
@@ -2587,7 +2569,7 @@ button {
 /* ========== 新的开始页面设计 ========== */
 
 /* 开始页面容器 - 渐变遮罩背景 */
-.landing-page {
+.home-page {
   background:
     radial-gradient(ellipse at 20% 30%, rgba(214, 160, 96, 0.12) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 70%, rgba(200, 16, 46, 0.08) 0%, transparent 50%),
@@ -2595,7 +2577,7 @@ button {
 }
 
 /* 粒子特效仍用 CSS 控制 */
-.landing-decoration {
+.home-decoration {
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -2612,7 +2594,7 @@ button {
 }
 
 /* CTA 的描边光效仍靠伪元素实现 */
-.landing-cta::before {
+.home-cta::before {
   content: '';
   position: absolute;
   inset: -2px;
@@ -2628,7 +2610,7 @@ button {
   transition: opacity 0.4s ease;
 }
 
-.landing-cta:hover::before {
+.home-cta:hover::before {
   opacity: 1;
 }
 
