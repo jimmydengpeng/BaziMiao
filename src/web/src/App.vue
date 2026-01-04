@@ -293,66 +293,134 @@
 
     <section
       v-else
-      class="main-shell grid h-full grid-cols-[auto_minmax(0,1fr)] items-start gap-5 overflow-hidden max-[960px]:grid-cols-1"
+      class="main-shell grid h-full grid-cols-1 items-start gap-5 overflow-hidden lg:grid-cols-[auto_minmax(0,1fr)]"
     >
-      <aside class="side-nav main-nav">
-        <div class="brand-mini">
+      <!-- 移动端顶部栏：品牌 + 菜单按钮 -->
+      <div
+        class="flex items-center justify-between gap-3 rounded-2xl border border-[rgba(255,255,255,0.14)] bg-[rgba(18,22,33,0.72)] px-4 py-3 shadow-[0_10px_30px_rgba(0,0,0,0.3)] backdrop-blur-xl lg:hidden"
+      >
+        <div class="flex items-center gap-3">
           <div class="logo-placeholder logo-image logo-mini">
             <img :src="logoUrl" alt="神机喵算 Logo" />
           </div>
-          <div class="brand-text">
-            <div class="brand-title">神机喵算</div>
-            <div class="muted">命盘与报告</div>
+          <div class="flex flex-col leading-tight">
+            <span class="text-[15px] font-semibold text-[var(--accent-2)]">神机喵算</span>
+            <span class="text-[12px] text-[var(--muted)]">命盘与报告</span>
           </div>
         </div>
-        <div class="nav-section">
-          <div class="nav-label">核心功能</div>
-          <button
-            class="nav-btn"
-            type="button"
-            :class="{ active: stage === 'detail' && activeTab === 'chart' }"
-            @click="goToDetail('chart')"
-          >
-            八字命盘
-          </button>
-          <button
-            class="nav-btn"
-            type="button"
-            :class="{ active: stage === 'detail' && activeTab === 'report' }"
-            :disabled="!canViewReport"
-            @click="goToDetail('report')"
-          >
-            命理报告
-          </button>
-          <button
-            class="nav-btn"
-            type="button"
-            :class="{ active: stage === 'archive' }"
-            @click="goToArchive"
-          >
-            档案列表
-          </button>
-          <button
-            class="nav-btn"
-            type="button"
-            :class="{ active: stage === 'master-chat' }"
-            @click="goToMasterChat"
-          >
-            🐱 神喵大师
-          </button>
+        <button
+          class="inline-flex items-center justify-center rounded-xl border border-[rgba(255,255,255,0.2)] bg-white/5 px-3 py-2 text-sm text-white transition hover:bg-white/10"
+          type="button"
+          @click="navOpen = !navOpen"
+          aria-label="打开导航"
+        >
+          <svg v-if="!navOpen" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+            <line x1="3" y1="6" x2="17" y2="6"/>
+            <line x1="3" y1="10" x2="17" y2="10"/>
+            <line x1="3" y1="14" x2="17" y2="14"/>
+          </svg>
+          <svg v-else width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8">
+            <line x1="5" y1="5" x2="15" y2="15"/>
+            <line x1="15" y1="5" x2="5" y2="15"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- 侧边导航 / 抽屉 -->
+      <aside
+        :class="[
+          'main-nav z-40 flex h-full flex-col gap-3 border border-[rgba(255,255,255,0.14)] bg-[rgba(18,22,33,0.62)] px-4 py-4 backdrop-blur-xl shadow-[0_18px_40px_rgba(0,0,0,0.35)] lg:static lg:h-full lg:w-[clamp(180px,18vw,240px)] lg:translate-x-0 lg:rounded-2xl lg:p-4',
+          navOpen ? 'fixed inset-y-0 left-0 w-[78%] max-w-[320px] translate-x-0 rounded-r-2xl' : 'fixed inset-y-0 left-0 w-[78%] max-w-[320px] -translate-x-full',
+          'transition-transform duration-300 ease-in-out overflow-y-auto'
+        ]"
+      >
+        <div class="flex items-center gap-3 border-b border-[var(--border)] pb-3">
+          <div class="logo-placeholder logo-image logo-mini">
+            <img :src="logoUrl" alt="神机喵算 Logo" />
+          </div>
+          <div class="grid gap-1 leading-tight">
+            <span class="text-[16px] font-semibold text-[var(--accent-2)]">神机喵算</span>
+            <span class="text-[12px] text-[var(--muted)]">命盘与报告</span>
+          </div>
         </div>
-        <div class="nav-section nav-section-muted">
-          <div class="nav-label">更多模块</div>
-          <button class="nav-btn muted" type="button" disabled>运势测算</button>
-          <button class="nav-btn muted" type="button" disabled>今日运势</button>
-          <button class="nav-btn muted" type="button" disabled>命理百科</button>
-        </div>
-        <div class="nav-section">
-          <div class="nav-label">快捷入口</div>
-          <button class="nav-btn" type="button" @click="goToForm">新建排盘</button>
-          <button class="nav-btn" type="button" @click="goToLanding">回到欢迎</button>
+
+        <div class="grid gap-3">
+          <div class="grid gap-2">
+            <div class="text-[11px] uppercase tracking-[0.12em] text-white/60">核心功能</div>
+            <button
+              class="flex w-full items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-left text-[15px] text-white transition hover:bg-white/5"
+              type="button"
+              :class="{ 'border-[rgba(255,255,255,0.25)] bg-[rgba(214,160,96,0.22)] text-[var(--accent-2)]': stage === 'detail' && activeTab === 'chart' }"
+              @click="goToDetail('chart'); navOpen = false"
+            >
+              八字命盘
+            </button>
+            <button
+              class="flex w-full items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-left text-[15px] text-white transition hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
+              type="button"
+              :class="{ 'border-[rgba(255,255,255,0.25)] bg-[rgba(214,160,96,0.22)] text-[var(--accent-2)]': stage === 'detail' && activeTab === 'report' }"
+              :disabled="!canViewReport"
+              @click="goToDetail('report'); navOpen = false"
+            >
+              命理报告
+            </button>
+            <button
+              class="flex w-full items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-left text-[15px] text-white transition hover:bg-white/5"
+              type="button"
+              :class="{ 'border-[rgba(255,255,255,0.25)] bg-[rgba(214,160,96,0.22)] text-[var(--accent-2)]': stage === 'archive' }"
+              @click="goToArchive(); navOpen = false"
+            >
+              档案列表
+            </button>
+            <button
+              class="flex w-full items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-left text-[15px] text-white transition hover:bg-white/5"
+              type="button"
+              :class="{ 'border-[rgba(255,255,255,0.25)] bg-[rgba(214,160,96,0.22)] text-[var(--accent-2)]': stage === 'master-chat' }"
+              @click="goToMasterChat(); navOpen = false"
+            >
+              🐱 神喵大师
+            </button>
+          </div>
+
+          <div class="grid gap-2 opacity-80">
+            <div class="text-[11px] uppercase tracking-[0.12em] text-white/60">更多模块</div>
+            <button class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[15px] text-white/60" type="button" disabled>
+              运势测算
+            </button>
+            <button class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[15px] text-white/60" type="button" disabled>
+              今日运势
+            </button>
+            <button class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[15px] text-white/60" type="button" disabled>
+              命理百科
+            </button>
+          </div>
+
+          <div class="grid gap-2">
+            <div class="text-[11px] uppercase tracking-[0.12em] text-white/60">快捷入口</div>
+            <button
+              class="flex w-full items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-left text-[15px] text-white transition hover:bg-white/5"
+              type="button"
+              @click="goToForm(); navOpen = false"
+            >
+              新建排盘
+            </button>
+            <button
+              class="flex w-full items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-left text-[15px] text-white transition hover:bg-white/5"
+              type="button"
+              @click="goToLanding(); navOpen = false"
+            >
+              回到欢迎
+            </button>
+          </div>
         </div>
       </aside>
+
+      <!-- 抽屉遮罩 -->
+      <div
+        v-if="navOpen"
+        class="fixed inset-0 z-30 bg-black/50 backdrop-blur-[2px] lg:hidden"
+        @click="navOpen = false"
+      ></div>
 
       <div class="workspace flex h-full min-w-0 gap-5 overflow-hidden" :class="{ 'chat-open': chatOpen }">
         <main
@@ -566,6 +634,7 @@ const stage = ref<"landing" | "form" | "detail" | "archive" | "master-chat">("la
 const formStep = ref<"choice" | "edit">("choice");
 const activeTab = ref<"chart" | "report">("chart");
 const chatOpen = ref(false);
+const navOpen = ref(false);
 
 // 粒子系统配置
 const particleCount = 128;

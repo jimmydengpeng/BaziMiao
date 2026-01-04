@@ -1285,16 +1285,6 @@ button {
   color: var(--accent-2);
 }
 
-.main-shell {
-  display: grid;
-  /* 使用auto让第一列自动适应侧边栏的实际宽度 */
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 20px;
-  align-items: flex-start;
-  height: 100%;
-  overflow: hidden;
-}
-
 .workspace {
   display: flex;
   gap: 20px;
@@ -1447,91 +1437,6 @@ button {
   text-align: center;
   background: rgba(16, 12, 10, 0.7);
   border-color: rgba(255, 255, 255, 0.14);
-}
-
-.side-nav {
-  /* 响应式宽度：最小180px，理想值为视口宽度的18%，最大240px */
-  width: clamp(180px, 18vw, 240px);
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(18, 22, 33, 0.62);
-  backdrop-filter: blur(16px);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.brand-mini {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
-}
-
-.brand-text {
-  display: grid;
-  gap: 4px;
-}
-
-.nav-btn {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--text);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.nav-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.nav-btn.active {
-  border-color: rgba(255, 255, 255, 0.2);
-  background: linear-gradient(120deg, rgba(214, 160, 96, 0.26), rgba(240, 192, 122, 0.16));
-  color: var(--accent-2);
-}
-
-.nav-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.nav-section {
-  display: grid;
-  gap: 8px;
-}
-
-.nav-section + .nav-section {
-  padding-top: 8px;
-  border-top: 1px dashed rgba(255, 255, 255, 0.08);
-}
-
-.nav-section-muted {
-  opacity: 0.8;
-}
-
-.nav-label {
-  font-size: 12px;
-  letter-spacing: 1px;
-  color: rgba(255, 255, 255, 0.55);
-  text-transform: uppercase;
-}
-
-.nav-btn.muted {
-  color: rgba(255, 255, 255, 0.5);
 }
 
 .main-content {
@@ -2313,28 +2218,8 @@ button {
 
 /* 中等屏幕下侧边导航栏调整 */
 @media (max-width: 1200px) {
-  .side-nav {
-    /* 在中等屏幕下进一步减小宽度 */
-    width: clamp(160px, 16vw, 200px);
-    padding: 14px;
-    gap: 10px;
-  }
-
-  .nav-btn {
-    padding: 8px 10px;
-    font-size: 14px;
-  }
-
-  .brand-mini {
-    gap: 10px;
-  }
-
   .brand-title {
     font-size: 15px;
-  }
-
-  .nav-label {
-    font-size: 11px;
   }
 }
 
@@ -2363,37 +2248,6 @@ button {
 
   .hero-title-image {
     width: min(320px, 72vw);
-  }
-
-  .main-shell {
-    grid-template-columns: 1fr;
-    height: 100%;
-  }
-
-  .side-nav {
-    width: 100%;
-    height: auto;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    overflow: visible;
-  }
-
-  .nav-section {
-    width: 100%;
-  }
-
-  .nav-label {
-    width: 100%;
-  }
-
-  .nav-btn {
-    flex: 1 1 140px;
-    justify-content: center;
-  }
-
-  .brand-mini {
-    width: 100%;
   }
 
   .chat-column {
