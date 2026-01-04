@@ -2736,22 +2736,15 @@ button {
 
 /* ========== 新的开始页面设计 ========== */
 
-/* 开始页面容器 - 全屏居中 */
+/* 开始页面容器 - 渐变遮罩背景 */
 .landing-page {
-  position: relative;
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  /* 提高透明度的渐变遮罩，让底层图片更清晰 */
   background:
     radial-gradient(ellipse at 20% 30%, rgba(214, 160, 96, 0.12) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 70%, rgba(200, 16, 46, 0.08) 0%, transparent 50%),
     radial-gradient(ellipse at 50% 50%, rgba(10, 10, 12, 0.45) 0%, rgba(5, 5, 5, 0.75) 100%);
 }
 
-/* 装饰性背景元素 */
+/* 粒子特效仍用 CSS 控制 */
 .landing-decoration {
   position: absolute;
   inset: 0;
@@ -2759,7 +2752,6 @@ button {
   overflow: hidden;
 }
 
-/* 金色粒子点 - 通用样式 */
 .gold-particle {
   position: absolute;
   background: var(--accent);
@@ -2767,126 +2759,14 @@ button {
   opacity: 0;
   box-shadow: 0 0 12px rgba(214, 160, 96, 0.6);
   animation: particle-float ease-in-out infinite;
-  /* 位置、大小、动画延迟由内联样式控制 */
 }
 
-/* 主内容区域 - 圆角矩形卡片 + 毛玻璃效果 */
-.landing-content {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
-  max-width: 680px;
-  padding: 56px 48px;
-  text-align: center;
-  /* 毛玻璃效果 */
-  background: rgba(15, 15, 18, 0.35);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  /* 圆角矩形 */
-  border-radius: 32px;
-  /* 边框 */
-  border: 1px solid rgba(214, 160, 96, 0.15);
-  /* 阴影 */
-  box-shadow:
-    0 20px 60px rgba(0, 0, 0, 0.5),
-    0 0 80px rgba(214, 160, 96, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-/* 项目标题 - 书法字体 */
-.landing-title {
-  font-family: "Ma Shan Zheng", serif;
-  font-size: clamp(56px, 8vw, 96px);
-  font-weight: 400;
-  line-height: 1.2;
-  margin: 0 0 16px;
-  letter-spacing: 0.08em;
-  background: linear-gradient(
-    135deg,
-    #f4d03f 0%,
-    #d6a060 25%,
-    #f0c07a 50%,
-    #d6a060 75%,
-    #f4d03f 100%
-  );
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  filter: drop-shadow(0 0 40px rgba(214, 160, 96, 0.4));
-  opacity: 0;
-  animation:
-    fade-in-up 1s ease-out 0.2s forwards,
-    shimmer 3s ease-in-out 1.2s infinite;
-}
-
-/* 英文副标题 */
-.landing-subtitle-en {
-  font-family: "Cinzel", serif;
-  font-size: clamp(16px, 2vw, 22px);
-  font-weight: 400;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  color: var(--accent);
-  margin-bottom: 40px;
-  opacity: 0;
-  animation: fade-in-up 1s ease-out 0.4s forwards;
-}
-
-/* 简介文字 */
-.landing-intro {
-  font-size: clamp(15px, 1.8vw, 18px);
-  font-weight: 500;
-  color: rgba(236, 227, 214, 0.9);
-  margin: 0 0 16px;
-  letter-spacing: 0.05em;
-  opacity: 0;
-  animation: fade-in-up 1s ease-out 0.6s forwards;
-}
-
-/* Slogan */
-.landing-slogan {
-  font-size: clamp(14px, 1.6vw, 17px);
-  color: var(--muted);
-  margin: 0 0 48px;
-  letter-spacing: 0.03em;
-  line-height: 1.8;
-  opacity: 0;
-  animation: fade-in-up 1s ease-out 0.8s forwards;
-}
-
-/* 开始按钮 */
-.landing-cta {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  padding: 18px 48px;
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  border: none;
-  border-radius: 50px;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
-  color: #0a0604;
-  cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow:
-    0 8px 24px rgba(214, 160, 96, 0.3),
-    0 0 60px rgba(214, 160, 96, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  opacity: 0;
-  animation: fade-in-up 1s ease-out 1s forwards;
-}
-
+/* CTA 的描边光效仍靠伪元素实现 */
 .landing-cta::before {
   content: '';
   position: absolute;
   inset: -2px;
-  border-radius: 50px;
+  border-radius: inherit;
   padding: 2px;
   background: linear-gradient(135deg, var(--accent-2), var(--accent), var(--accent-red));
   -webkit-mask:
@@ -2900,56 +2780,6 @@ button {
 
 .landing-cta:hover::before {
   opacity: 1;
-}
-
-.landing-cta:hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow:
-    0 16px 40px rgba(214, 160, 96, 0.4),
-    0 0 80px rgba(214, 160, 96, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
-}
-
-.landing-cta:active {
-  transform: translateY(-1px) scale(1);
-}
-
-.cta-text {
-  position: relative;
-  z-index: 1;
-}
-
-.cta-arrow {
-  position: relative;
-  z-index: 1;
-  font-size: 24px;
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.landing-cta:hover .cta-arrow {
-  transform: translateX(6px);
-}
-
-/* 底部装饰文字 */
-.landing-footer {
-  margin-top: 64px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 13px;
-  color: var(--muted);
-  letter-spacing: 0.15em;
-  opacity: 0;
-  animation: fade-in-up 1s ease-out 1.2s forwards;
-}
-
-.footer-divider {
-  color: var(--accent);
-  opacity: 0.5;
-}
-
-.footer-text {
-  font-weight: 500;
 }
 
 /* ========== 动画关键帧 ========== */
@@ -3021,54 +2851,5 @@ button {
   75% {
     opacity: calc(var(--particle-opacity, 0.8) * 0.75);
     transform: translateY(-20px) scale(1.1);
-  }
-}
-
-/* ========== 响应式调整 ========== */
-
-@media (max-width: 768px) {
-  .landing-content {
-    max-width: 560px;
-    padding: 48px 36px;
-    border-radius: 28px;
-  }
-
-  .landing-title {
-    margin-bottom: 12px;
-  }
-
-  .landing-subtitle-en {
-    margin-bottom: 32px;
-  }
-
-  .landing-slogan {
-    margin-bottom: 40px;
-  }
-
-  .landing-cta {
-    padding: 16px 40px;
-    font-size: 16px;
-  }
-
-  .landing-footer {
-    margin-top: 48px;
-    font-size: 12px;
-  }
-}
-
-@media (max-width: 480px) {
-  .landing-content {
-    max-width: calc(100% - 32px);
-    padding: 40px 28px;
-    border-radius: 24px;
-  }
-
-  .landing-footer {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .footer-divider {
-    display: none;
   }
 }

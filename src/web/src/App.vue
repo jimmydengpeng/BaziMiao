@@ -13,9 +13,12 @@
           : 'max-w-[1100px] px-5 pt-8 pb-20'
     ]"
   >
-    <section v-if="stage === 'landing'" class="landing-page">
+    <section
+      v-if="stage === 'landing'"
+      class="landing-page relative flex h-screen items-center justify-center overflow-hidden px-4"
+    >
       <!-- 装饰性背景元素 - 粒子系统 -->
-      <div class="landing-decoration">
+      <div class="landing-decoration pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <!-- 金色粒子点 - 使用 v-for 生成 -->
         <div
           v-for="i in particleCount"
@@ -26,31 +29,55 @@
       </div>
 
       <!-- 主内容 -->
-      <div class="landing-content">
+      <div
+        class="relative z-10 flex w-full max-w-[calc(100%-32px)] flex-col items-center rounded-[24px] border border-[rgba(214,160,96,0.15)] bg-[rgba(15,15,18,0.35)] px-7 py-10 text-center backdrop-blur-[24px] shadow-[0_20px_60px_rgba(0,0,0,0.5),0_0_80px_rgba(214,160,96,0.1),inset_0_1px_0_rgba(255,255,255,0.05)] sm:max-w-[560px] sm:rounded-[28px] sm:px-9 sm:py-12 md:max-w-[680px] md:rounded-[32px] md:px-12 md:py-14"
+      >
 
         <!-- 项目名称 - 使用书法字体 -->
-        <h1 class="landing-title">神机喵算</h1>
+        <h1
+          class="mb-4 bg-[linear-gradient(135deg,#f4d03f_0%,#d6a060_25%,#f0c07a_50%,#d6a060_75%,#f4d03f_100%)] bg-clip-text font-['Ma_Shan_Zheng',serif] text-[clamp(56px,8vw,96px)] font-normal leading-[1.2] tracking-[0.08em] text-transparent drop-shadow-[0_0_40px_rgba(214,160,96,0.4)] opacity-0 animate-[fade-in-up_1s_ease-out_0.2s_forwards,shimmer_3s_ease-in-out_1.2s_infinite]"
+        >
+          神机喵算
+        </h1>
 
         <!-- 英文副标题 -->
-        <div class="landing-subtitle-en">BaziMiao</div>
+        <div
+          class="mb-10 font-['Cinzel',serif] text-[clamp(16px,2vw,22px)] uppercase tracking-[0.3em] text-[var(--accent)] opacity-0 animate-[fade-in-up_1s_ease-out_0.4s_forwards]"
+        >
+          BaziMiao
+        </div>
 
         <!-- 简介 -->
-        <p class="landing-intro">基于八字排盘的 AI 命理 WebApp</p>
+        <p
+          class="mb-4 text-[clamp(15px,1.8vw,18px)] font-medium tracking-[0.05em] text-[rgba(236,227,214,0.9)] opacity-0 animate-[fade-in-up_1s_ease-out_0.6s_forwards]"
+        >
+          基于八字排盘的 AI 命理 WebApp
+        </p>
 
         <!-- Slogan -->
-        <p class="landing-slogan">用 AI 读懂八字，看到趋势与选择</p>
+        <p
+          class="mb-12 text-[clamp(14px,1.6vw,17px)] leading-[1.8] tracking-[0.03em] text-[var(--muted)] opacity-0 animate-[fade-in-up_1s_ease-out_0.8s_forwards]"
+        >
+          用 AI 读懂八字，看到趋势与选择
+        </p>
 
         <!-- 开始按钮 -->
-        <button class="landing-cta" type="button" @click="goToForm">
-          <span class="cta-text">开始探索</span>
-          <span class="cta-arrow">→</span>
+        <button
+          class="landing-cta group relative inline-flex items-center gap-3 rounded-full bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] px-12 py-4 text-lg font-semibold tracking-[0.08em] text-[#0a0604] shadow-[0_8px_24px_rgba(214,160,96,0.3),0_0_60px_rgba(214,160,96,0.2),inset_0_1px_0_rgba(255,255,255,0.3)] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] opacity-0 animate-[fade-in-up_1s_ease-out_1s_forwards] hover:-translate-y-[3px] hover:scale-[1.02] active:-translate-y-[1px]"
+          type="button"
+          @click="goToForm"
+        >
+          <span class="relative z-[1]">开始探索</span>
+          <span class="relative z-[1] text-2xl transition-transform duration-300 group-hover:translate-x-1.5">→</span>
         </button>
 
         <!-- 底部装饰文字 -->
-        <div class="landing-footer">
-          <span class="footer-divider">—</span>
-          <span class="footer-text">命由天定 · 运在人为</span>
-          <span class="footer-divider">—</span>
+        <div
+          class="mt-16 flex items-center gap-4 text-[13px] tracking-[0.15em] text-[var(--muted)] opacity-0 animate-[fade-in-up_1s_ease-out_1.2s_forwards] max-[480px]:flex-col max-[480px]:gap-2 max-[480px]:text-[12px]"
+        >
+          <span class="text-[var(--accent)] opacity-50 max-[480px]:hidden">—</span>
+          <span class="font-medium">命由天定 · 运在人为</span>
+          <span class="text-[var(--accent)] opacity-50 max-[480px]:hidden">—</span>
         </div>
       </div>
     </section>
