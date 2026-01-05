@@ -1007,6 +1007,12 @@ const getCurrentDestinyPillar = computed((): PillarInfo | null => {
 
 // 获取当前流年
 const getCurrentYearPillar = computed((): PillarInfo => {
+  // 优先使用后端提供的流年柱（已按立春界限计算），保证与干支关系一致
+  if (props.chart?.current_year_pillar) {
+    return props.chart.current_year_pillar;
+  }
+
+  // 兜底：若后端未返回，则按公历年份估算
   const currentYear = new globalThis.Date().getFullYear();
   return getYearGanZhi(currentYear);
 });

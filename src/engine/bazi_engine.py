@@ -471,6 +471,7 @@ class BaziPaipanEngine:
         birth_jieqi = self._calculate_birth_jieqi(birth_day, adjusted_dt.hour, adjusted_dt.minute)
 
         # 计算干支关系（一次性计算所有关系：本命+大运+流年）
+        current_year: Optional[PillarInfo] = None
         try:
             # 获取当前大运
             current_destiny = self.get_current_destiny_pillar(original_solar_datetime, destiny_cycle)
@@ -518,6 +519,7 @@ class BaziPaipanEngine:
             ming_gong=ming_gong,
             ren_yuan_si_ling=ren_yuan_si_ling,
             kong_wang=kong_wang,
+            current_year_pillar=current_year,
             ganzi_relations=ganzi_relations,
         )
 

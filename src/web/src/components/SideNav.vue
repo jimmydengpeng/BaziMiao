@@ -1,16 +1,11 @@
 <template>
   <!-- 侧边导航栏（命理报告模块专用） -->
-  <!-- 桌面端：固定侧边栏；移动端：抽屉式（从 TopNav 下方开始） -->
+  <!-- 桌面端：固定侧边栏；移动端：使用底部导航，侧边栏隐藏 -->
   <aside
     :class="[
-      'side-nav z-40 flex flex-col gap-3 border border-[rgba(255,255,255,0.14)] bg-[rgba(18,22,33,0.62)] px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl',
-      // 桌面端样式
-      'lg:sticky lg:top-20 lg:max-h-[calc(100vh-96px)] lg:w-[clamp(180px,18vw,240px)] lg:translate-x-0 lg:rounded-2xl lg:p-4 lg:overflow-y-auto',
-      // 移动端样式：抽屉（top-14 为 TopNav 高度）
-      open
-        ? 'fixed top-14 bottom-0 left-0 w-[78%] max-w-[320px] translate-x-0 rounded-br-2xl'
-        : 'fixed top-14 bottom-0 left-0 w-[78%] max-w-[320px] -translate-x-full',
-      'transition-transform duration-300 ease-in-out overflow-y-auto'
+      'side-nav z-40 hidden flex-col gap-3 border border-[rgba(255,255,255,0.14)] bg-[rgba(18,22,33,0.62)] px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl',
+      // 桌面端样式：显示侧边栏
+      'lg:flex lg:sticky lg:top-20 lg:max-h-[calc(100vh-96px)] lg:w-[clamp(180px,18vw,240px)] lg:rounded-2xl lg:overflow-y-auto'
     ]"
   >
     <!-- 核心功能导航 -->
@@ -106,32 +101,24 @@
       </div>
     </div>
   </aside>
-
-  <!-- 抽屉遮罩（仅移动端，从 TopNav 下方开始） -->
-  <div
-    v-if="open"
-    class="fixed top-14 bottom-0 left-0 right-0 z-30 bg-black/50 backdrop-blur-[2px] lg:hidden"
-    @click="$emit('close')"
-  ></div>
 </template>
 
 <script setup lang="ts">
+import { useRouter, useRoute } from 'vue-router';
 import baziChartIconUrl from '../assets/bazi-chart.png';
 import reportIconUrl from '../assets/report.png';
 import archiveIconUrl from '../assets/archive.png';
 import chatIconUrl from '../assets/chat-dot-square.png';
+import { useStore } from '../composables/useStore';
+
+const router = useRouter();
+const route = useRoute();
+const { activeArchiveId } = useStore();
 
 // Props
 defineProps<{
-  open: boolean; // 移动端抽屉是否打开
   currentPage: 'chart' | 'report' | 'archive' | 'master-chat' | 'form' | 'home';
   canViewReport: boolean; // 是否可以查看报告（需要已生成报告）
-}>();
-
-// 事件
-const emit = defineEmits<{
-  (e: 'navigate', page: 'chart' | 'report' | 'archive' | 'master-chat' | 'form' | 'home'): void;
-  (e: 'close'): void;
 }>();
 
 // 导航按钮基础样式
@@ -143,7 +130,30 @@ const navIconClass = 'flex h-10 w-10 items-center justify-center rounded-lg shri
 
 // 处理导航点击
 const handleNav = (page: 'chart' | 'report' | 'archive' | 'master-chat' | 'form' | 'home') => {
-  emit('navigate', page);
-  emit('close'); // 移动端点击后自动关闭抽屉
+  // 根据页面类型导航到对应路由
+  switch (page) {
+    case 'chart': {
+      const chartId = route.params.id || activeArchiveId.value || 'temp';
+      router.push(`/bazi/chart/${chartId}/pillars`);
+      break;
+    }
+    case 'report': {
+      const chartId = route.params.id || activeArchiveId.value || 'temp';
+      router.push(`/bazi/chart/${chartId}/report`);
+      break;
+    }
+    case 'archive':
+      router.push('/bazi/archives');
+      break;
+    case 'master-chat':
+      router.push('/bazi/chat');
+      break;
+    case 'form':
+      router.push('/bazi/form');
+      break;
+    case 'home':
+      router.push('/');
+      break;
+  }
 };
 </script>

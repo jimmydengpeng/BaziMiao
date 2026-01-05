@@ -106,6 +106,7 @@ export interface Chart {
   ming_gong?: NaYinInfo | null; // 命宫
   ren_yuan_si_ling?: string; // 人元司令分野
   kong_wang?: string; // 空亡
+  current_year_pillar?: PillarInfo | null; // 当前流年柱（以立春为界）
   ganzi_relations?: GanZhiRelations | null; // 干支关系
 }
 

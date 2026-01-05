@@ -115,4 +115,5 @@ class Chart(BaseModel):
     ming_gong: Optional[NaYinInfo] = Field(default=None, description="命宫")
     ren_yuan_si_ling: str = Field(default="", description="人元司令分野")
     kong_wang: str = Field(default="", description="空亡")
+    current_year_pillar: Optional[PillarInfo] = Field(default=None, description="当前流年柱（以立春为界）")
     ganzi_relations: Optional[GanZhiRelations] = Field(default=None, description="干支关系")
