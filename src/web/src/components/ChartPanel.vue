@@ -1,310 +1,295 @@
 <template>
-  <div class="chart-panel-wrapper">
-    <div v-if="!chart" class="muted panel">生成后会显示命盘信息。</div>
-    <div v-else class="chart-cards">
+  <div class="flex flex-col gap-4">
+    <div v-if="!chart" class="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[var(--panel)] p-5 text-[var(--muted)]">
+      生成后会显示命盘信息。
+    </div>
+    <div v-else class="flex flex-col gap-4">
       <!-- 基本信息卡片 -->
-      <div class="panel info-card">
+      <div class="overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.65)] backdrop-blur-[16px]">
         <!-- 标题栏：姓名 + 农历生日 + 排盘设置 -->
-        <div class="info-header">
-          <div class="info-header-left">
-            <span class="info-name">{{ chart.name || "命主" }}</span>
-            <span class="info-lunar-birth">{{ lunarBirthText }}</span>
+        <div class="flex items-center justify-between gap-4 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-5 py-4">
+          <div class="flex items-baseline gap-3 flex-wrap">
+            <span class="text-xl font-bold tracking-wide text-[var(--accent-2)]">{{ chart.name || "命主" }}</span>
+            <span class="text-sm text-[var(--muted)]">{{ lunarBirthText }}</span>
           </div>
-          <button class="info-header-action" type="button">
+          <button
+            class="flex items-center gap-1.5 rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-3.5 py-2 text-[13px] text-[var(--muted)] transition-all duration-200 hover:bg-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.2)] hover:text-[var(--text)]"
+            type="button"
+          >
             排盘设置
-            <span class="chevron-icon">›</span>
+            <span class="text-base font-semibold">›</span>
           </button>
         </div>
 
         <!-- 第一模块：时间地点信息 -->
-        <div class="info-section">
-          <div class="info-entry">
-            <span class="entry-label">阳历</span>
-            <span class="entry-value">{{ solarText }}</span>
+        <div class="grid grid-cols-2 gap-3 border-b border-[rgba(255,255,255,0.06)] px-5 py-4">
+          <div class="flex items-center gap-3">
+            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">阳历</span>
+            <span class="flex-1 text-sm text-[var(--text)]">{{ solarText }}</span>
           </div>
-          <div class="info-entry">
-            <span class="entry-label">真太阳时</span>
-            <span class="entry-value">{{ trueSolarText }}</span>
+          <div class="flex items-center gap-3">
+            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">真太阳时</span>
+            <span class="flex-1 text-sm text-[var(--text)]">{{ trueSolarText }}</span>
           </div>
-          <div class="info-entry full-width">
-            <span class="entry-label">出生地区</span>
-            <span class="entry-value">
+          <div class="col-span-2 flex items-center gap-3">
+            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">出生地区</span>
+            <span class="flex-1 text-sm text-[var(--text)]">
               <template v-if="!chart.birth_place || chart.birth_place === '未知地区'">
-                未知区域<span class="muted">（不使用真太阳时）</span>
+                未知区域<span class="ml-0.5 text-[13px] text-[var(--muted)]">（不使用真太阳时）</span>
               </template>
               <template v-else>{{ chart.birth_place }}</template>
             </span>
           </div>
-          <div class="info-entry full-width">
-            <span class="entry-label">出生节气</span>
-            <span class="entry-value">{{ jieqiText }}</span>
+          <div class="col-span-2 flex items-center gap-3">
+            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">出生节气</span>
+            <span class="flex-1 text-sm text-[var(--text)]">{{ jieqiText }}</span>
           </div>
         </div>
 
         <!-- 第二模块：个人属性信息 -->
-        <div class="info-section">
-          <div class="info-entry">
-            <span class="entry-label">性别</span>
-            <span class="entry-value gender-value">
+        <div class="grid grid-cols-2 gap-3 border-b border-[rgba(255,255,255,0.06)] px-5 py-4">
+          <div class="flex items-center gap-3">
+            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">性别</span>
+            <span class="flex flex-1 items-center gap-1.5 text-sm text-[var(--text)]">
               <span>{{ genderText }}</span>
               <img
                 v-if="chart.gender === 'male'"
                 :src="maleIconUrl"
                 alt="男"
-                class="gender-icon"
+                class="h-[18px] w-[18px] object-contain"
               />
               <img
                 v-else-if="chart.gender === 'female'"
                 :src="femaleIconUrl"
                 alt="女"
-                class="gender-icon"
+                class="h-[18px] w-[18px] object-contain"
               />
-              <span class="gender-type">{{ genderType }}</span>
+              <span class="text-sm font-medium text-[var(--accent-2)]">{{ genderType }}</span>
             </span>
           </div>
-          <div class="info-entry">
-            <span class="entry-label">属相</span>
-            <span class="entry-value">{{ chart.zodiac_animal || "未知" }}</span>
+          <div class="flex items-center gap-3">
+            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">属相</span>
+            <span class="flex-1 text-sm text-[var(--text)]">{{ chart.zodiac_animal || "未知" }}</span>
           </div>
-          <div class="info-entry">
-            <span class="entry-label">星座</span>
-            <span class="entry-value">{{ chart.zodiac_sign || "未知" }}</span>
+          <div class="flex items-center gap-3">
+            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">星座</span>
+            <span class="flex-1 text-sm text-[var(--text)]">{{ chart.zodiac_sign || "未知" }}</span>
           </div>
-          <div class="info-entry">
-            <span class="entry-label">星宿</span>
-            <span class="entry-value">{{ chart.star_mansion || "未知" }}</span>
+          <div class="flex items-center gap-3">
+            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">星宿</span>
+            <span class="flex-1 text-sm text-[var(--text)]">{{ chart.star_mansion || "未知" }}</span>
           </div>
-          <div class="info-entry">
-            <span class="entry-label">命主五行</span>
-            <span class="entry-value">
+          <div class="flex items-center gap-3">
+            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">命主五行</span>
+            <span class="flex-1 text-sm text-[var(--text)]">
               <span :class="elementClass(chart.day_master.element)">
                 {{ chart.day_master_display || dayMasterDisplay }}
               </span>
             </span>
           </div>
-          <div class="info-entry">
-            <span class="entry-label">天运五行</span>
-            <span class="entry-value">{{ chart.fortune_element || "未知" }}</span>
+          <div class="flex items-center gap-3">
+            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">天运五行</span>
+            <span class="flex-1 text-sm text-[var(--text)]">{{ chart.fortune_element || "未知" }}</span>
           </div>
         </div>
 
         <!-- 第三模块：命理要素 -->
-        <div class="info-section">
-          <div class="info-entry">
-            <span class="entry-label">胎元</span>
-            <span class="entry-value">
-              {{ taiYuanText }}
-            </span>
+        <div class="grid grid-cols-2 gap-3 px-5 py-4">
+          <div class="flex items-center gap-3">
+            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">胎元</span>
+            <span class="flex-1 text-sm text-[var(--text)]">{{ taiYuanText }}</span>
           </div>
-          <div class="info-entry">
-            <span class="entry-label">胎息</span>
-            <span class="entry-value">
-              {{ taiXiText }}
-            </span>
+          <div class="flex items-center gap-3">
+            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">胎息</span>
+            <span class="flex-1 text-sm text-[var(--text)]">{{ taiXiText }}</span>
           </div>
-          <div class="info-entry">
-            <span class="entry-label">身宫</span>
-            <span class="entry-value">
-              {{ shenGongText }}
-            </span>
+          <div class="flex items-center gap-3">
+            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">身宫</span>
+            <span class="flex-1 text-sm text-[var(--text)]">{{ shenGongText }}</span>
           </div>
-          <div class="info-entry">
-            <span class="entry-label">命宫</span>
-            <span class="entry-value">
-              {{ mingGongText }}
-            </span>
+          <div class="flex items-center gap-3">
+            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">命宫</span>
+            <span class="flex-1 text-sm text-[var(--text)]">{{ mingGongText }}</span>
           </div>
-          <div class="info-entry">
-            <span class="entry-label">人元司令分野</span>
-            <span class="entry-value">{{ chart.ren_yuan_si_ling || "未知" }}</span>
+          <div class="flex items-center gap-3">
+            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">人元司令分野</span>
+            <span class="flex-1 text-sm text-[var(--text)]">{{ chart.ren_yuan_si_ling || "未知" }}</span>
           </div>
-          <div class="info-entry">
-            <span class="entry-label">空亡</span>
-            <span class="entry-value">{{ chart.kong_wang || "未知" }}</span>
+          <div class="flex items-center gap-3">
+            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">空亡</span>
+            <span class="flex-1 text-sm text-[var(--text)]">{{ chart.kong_wang || "未知" }}</span>
           </div>
         </div>
       </div>
 
       <!-- 八字命盘卡片 -->
-      <div class="panel bazi-card">
-        <div class="card-header">
-          <div class="card-title">八字命盘</div>
-          <span class="badge">四柱八字</span>
+      <div class="rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.65)] p-5 backdrop-blur-[16px]">
+        <div class="mb-4 flex items-center justify-between gap-3 border-b border-[rgba(255,255,255,0.08)] pb-3">
+          <div class="text-base font-semibold text-[var(--accent-2)]">八字命盘</div>
+          <span class="rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-2 py-1 text-xs text-[var(--muted)]">四柱八字</span>
         </div>
-        <div class="bazi-table">
-          <div class="bazi-row header">
-            <div class="bazi-cell label"></div>
-            <div class="bazi-cell">年柱</div>
-            <div class="bazi-cell">月柱</div>
-            <div class="bazi-cell">日柱</div>
-            <div class="bazi-cell">时柱</div>
+        <div class="mb-4 overflow-hidden rounded-[14px] border border-[rgba(255,255,255,0.08)]">
+          <div class="grid grid-cols-[64px_repeat(4,minmax(0,1fr))] bg-[rgba(255,255,255,0.06)] font-semibold text-[13px]">
+            <div class="px-2 py-3 text-left text-xs text-[var(--muted)]"></div>
+            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-sm">年柱</div>
+            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-sm">月柱</div>
+            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-sm">日柱</div>
+            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-sm">时柱</div>
           </div>
-          <div class="bazi-row">
-            <div class="bazi-cell label">主星</div>
-            <div class="bazi-cell star">{{ chart.year_pillar.heaven_stem.ten_god }}</div>
-            <div class="bazi-cell star">{{ chart.month_pillar.heaven_stem.ten_god }}</div>
-            <div class="bazi-cell star">{{ chart.day_pillar.heaven_stem.ten_god }}</div>
-            <div class="bazi-cell star">{{ chart.hour_pillar.heaven_stem.ten_god }}</div>
+          <div class="grid grid-cols-[64px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
+            <div class="px-2 py-3 text-left text-xs text-[var(--muted)]">主星</div>
+            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-xs text-[var(--muted)]">{{ chart.year_pillar.heaven_stem.ten_god }}</div>
+            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-xs text-[var(--muted)]">{{ chart.month_pillar.heaven_stem.ten_god }}</div>
+            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-xs text-[var(--muted)]">{{ chart.day_pillar.heaven_stem.ten_god }}</div>
+            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-xs text-[var(--muted)]">{{ chart.hour_pillar.heaven_stem.ten_god }}</div>
           </div>
-          <div class="bazi-row">
-            <div class="bazi-cell label">天干</div>
-            <div class="bazi-cell stem">
-              <span :class="['pillar-char', elementClass(chart.year_pillar.heaven_stem.element)]">
+          <div class="grid grid-cols-[64px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
+            <div class="px-2 py-3 text-left text-xs text-[var(--muted)]">天干</div>
+            <div class="flex items-center justify-center gap-1.5 px-2 py-3 text-center">
+              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.year_pillar.heaven_stem.element)]">
                 {{ chart.year_pillar.heaven_stem.name }}
               </span>
-              <span class="pillar-icon">{{ elementIcon(chart.year_pillar.heaven_stem.element) }}</span>
+              <span class="text-sm opacity-80">{{ elementIcon(chart.year_pillar.heaven_stem.element) }}</span>
             </div>
-            <div class="bazi-cell stem">
-              <span :class="['pillar-char', elementClass(chart.month_pillar.heaven_stem.element)]">
+            <div class="flex items-center justify-center gap-1.5 px-2 py-3 text-center">
+              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.month_pillar.heaven_stem.element)]">
                 {{ chart.month_pillar.heaven_stem.name }}
               </span>
-              <span class="pillar-icon">{{ elementIcon(chart.month_pillar.heaven_stem.element) }}</span>
+              <span class="text-sm opacity-80">{{ elementIcon(chart.month_pillar.heaven_stem.element) }}</span>
             </div>
-            <div class="bazi-cell stem">
-              <span :class="['pillar-char', elementClass(chart.day_pillar.heaven_stem.element)]">
+            <div class="flex items-center justify-center gap-1.5 px-2 py-3 text-center">
+              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.day_pillar.heaven_stem.element)]">
                 {{ chart.day_pillar.heaven_stem.name }}
               </span>
-              <span class="pillar-icon">{{ elementIcon(chart.day_pillar.heaven_stem.element) }}</span>
+              <span class="text-sm opacity-80">{{ elementIcon(chart.day_pillar.heaven_stem.element) }}</span>
             </div>
-            <div class="bazi-cell stem">
-              <span :class="['pillar-char', elementClass(chart.hour_pillar.heaven_stem.element)]">
+            <div class="flex items-center justify-center gap-1.5 px-2 py-3 text-center">
+              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.hour_pillar.heaven_stem.element)]">
                 {{ chart.hour_pillar.heaven_stem.name }}
               </span>
-              <span class="pillar-icon">{{ elementIcon(chart.hour_pillar.heaven_stem.element) }}</span>
+              <span class="text-sm opacity-80">{{ elementIcon(chart.hour_pillar.heaven_stem.element) }}</span>
             </div>
           </div>
-          <div class="bazi-row">
-            <div class="bazi-cell label">地支</div>
-            <div class="bazi-cell branch">
-              <span :class="['pillar-char', elementClass(chart.year_pillar.earth_branch.element)]">
+          <div class="grid grid-cols-[64px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
+            <div class="px-2 py-3 text-left text-xs text-[var(--muted)]">地支</div>
+            <div class="flex items-center justify-center gap-1.5 px-2 py-3 text-center">
+              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.year_pillar.earth_branch.element)]">
                 {{ chart.year_pillar.earth_branch.name }}
               </span>
-              <span class="pillar-icon">{{ elementIcon(chart.year_pillar.earth_branch.element) }}</span>
+              <span class="text-sm opacity-80">{{ elementIcon(chart.year_pillar.earth_branch.element) }}</span>
             </div>
-            <div class="bazi-cell branch">
-              <span :class="['pillar-char', elementClass(chart.month_pillar.earth_branch.element)]">
+            <div class="flex items-center justify-center gap-1.5 px-2 py-3 text-center">
+              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.month_pillar.earth_branch.element)]">
                 {{ chart.month_pillar.earth_branch.name }}
               </span>
-              <span class="pillar-icon">{{ elementIcon(chart.month_pillar.earth_branch.element) }}</span>
+              <span class="text-sm opacity-80">{{ elementIcon(chart.month_pillar.earth_branch.element) }}</span>
             </div>
-            <div class="bazi-cell branch">
-              <span :class="['pillar-char', elementClass(chart.day_pillar.earth_branch.element)]">
+            <div class="flex items-center justify-center gap-1.5 px-2 py-3 text-center">
+              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.day_pillar.earth_branch.element)]">
                 {{ chart.day_pillar.earth_branch.name }}
               </span>
-              <span class="pillar-icon">{{ elementIcon(chart.day_pillar.earth_branch.element) }}</span>
+              <span class="text-sm opacity-80">{{ elementIcon(chart.day_pillar.earth_branch.element) }}</span>
             </div>
-            <div class="bazi-cell branch">
-              <span :class="['pillar-char', elementClass(chart.hour_pillar.earth_branch.element)]">
+            <div class="flex items-center justify-center gap-1.5 px-2 py-3 text-center">
+              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.hour_pillar.earth_branch.element)]">
                 {{ chart.hour_pillar.earth_branch.name }}
               </span>
-              <span class="pillar-icon">{{ elementIcon(chart.hour_pillar.earth_branch.element) }}</span>
+              <span class="text-sm opacity-80">{{ elementIcon(chart.hour_pillar.earth_branch.element) }}</span>
             </div>
           </div>
-          <div class="bazi-row">
-            <div class="bazi-cell label">藏干</div>
-            <div class="bazi-cell hidden">
-              <div class="hidden-stems">
-                <span
-                  v-for="stem in chart.year_pillar.earth_branch.hidden_stems"
-                  :key="stem.name"
-                  :class="elementClass(stem.element)"
-                >
-                  {{ stem.name }}
-                </span>
-              </div>
+          <div class="grid grid-cols-[64px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
+            <div class="px-2 py-3 text-left text-xs text-[var(--muted)]">藏干</div>
+            <div class="flex flex-col gap-0.5 px-2 py-3 text-center text-[13px]">
+              <span
+                v-for="stem in chart.year_pillar.earth_branch.hidden_stems"
+                :key="stem.name"
+                :class="elementClass(stem.element)"
+              >
+                {{ stem.name }}
+              </span>
             </div>
-            <div class="bazi-cell hidden">
-              <div class="hidden-stems">
-                <span
-                  v-for="stem in chart.month_pillar.earth_branch.hidden_stems"
-                  :key="stem.name"
-                  :class="elementClass(stem.element)"
-                >
-                  {{ stem.name }}
-                </span>
-              </div>
+            <div class="flex flex-col gap-0.5 px-2 py-3 text-center text-[13px]">
+              <span
+                v-for="stem in chart.month_pillar.earth_branch.hidden_stems"
+                :key="stem.name"
+                :class="elementClass(stem.element)"
+              >
+                {{ stem.name }}
+              </span>
             </div>
-            <div class="bazi-cell hidden">
-              <div class="hidden-stems">
-                <span
-                  v-for="stem in chart.day_pillar.earth_branch.hidden_stems"
-                  :key="stem.name"
-                  :class="elementClass(stem.element)"
-                >
-                  {{ stem.name }}
-                </span>
-              </div>
+            <div class="flex flex-col gap-0.5 px-2 py-3 text-center text-[13px]">
+              <span
+                v-for="stem in chart.day_pillar.earth_branch.hidden_stems"
+                :key="stem.name"
+                :class="elementClass(stem.element)"
+              >
+                {{ stem.name }}
+              </span>
             </div>
-            <div class="bazi-cell hidden">
-              <div class="hidden-stems">
-                <span
-                  v-for="stem in chart.hour_pillar.earth_branch.hidden_stems"
-                  :key="stem.name"
-                  :class="elementClass(stem.element)"
-                >
-                  {{ stem.name }}
-                </span>
-              </div>
+            <div class="flex flex-col gap-0.5 px-2 py-3 text-center text-[13px]">
+              <span
+                v-for="stem in chart.hour_pillar.earth_branch.hidden_stems"
+                :key="stem.name"
+                :class="elementClass(stem.element)"
+              >
+                {{ stem.name }}
+              </span>
             </div>
           </div>
-          <div class="bazi-row">
-            <div class="bazi-cell label">副星</div>
-            <div class="bazi-cell sub-star">
-              <div class="sub-star-list">
-                <span v-for="stem in chart.year_pillar.earth_branch.hidden_stems" :key="stem.name">
-                  {{ stem.ten_god }}
-                </span>
-              </div>
+          <div class="grid grid-cols-[64px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
+            <div class="px-2 py-3 text-left text-xs text-[var(--muted)]">副星</div>
+            <div class="flex flex-col gap-0.5 px-2 py-3 text-center text-[11px] text-[var(--muted)]">
+              <span v-for="stem in chart.year_pillar.earth_branch.hidden_stems" :key="stem.name">
+                {{ stem.ten_god }}
+              </span>
             </div>
-            <div class="bazi-cell sub-star">
-              <div class="sub-star-list">
-                <span v-for="stem in chart.month_pillar.earth_branch.hidden_stems" :key="stem.name">
-                  {{ stem.ten_god }}
-                </span>
-              </div>
+            <div class="flex flex-col gap-0.5 px-2 py-3 text-center text-[11px] text-[var(--muted)]">
+              <span v-for="stem in chart.month_pillar.earth_branch.hidden_stems" :key="stem.name">
+                {{ stem.ten_god }}
+              </span>
             </div>
-            <div class="bazi-cell sub-star">
-              <div class="sub-star-list">
-                <span v-for="stem in chart.day_pillar.earth_branch.hidden_stems" :key="stem.name">
-                  {{ stem.ten_god }}
-                </span>
-              </div>
+            <div class="flex flex-col gap-0.5 px-2 py-3 text-center text-[11px] text-[var(--muted)]">
+              <span v-for="stem in chart.day_pillar.earth_branch.hidden_stems" :key="stem.name">
+                {{ stem.ten_god }}
+              </span>
             </div>
-            <div class="bazi-cell sub-star">
-              <div class="sub-star-list">
-                <span v-for="stem in chart.hour_pillar.earth_branch.hidden_stems" :key="stem.name">
-                  {{ stem.ten_god }}
-                </span>
-              </div>
+            <div class="flex flex-col gap-0.5 px-2 py-3 text-center text-[11px] text-[var(--muted)]">
+              <span v-for="stem in chart.hour_pillar.earth_branch.hidden_stems" :key="stem.name">
+                {{ stem.ten_god }}
+              </span>
             </div>
           </div>
         </div>
 
         <!-- 五行统计摘要 -->
-        <div class="elements-summary">
-          <div v-for="item in elementCounts" :key="item.label" class="element-badge">
-            <span :class="['element-dot', elementClass(item.label)]"></span>
+        <div class="flex flex-wrap justify-center gap-2.5">
+          <div
+            v-for="item in elementCounts"
+            :key="item.label"
+            class="inline-flex items-center gap-1.5 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(15,20,33,0.6)] px-3 py-2 text-[13px] transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(255,255,255,0.2)]"
+          >
+            <span :class="['h-2 w-2 rounded-full', elementClass(item.label)]"></span>
             <span :class="elementClass(item.label)">{{ item.label }}</span>
-            <span class="element-count">{{ item.value }}</span>
+            <span class="text-xs text-[var(--muted)]">{{ item.value }}</span>
           </div>
         </div>
       </div>
 
       <!-- 五行能量卡片 -->
-      <div class="panel energy-card">
-        <div class="card-header">
-          <div class="card-title">五行能量</div>
-          <span class="badge">命理分析</span>
+      <div class="flex flex-col gap-3 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.65)] p-5 backdrop-blur-[16px]">
+        <div class="mb-4 flex items-center justify-between gap-3 border-b border-[rgba(255,255,255,0.08)] pb-3">
+          <div class="text-base font-semibold text-[var(--accent-2)]">五行能量</div>
+          <span class="rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-2 py-1 text-xs text-[var(--muted)]">命理分析</span>
         </div>
-        <div class="energy-content">
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <!-- 雷达图 -->
-          <div class="energy-radar">
-            <div class="radar-title">
+          <div class="flex flex-col gap-3">
+            <div class="mb-2 flex items-center gap-2 text-[13px]">
               <strong>五行雷达图</strong>
-              <span class="muted">最高占比为满格</span>
+              <span class="text-[var(--muted)]">最高占比为满格</span>
             </div>
-            <div class="radar-stage">
-              <svg class="radar-svg" viewBox="0 0 400 400" role="img" aria-label="五行雷达图">
+            <div class="flex justify-center">
+              <svg class="w-full max-w-[280px] lg:max-w-[320px]" viewBox="0 0 400 400" role="img" aria-label="五行雷达图">
                 <g class="radar-grid">
                   <polygon
                     v-for="level in radarLevels"
@@ -348,28 +333,30 @@
           </div>
 
           <!-- 五行占比 -->
-          <div class="energy-breakdown">
-            <div class="breakdown-title">
+          <div class="flex flex-col gap-3">
+            <div class="mb-2 flex items-center gap-2 text-[13px]">
               <strong>五行占比</strong>
-              <span class="muted">基于天干与藏干统计</span>
+              <span class="text-[var(--muted)]">基于天干与藏干统计</span>
             </div>
-            <div class="energy-bars">
-              <div v-for="item in energyItems" :key="item.element" class="energy-bar-item">
-                <div class="bar-header">
-                  <div class="bar-left">
-                    <span :class="['bar-dot', elementClass(item.element)]"></span>
-                    <span class="bar-name">{{ item.element }}</span>
-                    <span class="bar-relation">{{ item.relation }}</span>
+            <div class="flex flex-col gap-3">
+              <div v-for="item in energyItems" :key="item.element" class="flex flex-col gap-1.5">
+                <div class="flex items-center justify-between text-[13px]">
+                  <div class="flex items-center gap-2">
+                    <span :class="['h-2.5 w-2.5 rounded-full shadow-[0_0_8px_rgba(255,255,255,0.2)]', elementClass(item.element)]"></span>
+                    <span class="font-semibold">{{ item.element }}</span>
+                    <span class="text-[11px] text-[var(--muted)]">{{ item.relation }}</span>
                   </div>
-                  <div class="bar-right">
-                    <span class="bar-percent">{{ formatPercent(item.ratio) }}</span>
-                    <span class="bar-count">{{ item.count }}个</span>
+                  <div class="flex items-center gap-2.5">
+                    <span class="min-w-[48px] text-right font-semibold">{{ formatPercent(item.ratio) }}</span>
+                    <span class="min-w-[28px] text-[11px] text-[var(--muted)]">{{ item.count }}个</span>
                   </div>
                 </div>
-                <div class="bar-track">
+                <div class="h-2 overflow-hidden rounded bg-[rgba(255,255,255,0.08)]">
                   <div
-                    class="bar-fill"
-                    :class="elementClass(item.element)"
+                    :class="[
+                      'h-full rounded transition-[width] duration-500',
+                      elementClass(item.element)
+                    ]"
                     :style="{ width: `${(item.ratio / maxEnergyRatio) * 100}%` }"
                   ></div>
                 </div>
@@ -380,27 +367,31 @@
       </div>
 
       <!-- 大运卡片 -->
-      <div class="panel destiny-card">
-        <div class="card-header">
-          <div class="card-title">大运</div>
-          <span v-if="destinyMeta" class="badge">{{ destinyMeta }}</span>
+      <div class="rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.65)] p-5 backdrop-blur-[16px]">
+        <div class="mb-4 flex items-center justify-between gap-3 border-b border-[rgba(255,255,255,0.08)] pb-3">
+          <div class="text-base font-semibold text-[var(--accent-2)]">大运</div>
+          <span v-if="destinyMeta" class="rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-2 py-1 text-xs text-[var(--muted)]">{{ destinyMeta }}</span>
         </div>
-        <div v-if="!destinyPillars.length" class="muted">暂无大运数据。</div>
-        <div v-else class="destiny-grid">
-          <div v-for="pillar in destinyPillarsWithAge" :key="pillar.year" class="destiny-item">
-            <div class="destiny-year">{{ pillar.year }}年 · {{ pillar.age }}岁</div>
-            <div class="destiny-pillar">
-              <div class="destiny-row">
-                <span :class="['destiny-char', elementClass(pillar.heaven_stem.element)]">
+        <div v-if="!destinyPillars.length" class="text-[var(--muted)]">暂无大运数据。</div>
+        <div v-else class="grid grid-cols-[repeat(auto-fit,minmax(110px,1fr))] gap-3">
+          <div
+            v-for="pillar in destinyPillarsWithAge"
+            :key="pillar.year"
+            class="flex flex-col items-center gap-2 rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-3.5 text-center transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(214,160,96,0.4)]"
+          >
+            <div class="text-xs text-[var(--muted)]">{{ pillar.year }}年 · {{ pillar.age }}岁</div>
+            <div class="flex flex-col gap-1.5">
+              <div class="flex items-center justify-center gap-2">
+                <span :class="['text-[22px] font-bold leading-tight tracking-wide', elementClass(pillar.heaven_stem.element)]">
                   {{ pillar.heaven_stem.name }}
                 </span>
-                <span class="destiny-god">{{ pillar.heaven_stem.ten_god }}</span>
+                <span class="text-[11px] font-medium text-[var(--accent-2)] opacity-85 whitespace-nowrap">{{ pillar.heaven_stem.ten_god }}</span>
               </div>
-              <div class="destiny-row">
-                <span :class="['destiny-char', elementClass(pillar.earth_branch.element)]">
+              <div class="flex items-center justify-center gap-2">
+                <span :class="['text-[22px] font-bold leading-tight tracking-wide', elementClass(pillar.earth_branch.element)]">
                   {{ pillar.earth_branch.name }}
                 </span>
-                <span class="destiny-god">{{ pillar.earth_branch_ten_god }}</span>
+                <span class="text-[11px] font-medium text-[var(--accent-2)] opacity-85 whitespace-nowrap">{{ pillar.earth_branch_ten_god }}</span>
               </div>
             </div>
           </div>
@@ -408,15 +399,37 @@
       </div>
 
       <!-- 干支关系卡片 -->
-      <div class="panel ganzi-card">
-        <div class="card-header">
-          <div class="card-title">干支关系</div>
-          <div class="mode-toggle-switch" @click="toggleGanziMode">
-            <div class="mode-toggle-options">
-              <span :class="['mode-option', { 'active': !isCurrentMode }]">本命</span>
-              <span :class="['mode-option', { 'active': isCurrentMode }]">当前</span>
+      <div class="flex flex-col gap-4 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.65)] p-5 backdrop-blur-[16px]">
+        <div class="mb-4 flex items-center justify-between gap-3 border-b border-[rgba(255,255,255,0.08)] pb-3">
+          <div class="text-base font-semibold text-[var(--accent-2)]">干支关系</div>
+          <div
+            class="relative inline-flex cursor-pointer items-center rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,17,24,0.9)] p-1 transition-colors hover:border-[rgba(255,255,255,0.2)]"
+            @click="toggleGanziMode"
+          >
+            <div class="relative z-[2] flex w-full">
+              <span
+                :class="[
+                  'relative z-[1] flex-1 rounded-lg px-5 py-1.5 text-center text-[13px] font-medium text-white/65 transition-colors duration-200',
+                  !isCurrentMode ? 'text-white' : ''
+                ]"
+              >
+                本命
+              </span>
+              <span
+                :class="[
+                  'relative z-[1] flex-1 rounded-lg px-5 py-1.5 text-center text-[13px] font-medium text-white/65 transition-colors duration-200',
+                  isCurrentMode ? 'text-white' : ''
+                ]"
+              >
+                当前
+              </span>
             </div>
-            <div :class="['mode-toggle-pill', { 'right': isCurrentMode }]"></div>
+            <div
+              :class="[
+                'absolute left-1 top-1 z-0 h-[calc(100%-8px)] w-[calc(50%-4px)] rounded-lg bg-[rgba(52,59,88,0.65)] shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
+                isCurrentMode ? 'translate-x-full' : ''
+              ]"
+            ></div>
           </div>
         </div>
         
@@ -580,7 +593,7 @@
         </div>
 
         <!-- 关系说明区域 -->
-        <div class="ganzi-summary">
+        <div class="flex flex-col gap-2">
           <!-- 本命模式 -->
           <template v-if="!isCurrentMode">
             <div v-if="stemRelationsData.length" class="ganzi-summary-item">
@@ -603,7 +616,7 @@
                 >{{ rel.description }}</span>
               </div>
             </div>
-            <div v-if="!stemRelationsData.length && !branchRelationsData.length" class="muted">
+            <div v-if="!stemRelationsData.length && !branchRelationsData.length" class="text-sm text-[var(--muted)]">
               本命四柱无明显刑冲合会关系
             </div>
           </template>
@@ -650,13 +663,13 @@
                 >{{ rel.description }}</span>
               </div>
             </div>
-            <div v-if="!stemRelationsData.length && !branchRelationsData.length && !stemFortuneRelationsData.length && !branchFortuneRelationsData.length" class="muted">
+            <div v-if="!stemRelationsData.length && !branchRelationsData.length && !stemFortuneRelationsData.length && !branchFortuneRelationsData.length" class="text-sm text-[var(--muted)]">
               当前无明显刑冲合会关系
             </div>
           </template>
         </div>
 
-        <div class="ganzi-note muted">
+        <div class="ganzi-note text-xs leading-relaxed text-[var(--muted)]">
           因八字合化论流派繁多且断法各异，故以上仅展示正化结果；实际应用中需考虑是否反化或合而不化的可能，故以上结果仅供基本参考，具体结论以个体判断为准
         </div>
       </div>

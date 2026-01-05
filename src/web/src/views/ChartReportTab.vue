@@ -1,65 +1,65 @@
 <template>
-  <div class="chart-report-tab">
-    <div class="panel stack">
-      <div class="status-line">
-        <strong>命理报告</strong>
-        <span class="badge">LLM 解释器</span>
+  <div class="flex flex-col gap-3">
+    <div class="flex flex-col gap-3 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[var(--panel)] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+      <div class="flex items-center gap-2 text-sm">
+        <strong class="text-white">命理报告</strong>
+        <span class="rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-2 py-1 text-xs text-[var(--muted)]">LLM 解释器</span>
       </div>
 
       <!-- 错误状态 -->
-      <div v-if="error" class="muted">{{ error }}</div>
+      <div v-if="error" class="text-sm text-[var(--muted)]">{{ error }}</div>
 
       <!-- 流式生成中 -->
-      <div v-if="reportStreaming" class="sections">
-        <div v-if="reportThinking" class="section-card thinking-card">
-          <div class="thinking-header">
-            <h3>模型思考</h3>
+      <div v-if="reportStreaming" class="grid gap-3">
+        <div v-if="reportThinking" class="rounded-xl border border-dashed border-[rgba(255,255,255,0.08)] bg-[rgba(214,160,96,0.08)] p-4">
+          <div class="mb-2 flex items-center justify-between gap-3">
+            <h3 class="text-sm font-semibold text-[var(--accent)]">模型思考</h3>
           </div>
-          <div class="streaming-text thinking">
+          <div class="whitespace-pre-wrap break-words text-[11px] leading-relaxed text-[var(--muted)]">
             {{ reportThinking }}
           </div>
         </div>
-        <div class="section-card">
-          <h3>生成中...</h3>
-          <div class="streaming-text">
+        <div class="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] p-4">
+          <h3 class="mb-2 text-sm font-semibold text-[var(--accent)]">生成中...</h3>
+          <div class="whitespace-pre-wrap break-words text-xs leading-relaxed">
             {{ reportDraft || '正在生成，请稍候...' }}
           </div>
         </div>
       </div>
 
       <!-- 报告已生成 -->
-      <div v-else-if="report" class="report-layout">
-        <div v-if="reportThinking" class="section-card thinking-card">
-          <div class="thinking-header">
-            <h3>模型思考</h3>
+      <div v-else-if="report" class="grid gap-4">
+        <div v-if="reportThinking" class="rounded-xl border border-dashed border-[rgba(255,255,255,0.08)] bg-[rgba(214,160,96,0.08)] p-4">
+          <div class="mb-2 flex items-center justify-between gap-3">
+            <h3 class="text-sm font-semibold text-[var(--accent)]">模型思考</h3>
             <button
-              class="btn ghost"
+              class="rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.06)] px-2.5 py-1 text-xs text-[var(--text)] transition-all duration-200 hover:bg-[rgba(255,255,255,0.1)]"
               type="button"
               @click="reportThinkingCollapsed = !reportThinkingCollapsed"
             >
               {{ reportThinkingCollapsed ? '展开' : '收起' }}
             </button>
           </div>
-          <div v-if="!reportThinkingCollapsed" class="streaming-text thinking">
+          <div v-if="!reportThinkingCollapsed" class="whitespace-pre-wrap break-words text-[11px] leading-relaxed text-[var(--muted)]">
             {{ reportThinking }}
           </div>
         </div>
 
-        <div v-if="report.energy_chart" class="section-card">
-          <h3>五行能量图</h3>
-          <pre class="energy-chart">{{ report.energy_chart }}</pre>
+        <div v-if="report.energy_chart" class="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] p-4">
+          <h3 class="mb-2 text-sm font-semibold text-[var(--accent)]">五行能量图</h3>
+          <pre class="m-0 rounded-lg border border-dashed border-[rgba(255,255,255,0.08)] bg-[rgba(15,20,33,0.6)] p-3 font-mono text-[11px] leading-relaxed text-[var(--text)] whitespace-pre overflow-x-auto max-w-full">{{ report.energy_chart }}</pre>
         </div>
 
-        <div class="sections">
-          <div class="section-card" v-for="(sec, idx) in report.sections" :key="idx">
-            <h3>{{ sec.title }}</h3>
-            <div class="markdown-body" v-html="renderMarkdown(sec.content)"></div>
+        <div class="grid gap-3">
+          <div class="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] p-4 break-words" v-for="(sec, idx) in report.sections" :key="idx">
+            <h3 class="mb-2 text-sm font-semibold text-[var(--accent)]">{{ sec.title }}</h3>
+            <div class="markdown-body text-xs leading-relaxed break-words" v-html="renderMarkdown(sec.content)"></div>
           </div>
         </div>
       </div>
 
       <!-- 未生成报告 -->
-      <div v-else class="muted">
+      <div v-else class="text-sm text-[var(--muted)]">
         生成报告后，将在此处展示详细解读。
         <router-link :to="`/bazi/chart/${chartId}/pillars`" class="text-[var(--accent)] hover:underline">
           点击返回命盘页面生成报告

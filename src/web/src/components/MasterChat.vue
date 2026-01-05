@@ -1,25 +1,35 @@
 <template>
-  <div class="master-chat-container">
+  <div class="relative flex h-full w-full max-w-[900px] flex-col overflow-hidden rounded-[20px] border border-[rgba(255,255,255,0.08)] bg-[rgba(15,15,18,0.4)]">
     <!-- 顶部标题栏 -->
-    <header class="chat-header">
-      <div class="chat-header-content">
-        <div class="chat-actions-left">
-          <button class="icon-btn" type="button" @click="newChat" aria-label="新建对话">
+    <header class="relative z-10 flex-shrink-0 border-b border-[rgba(255,255,255,0.15)] bg-[rgba(14,13,19,0.75)] px-6 py-4 backdrop-blur-[32px] backdrop-saturate-[180%] before:absolute before:inset-0 before:bg-gradient-to-br before:from-[rgba(214,160,96,0.05)] before:to-[rgba(240,192,122,0.03)] before:pointer-events-none">
+      <div class="relative flex w-full items-center justify-center">
+        <div class="absolute left-0 flex gap-2">
+          <button
+            class="flex h-9 w-9 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.06)] text-[var(--muted)] transition-all duration-200 hover:bg-[rgba(255,255,255,0.1)] hover:text-[var(--text)] hover:-translate-y-[1px] active:translate-y-0"
+            type="button"
+            @click="newChat"
+            aria-label="新建对话"
+          >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="10" y1="4" x2="10" y2="16"/>
               <line x1="4" y1="10" x2="16" y2="10"/>
             </svg>
           </button>
         </div>
-        <div class="chat-title">
-          <div class="chat-title-text">
-            <div class="chat-name">神喵大师</div>
-            <div class="chat-status">在线</div>
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-3">
+            <div class="text-lg font-semibold text-[var(--text)]">神喵大师</div>
+            <div class="text-xs text-[#7dd56f]">在线</div>
           </div>
         </div>
-        <div class="chat-actions">
-          <div class="menu-container">
-            <button class="icon-btn" type="button" @click="showMenu = !showMenu" aria-label="更多">
+        <div class="absolute right-0 flex gap-2">
+          <div class="relative inline-block">
+            <button
+              class="flex h-9 w-9 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.06)] text-[var(--muted)] transition-all duration-200 hover:bg-[rgba(255,255,255,0.1)] hover:text-[var(--text)] hover:-translate-y-[1px] active:translate-y-0"
+              type="button"
+              @click="showMenu = !showMenu"
+              aria-label="更多"
+            >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
                 <circle cx="10" cy="4" r="1.5"/>
                 <circle cx="10" cy="10" r="1.5"/>
@@ -27,8 +37,15 @@
               </svg>
             </button>
             <!-- 更多菜单 -->
-            <div v-if="showMenu" class="menu-panel">
-              <button class="menu-item" type="button" @click="clearMessages">
+            <div
+              v-if="showMenu"
+              class="absolute right-0 top-full z-50 mt-2 min-w-[160px] rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(18,20,28,0.95)] p-1 shadow-lg backdrop-blur-xl"
+            >
+              <button
+                class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-[var(--text)] transition-colors hover:bg-[rgba(255,255,255,0.1)]"
+                type="button"
+                @click="clearMessages"
+              >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path d="M2 4h12M5.5 4V3a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1M7 7v4M9 7v4M3 4l1 9a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-9"/>
                 </svg>
@@ -41,19 +58,26 @@
     </header>
 
     <!-- 中间对话区 -->
-    <div class="chat-messages" ref="messagesContainer">
-      <div class="messages-wrapper">
+    <div
+      ref="messagesContainer"
+      class="flex-1 overflow-y-auto bg-[rgba(18,20,28,0.35)] px-6 pb-6 pt-[calc(68px+24px)] backdrop-blur-[16px] scroll-smooth"
+      style="margin-top: -68px;"
+    >
+      <div class="flex max-w-full flex-col gap-4">
         <!-- 欢迎消息 -->
-        <div v-if="messages.length === 0" class="welcome-card">
-          <div class="welcome-avatar">
-            <img :src="logoUrl" alt="神喵大师" class="welcome-avatar-img" />
+        <div
+          v-if="messages.length === 0"
+          class="mx-auto my-[60px] max-w-[480px] rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.65)] p-8 text-center backdrop-blur-[16px]"
+        >
+          <div class="mx-auto mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-[rgba(0,0,0,0.2)]">
+            <img :src="logoUrl" alt="神喵大师" class="h-full w-full object-cover" />
           </div>
-          <h3>你好，我是神喵大师</h3>
-          <p class="muted">我精通八字命理，可以为你解答命理相关的问题。</p>
-          <div class="welcome-features">
-            <div class="feature-tag">命理解答</div>
-            <div class="feature-tag">运势分析</div>
-            <div class="feature-tag">五行咨询</div>
+          <h3 class="mb-2 text-2xl font-semibold text-[var(--text)]">你好，我是神喵大师</h3>
+          <p class="mb-6 text-sm leading-relaxed text-[var(--muted)]">我精通八字命理，可以为你解答命理相关的问题。</p>
+          <div class="flex flex-wrap justify-center gap-2">
+            <div class="rounded-lg border border-[rgba(214,160,96,0.3)] bg-[rgba(214,160,96,0.15)] px-3 py-1.5 text-xs text-[var(--accent-2)]">命理解答</div>
+            <div class="rounded-lg border border-[rgba(214,160,96,0.3)] bg-[rgba(214,160,96,0.15)] px-3 py-1.5 text-xs text-[var(--accent-2)]">运势分析</div>
+            <div class="rounded-lg border border-[rgba(214,160,96,0.3)] bg-[rgba(214,160,96,0.15)] px-3 py-1.5 text-xs text-[var(--accent-2)]">五行咨询</div>
           </div>
         </div>
 
@@ -61,28 +85,37 @@
         <div
           v-for="(msg, index) in messages"
           :key="index"
-          class="message-item"
-          :class="{ 'message-user': msg.role === 'user', 'message-assistant': msg.role === 'assistant' }"
+          :class="[
+            'flex items-start gap-3 animate-[messageSlideIn_0.3s_ease]',
+            msg.role === 'user' ? 'flex-row-reverse' : ''
+          ]"
         >
-          <div v-if="msg.role === 'assistant'" class="message-avatar">
-            <img :src="logoUrl" alt="喵大师" class="avatar-img" />
+          <div v-if="msg.role === 'assistant'" class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[rgba(0,0,0,0.2)] text-2xl leading-none">
+            <img :src="logoUrl" alt="喵大师" class="h-full w-full object-cover" />
           </div>
-          <div class="message-bubble">
-            <div class="message-content" v-html="renderMessageContent(msg.content)"></div>
-            <div class="message-time">{{ formatTime(msg.timestamp) }}</div>
+          <div
+            :class="[
+              'relative max-w-[70%] break-words rounded-2xl px-4 py-3',
+              msg.role === 'assistant'
+                ? 'rounded-tl rounded-tr-none bg-[rgba(40,45,60,0.35)] backdrop-blur-[12px] border border-[rgba(255,255,255,0.08)]'
+                : 'rounded-tr rounded-tl-none bg-gradient-to-br from-[rgba(214,160,96,0.3)] to-[rgba(240,192,122,0.2)] backdrop-blur-[12px] border border-[rgba(240,192,122,0.4)]'
+            ]"
+          >
+            <div class="mb-1 text-sm leading-relaxed text-[var(--text)]" v-html="renderMessageContent(msg.content)"></div>
+            <div class="text-[11px] text-[var(--muted)] opacity-70">{{ formatTime(msg.timestamp) }}</div>
           </div>
         </div>
 
         <!-- 正在输入指示器 -->
-        <div v-if="isThinking" class="message-item message-assistant">
-          <div class="message-avatar">
-            <img :src="logoUrl" alt="喵大师" class="avatar-img" />
+        <div v-if="isThinking" class="flex items-start gap-3">
+          <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[rgba(0,0,0,0.2)] text-2xl leading-none">
+            <img :src="logoUrl" alt="喵大师" class="h-full w-full object-cover" />
           </div>
-          <div class="message-bubble typing-indicator">
-            <div class="typing-dots">
-              <span></span>
-              <span></span>
-              <span></span>
+          <div class="rounded-2xl rounded-tl bg-[rgba(40,45,60,0.35)] border border-[rgba(255,255,255,0.08)] backdrop-blur-[12px] p-4">
+            <div class="flex gap-1 items-center">
+              <span class="h-1.5 w-1.5 rounded-full bg-[var(--muted)] animate-[typingBounce_1.4s_infinite_ease-in-out]" style="animation-delay: -0.32s;"></span>
+              <span class="h-1.5 w-1.5 rounded-full bg-[var(--muted)] animate-[typingBounce_1.4s_infinite_ease-in-out]" style="animation-delay: -0.16s;"></span>
+              <span class="h-1.5 w-1.5 rounded-full bg-[var(--muted)] animate-[typingBounce_1.4s_infinite_ease-in-out]"></span>
             </div>
           </div>
         </div>
@@ -90,14 +123,14 @@
     </div>
 
     <!-- 底部输入区 -->
-    <div class="chat-input-area">
+    <div class="flex-shrink-0 border-t border-[rgba(255,255,255,0.08)] bg-[rgba(18,20,28,0.85)] px-6 py-4 backdrop-blur-[20px]">
       <!-- 提示词建议 -->
-      <div v-if="suggestedQuestions.length > 0 && messages.length === 0" class="suggestions-container">
-        <div class="suggestions-scroll">
+      <div v-if="suggestedQuestions.length > 0 && messages.length === 0" class="mb-3 overflow-hidden">
+        <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
           <button
             v-for="(question, index) in suggestedQuestions"
             :key="index"
-            class="suggestion-chip"
+            class="shrink-0 rounded-full border border-[rgba(214,160,96,0.35)] bg-[rgba(18,20,30,0.55)] px-2.5 py-1.5 text-xs text-[var(--text)] transition-all duration-200 hover:border-[rgba(214,160,96,0.7)] hover:text-[#f3e4c8] hover:-translate-y-[1px]"
             type="button"
             @click="selectSuggestion(question)"
           >
@@ -107,19 +140,22 @@
       </div>
 
       <!-- 输入框 -->
-      <div class="input-container">
-        <div class="input-wrapper">
+      <div class="flex items-end gap-2">
+        <div class="flex flex-1 items-end gap-2 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(14,16,24,0.7)] p-2">
           <textarea
             v-model="inputText"
             ref="inputTextarea"
-            class="chat-input"
+            class="max-h-[120px] min-h-[40px] flex-1 resize-none rounded-lg border-0 bg-transparent px-3 py-2 text-sm text-[var(--text)] placeholder-white/40 outline-none"
             placeholder="向神喵大师提问..."
             rows="1"
             @keydown.enter.exact.prevent="sendMessage"
             @input="adjustTextareaHeight"
           ></textarea>
           <button
-            class="send-btn"
+            :class="[
+              'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0c0f15] transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed',
+              canSend ? '' : 'opacity-50'
+            ]"
             type="button"
             :disabled="!canSend"
             @click="sendMessage"
@@ -134,7 +170,11 @@
     </div>
 
     <!-- 点击遮罩关闭菜单 -->
-    <div v-if="showMenu" class="menu-overlay" @click="showMenu = false"></div>
+    <div
+      v-if="showMenu"
+      class="fixed inset-0 z-40 bg-black/20"
+      @click="showMenu = false"
+    ></div>
   </div>
 </template>
 
@@ -440,205 +480,7 @@ onDeactivated(() => {
 </script>
 
 <style scoped>
-.master-chat-container {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 900px;
-  height: 100%;
-  margin: 0 auto;
-  background: rgba(15, 15, 18, 0.4);
-  border-radius: 20px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  position: relative;
-}
-
-/* 顶部标题栏 */
-.chat-header {
-  background: rgba(14, 13, 19, 0.75);
-  backdrop-filter: blur(32px) saturate(180%);
-  -webkit-backdrop-filter: blur(32px) saturate(180%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 16px 24px;
-  flex-shrink: 0;
-  position: relative;
-  z-index: 10;
-}
-
-.chat-header::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(214, 160, 96, 0.05), rgba(240, 192, 122, 0.03));
-  pointer-events: none;
-}
-
-.chat-header-content {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-
-.chat-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.chat-title-text {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 12px;
-}
-
-.chat-name {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.chat-status {
-  font-size: 12px;
-  color: #7dd56f;
-}
-
-.chat-actions-left {
-  display: flex;
-  gap: 8px;
-  position: absolute;
-  left: 0;
-}
-
-.chat-actions {
-  display: flex;
-  gap: 8px;
-  position: absolute;
-  right: 0;
-}
-
-.menu-container {
-  position: relative;
-  display: inline-block;
-}
-
-.icon-btn {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: var(--muted);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.icon-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text);
-  transform: translateY(-1px);
-}
-
-.icon-btn:active {
-  transform: translateY(0);
-}
-
-/* 消息区域 */
-.chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px;
-  padding-top: calc(68px + 24px); /* 标题栏高度 + 原padding */
-  margin-top: -68px; /* 负值让消息区域向上延伸到标题栏下方 */
-  scroll-behavior: smooth;
-  background: rgba(18, 20, 28, 0.35);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-
-.messages-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-width: 100%;
-}
-
-/* 欢迎卡片 */
-.welcome-card {
-  background: rgba(18, 20, 28, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 16px;
-  padding: 32px;
-  text-align: center;
-  margin: 60px auto;
-  max-width: 480px;
-}
-
-.welcome-avatar {
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 16px;
-  border-radius: 50%;
-  overflow: hidden;
-  background: rgba(0, 0, 0, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.welcome-avatar-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.welcome-card h3 {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 8px;
-}
-
-.welcome-card p {
-  font-size: 14px;
-  line-height: 1.6;
-  margin-bottom: 24px;
-}
-
-.welcome-features {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.feature-tag {
-  padding: 6px 12px;
-  background: rgba(214, 160, 96, 0.15);
-  border: 1px solid rgba(214, 160, 96, 0.3);
-  border-radius: 8px;
-  font-size: 12px;
-  color: var(--accent-2);
-}
-
-/* 消息项 */
-.message-item {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  animation: messageSlideIn 0.3s ease;
-}
-
+/* 消息滑入动画 */
 @keyframes messageSlideIn {
   from {
     opacity: 0;
@@ -650,107 +492,7 @@ onDeactivated(() => {
   }
 }
 
-.message-user {
-  flex-direction: row-reverse;
-}
-
-.message-avatar {
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  line-height: 1;
-  border-radius: 50%;
-  overflow: hidden;
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.avatar-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.message-bubble {
-  max-width: 70%;
-  padding: 12px 16px;
-  border-radius: 16px;
-  position: relative;
-  word-wrap: break-word;
-}
-
-.message-assistant .message-bubble {
-  background: rgba(40, 45, 60, 0.35);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-top-left-radius: 4px;
-}
-
-.message-user .message-bubble {
-  background: linear-gradient(120deg, rgba(214, 160, 96, 0.3), rgba(240, 192, 122, 0.2));
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(240, 192, 122, 0.4);
-  border-top-right-radius: 4px;
-}
-
-.message-content {
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--text);
-  margin-bottom: 4px;
-}
-
-.message-content :deep(strong) {
-  font-weight: 600;
-  color: var(--accent-2);
-}
-
-.message-content :deep(code) {
-  background: rgba(255, 255, 255, 0.08);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: monospace;
-  font-size: 13px;
-}
-
-.message-time {
-  font-size: 11px;
-  color: var(--muted);
-  opacity: 0.7;
-}
-
-/* 正在输入指示器 */
-.typing-indicator {
-  padding: 16px;
-}
-
-.typing-dots {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-
-.typing-dots span {
-  width: 6px;
-  height: 6px;
-  background: var(--muted);
-  border-radius: 50%;
-  animation: typingBounce 1.4s infinite ease-in-out;
-}
-
-.typing-dots span:nth-child(1) {
-  animation-delay: -0.32s;
-}
-
-.typing-dots span:nth-child(2) {
-  animation-delay: -0.16s;
-}
-
+/* 输入指示器动画 */
 @keyframes typingBounce {
   0%, 80%, 100% {
     opacity: 0.4;
@@ -762,41 +504,18 @@ onDeactivated(() => {
   }
 }
 
-/* 输入区域 */
-.chat-input-area {
-  flex-shrink: 0;
-  background: rgba(18, 20, 28, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 16px 24px;
+/* 消息内容深度选择器 */
+.message-content :deep(strong) {
+  font-weight: 600;
+  color: var(--accent-2);
 }
 
-.suggestions-container {
-  margin-bottom: 12px;
-  overflow: hidden;
-}
-
-.suggestions-scroll {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 8px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
-}
-
-.suggestions-scroll::-webkit-scrollbar {
-  height: 4px;
-}
-
-.suggestions-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.suggestions-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 2px;
+.message-content :deep(code) {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 13px;
 }
 
 .suggestion-chip {

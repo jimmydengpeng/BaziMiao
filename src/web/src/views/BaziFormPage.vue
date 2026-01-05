@@ -1,12 +1,10 @@
 <template>
-  <div class="form-page-wrapper mx-auto max-w-[1100px] px-5 pb-16 pt-5">
-    <section class="form-shell">
-      <BirthFormCard
-        :loading="loading"
-        :error="error"
-        @submit="handleSubmit"
-      />
-    </section>
+  <div class="mx-auto max-w-[1100px] px-5 pb-16 pt-5">
+    <BirthFormCard
+      :loading="loading"
+      :error="error"
+      @submit="handleSubmit"
+    />
   </div>
 </template>
 

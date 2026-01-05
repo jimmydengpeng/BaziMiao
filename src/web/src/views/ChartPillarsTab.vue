@@ -1,32 +1,36 @@
 <template>
-  <div class="chart-pillars-tab">
-    <div v-if="chart" class="detail-panel">
+  <div class="flex flex-col gap-5">
+    <div v-if="chart" class="flex flex-col gap-5">
       <!-- 命盘展示 -->
       <ChartPanel :chart="chart" />
 
       <!-- AI 智能解析 CTA -->
-      <div class="panel stack">
-        <div class="status-line">
-          <strong>AI智能解析</strong>
-          <span class="muted">基于当前命盘生成详细报告</span>
+      <div class="flex flex-col gap-3 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[var(--panel)] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+        <div class="flex items-center gap-2 text-sm">
+          <strong class="text-white">AI智能解析</strong>
+          <span class="text-[var(--muted)] text-sm">基于当前命盘生成详细报告</span>
         </div>
-        <div class="cta-row matrix">
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] items-center gap-3">
           <button
-            class="btn primary ai-primary"
+            class="col-span-1 min-h-[48px] w-full rounded-xl border-none bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] px-7 py-3.5 text-base font-semibold text-[#0c0f15] shadow-[0_14px_30px_rgba(0,0,0,0.35)] transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
             type="button"
             :disabled="reportLoading || reportStreaming"
             @click="generateReport"
           >
             {{ reportLoading || reportStreaming ? '解析中...' : 'AI智能解析' }}
           </button>
-          <span v-if="error" class="muted cta-message">{{ error }}</span>
+          <span v-if="error" class="col-span-1 text-sm text-[var(--muted)]">{{ error }}</span>
         </div>
       </div>
     </div>
 
-    <div v-else class="panel">
-      <p class="muted">未找到命盘数据，请先填写生辰信息。</p>
-      <button class="btn primary mt-4" type="button" @click="goToForm">
+    <div v-else class="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[var(--panel)] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+      <p class="mb-4 text-sm text-[var(--muted)]">未找到命盘数据，请先填写生辰信息。</p>
+      <button
+        class="rounded-xl border-none bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] px-4 py-2.5 font-semibold text-[#0c0f15] shadow-[0_14px_30px_rgba(0,0,0,0.35)] transition-all duration-200 hover:-translate-y-[1px]"
+        type="button"
+        @click="goToForm"
+      >
         去填写
       </button>
     </div>

@@ -1,41 +1,58 @@
 <template>
-  <div class="picker-overlay" @click.self="$emit('close')">
-    <div class="panel picker-card open pillar-picker">
-      <div class="picker-head">
-        <div class="pillar-title">输入四柱八字</div>
-        <button class="btn ghost" type="button" @click="$emit('close')">关闭</button>
+  <div class="fixed inset-0 z-[200] flex items-center justify-center bg-[rgba(7,10,16,0.72)] p-5" @click.self="$emit('close')">
+    <div class="flex w-full max-w-[720px] flex-col gap-4 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(15,24,40,0.65)] p-5 shadow-[0_22px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+      <div class="flex items-center justify-between gap-3">
+        <div class="text-lg font-semibold text-[var(--text)]">输入四柱八字</div>
+        <button
+          class="rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.06)] px-3 py-1.5 text-xs font-semibold text-[var(--text)] transition-all duration-200 hover:bg-[rgba(255,255,255,0.1)]"
+          type="button"
+          @click="$emit('close')"
+        >
+          关闭
+        </button>
       </div>
 
       <!-- 当前选择的步骤说明 -->
-      <div class="pillar-progress">
-        <div class="progress-text">
-          <span class="progress-step">步骤 {{ Math.min(currentStep + 1, 8) }}/8</span>
-          <span class="progress-hint">{{ stepHints[Math.min(currentStep, 7)] }}</span>
+      <div class="flex flex-col gap-2">
+        <div class="flex items-center justify-between text-sm">
+          <span class="font-semibold text-[var(--text)]">步骤 {{ Math.min(currentStep + 1, 8) }}/8</span>
+          <span class="text-[var(--muted)]">{{ stepHints[Math.min(currentStep, 7)] }}</span>
         </div>
-        <div class="progress-bar">
-          <div class="progress-fill" :style="{ width: `${Math.min(currentStep / 8, 1) * 100}%` }"></div>
+        <div class="h-2 overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)]">
+          <div
+            class="h-full rounded-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent-2)] transition-[width] duration-300"
+            :style="{ width: `${Math.min(currentStep / 8, 1) * 100}%` }"
+          ></div>
         </div>
       </div>
 
       <!-- 已选择的四柱预览 -->
-      <div class="pillar-preview">
+      <div class="grid grid-cols-4 gap-3">
         <div
           v-for="(pillar, idx) in pillars"
           :key="idx"
-          class="preview-pillar"
-          :class="{ active: Math.floor(currentStep / 2) === idx }"
+          :class="[
+            'flex flex-col items-center gap-2 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-3 transition-all duration-200',
+            Math.floor(currentStep / 2) === idx
+              ? 'border-[rgba(214,160,96,0.4)] bg-[rgba(214,160,96,0.1)]'
+              : ''
+          ]"
         >
-          <div class="preview-label">{{ pillarLabels[idx] }}</div>
-          <div class="preview-chars">
+          <div class="text-xs text-[var(--muted)]">{{ pillarLabels[idx] }}</div>
+          <div class="flex gap-2">
             <span
-              class="preview-char"
-              :class="[pillar.stem ? getElementClass(pillar.stem) : 'empty']"
+              :class="[
+                'flex h-12 w-12 items-center justify-center rounded-lg text-2xl font-bold',
+                pillar.stem ? getElementClass(pillar.stem) : 'bg-[rgba(255,255,255,0.05)] text-[var(--muted)]'
+              ]"
             >
               {{ pillar.stem || "?" }}
             </span>
             <span
-              class="preview-char"
-              :class="[pillar.branch ? getElementClass(pillar.branch) : 'empty']"
+              :class="[
+                'flex h-12 w-12 items-center justify-center rounded-lg text-2xl font-bold',
+                pillar.branch ? getElementClass(pillar.branch) : 'bg-[rgba(255,255,255,0.05)] text-[var(--muted)]'
+              ]"
             >
               {{ pillar.branch || "?" }}
             </span>
@@ -44,17 +61,19 @@
       </div>
 
       <!-- 选择区域 -->
-      <div class="pillar-selection">
-        <div class="selection-title">
+      <div class="flex flex-col gap-3">
+        <div class="text-sm font-semibold text-[var(--text)]">
           {{ isSelectingStem ? "选择天干" : "选择地支" }}
         </div>
-        <div class="selection-grid" :class="{ 'grid-branches': !isSelectingStem }">
+        <div :class="['grid gap-2', !isSelectingStem ? 'grid-cols-4' : 'grid-cols-5']">
           <button
             v-for="item in availableOptions"
             :key="item"
             type="button"
-            class="selection-btn"
-            :class="getElementClass(item)"
+            :class="[
+              'rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-3 text-lg font-bold transition-all duration-200 hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.08)]',
+              getElementClass(item)
+            ]"
             @click="selectItem(item)"
           >
             {{ item }}
@@ -63,9 +82,9 @@
       </div>
 
       <!-- 操作按钮 -->
-      <div class="picker-footer">
+      <div class="flex items-center justify-between gap-3">
         <button
-          class="btn secondary"
+          class="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(18,20,30,0.72)] px-4 py-2.5 font-semibold text-[#f3e4c8] transition-all duration-200 hover:bg-[rgba(255,255,255,0.08)] disabled:opacity-50 disabled:cursor-not-allowed"
           type="button"
           :disabled="currentStep === 0"
           @click="goBack"
@@ -73,7 +92,7 @@
           上一步
         </button>
         <button
-          class="btn secondary"
+          class="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(18,20,30,0.72)] px-4 py-2.5 font-semibold text-[#f3e4c8] transition-all duration-200 hover:bg-[rgba(255,255,255,0.08)]"
           type="button"
           @click="reset"
         >
@@ -81,7 +100,7 @@
         </button>
         <button
           v-if="isComplete"
-          class="btn primary"
+          class="rounded-xl border-none bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] px-4 py-2.5 font-semibold text-[#0c0f15] transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
           type="button"
           :disabled="loading"
           @click="findDates"
@@ -91,29 +110,31 @@
       </div>
 
       <!-- 查找进度 -->
-      <div v-if="searchProgress" class="search-progress">
+      <div v-if="searchProgress" class="rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-4 py-3 text-sm text-[var(--text)]">
         {{ searchProgress }}
       </div>
 
       <!-- 查找结果 -->
-      <div v-if="matchedDates.length > 0" class="matched-dates">
-        <div class="matched-title">找到 {{ matchedDates.length }} 个匹配的日期</div>
-        <div class="matched-list">
+      <div v-if="matchedDates.length > 0" class="flex flex-col gap-3">
+        <div class="text-base font-semibold text-[var(--text)]">找到 {{ matchedDates.length }} 个匹配的日期</div>
+        <div class="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/15 scrollbar-track-black/20">
           <button
             v-for="(date, idx) in matchedDates"
             :key="idx"
             type="button"
-            class="date-option"
+            class="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-3 text-left transition-all duration-200 hover:border-[rgba(214,160,96,0.4)] hover:bg-[rgba(214,160,96,0.1)]"
             @click="selectDate(date)"
           >
-            <div class="date-main">{{ formatDate(date) }}</div>
-            <div class="date-lunar">{{ date.lunar_display }}</div>
+            <div class="text-[15px] font-medium text-[var(--text)]">{{ formatDate(date) }}</div>
+            <div class="mt-1 text-xs text-[var(--muted)]">{{ date.lunar_display }}</div>
           </button>
         </div>
       </div>
 
       <!-- 错误信息 -->
-      <div v-if="error" class="pillar-error">{{ error }}</div>
+      <div v-if="error" class="rounded-lg border border-[rgba(200,16,46,0.3)] bg-[rgba(200,16,46,0.1)] px-4 py-3 text-sm text-[var(--accent-red)]">
+        {{ error }}
+      </div>
     </div>
   </div>
 </template>
@@ -335,257 +356,6 @@ const selectDate = (date: MatchedDate) => {
 </script>
 
 <style scoped>
-.pillar-picker {
-  width: min(780px, 100%);
-  max-height: 85vh;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.pillar-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--accent-2);
-}
-
-.pillar-progress {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border);
-}
-
-.progress-text {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 13px;
-}
-
-.progress-step {
-  font-weight: 600;
-  color: var(--accent-2);
-}
-
-.progress-hint {
-  color: var(--muted);
-}
-
-.progress-bar {
-  height: 6px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-
-.pillar-preview {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-}
-
-.preview-pillar {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 8px;
-  border-radius: 12px;
-  border: 2px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.02);
-  transition: all 0.3s ease;
-}
-
-.preview-pillar.active {
-  border-color: var(--accent);
-  background: rgba(214, 160, 96, 0.1);
-}
-
-.preview-label {
-  font-size: 12px;
-  color: var(--muted);
-  letter-spacing: 1px;
-}
-
-.preview-chars {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  align-items: center;
-}
-
-.preview-char {
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  min-width: 40px;
-  text-align: center;
-}
-
-.preview-char.empty {
-  color: rgba(255, 255, 255, 0.15);
-}
-
-.pillar-selection {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border);
-}
-
-.selection-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--accent-2);
-  text-align: center;
-}
-
-.selection-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
-  /* 固定最小高度，确保单排和双排时高度一致，避免卡片跳动 */
-  min-height: 180px;
-  align-content: start;
-}
-
-.selection-grid.grid-branches {
-  grid-template-columns: repeat(6, 1fr);
-}
-
-.selection-btn {
-  padding: 16px 12px;
-  border-radius: 12px;
-  border: 2px solid var(--border);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
-  font-size: 24px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.selection-btn:hover {
-  transform: translateY(-2px);
-  border-color: var(--accent);
-  box-shadow: 0 8px 20px rgba(214, 160, 96, 0.3);
-}
-
-.matched-dates {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 12px;
-  background: rgba(125, 213, 111, 0.08);
-  border: 1px solid rgba(125, 213, 111, 0.3);
-}
-
-.matched-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #7dd56f;
-  text-align: center;
-}
-
-.matched-list {
-  display: grid;
-  gap: 8px;
-  max-height: 240px;
-  overflow-y: auto;
-}
-
-.date-option {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: left;
-}
-
-.date-option:hover {
-  border-color: var(--accent);
-  background: rgba(214, 160, 96, 0.1);
-  transform: translateX(4px);
-}
-
-.date-main {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--accent-2);
-}
-
-.date-lunar {
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.search-progress {
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: rgba(90, 169, 255, 0.15);
-  border: 1px solid rgba(90, 169, 255, 0.3);
-  color: #5aa9ff;
-  font-size: 13px;
-  text-align: center;
-}
-
-.pillar-error {
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: rgba(255, 107, 107, 0.15);
-  border: 1px solid rgba(255, 107, 107, 0.3);
-  color: #ff6b6b;
-  font-size: 13px;
-  text-align: center;
-}
-
-@media (max-width: 680px) {
-  .pillar-preview {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .selection-grid {
-    grid-template-columns: repeat(4, 1fr);
-    /* 移动端也保持固定高度，但稍小一些 */
-    min-height: 200px;
-  }
-
-  .selection-grid.grid-branches {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .preview-char {
-    font-size: 24px;
-  }
-
-  .selection-btn {
-    font-size: 20px;
-    padding: 14px 10px;
-  }
-}
+/* 所有样式已迁移到 Tailwind CSS，五行元素类在 main.css 中定义 */
 </style>
 

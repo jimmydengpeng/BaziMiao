@@ -1,33 +1,51 @@
 <template>
-  <section class="form-shell">
-    <div class="form-intro" v-if="showIntro">
-      <div class="status-line">
-        <strong>{{ title }}</strong>
-        <span class="muted">{{ subtitle }}</span>
+  <section class="flex flex-col gap-4">
+    <!-- 表单介绍 -->
+    <div v-if="showIntro" class="flex items-end justify-between flex-wrap gap-2">
+      <div class="flex items-center gap-2 text-sm">
+        <strong class="text-white">{{ title }}</strong>
+        <span class="text-[var(--muted)]">{{ subtitle }}</span>
       </div>
-      <p class="muted">{{ helper }}</p>
+      <p class="text-[var(--muted)] text-sm">{{ helper }}</p>
     </div>
-    <div class="form-layout">
-      <div class="panel form-card stack">
-        <div class="field-group">
-          <label>姓名</label>
-          <input v-model.trim="form.name" placeholder="请输入姓名" />
+    
+    <!-- 表单卡片 -->
+    <div class="flex justify-center">
+      <div class="flex w-full min-w-0 max-w-[640px] flex-col gap-4 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[var(--panel)] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.35)] animate-[fade-up_0.35s_ease_both]">
+        <!-- 姓名 -->
+        <div class="flex flex-col gap-1.5">
+          <label class="block text-[13px] text-[var(--muted)]">姓名</label>
+          <input
+            v-model.trim="form.name"
+            placeholder="请输入姓名"
+            class="w-full rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0d1626] px-3.5 py-3 text-[15px] text-[var(--text)] outline-none transition-colors focus:border-[rgba(255,255,255,0.2)]"
+          />
         </div>
-        <div class="field-row">
-          <div class="field-group">
-            <label>性别</label>
-            <div class="segmented">
+        
+        <!-- 性别和历法 -->
+        <div class="flex flex-wrap gap-3 items-end">
+          <div class="flex flex-1 min-w-[220px] flex-col gap-1.5">
+            <label class="block text-[13px] text-[var(--muted)]">性别</label>
+            <div class="inline-flex gap-2 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#0f1421] p-1.5">
               <button
-                class="segmented-btn"
-                :class="{ active: form.gender === 'male' }"
+                :class="[
+                  'flex-1 rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm text-[var(--muted)] transition-all duration-200',
+                  form.gender === 'male'
+                    ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0c0f15] font-semibold'
+                    : 'hover:bg-white/5'
+                ]"
                 type="button"
                 @click="form.gender = 'male'"
               >
                 男
               </button>
               <button
-                class="segmented-btn"
-                :class="{ active: form.gender === 'female' }"
+                :class="[
+                  'flex-1 rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm text-[var(--muted)] transition-all duration-200',
+                  form.gender === 'female'
+                    ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0c0f15] font-semibold'
+                    : 'hover:bg-white/5'
+                ]"
                 type="button"
                 @click="form.gender = 'female'"
               >
@@ -35,28 +53,40 @@
               </button>
             </div>
           </div>
-          <div class="field-group calendar-row">
-            <label>历法</label>
-            <div class="segmented">
+          <div class="flex flex-1 min-w-[220px] flex-col gap-1.5">
+            <label class="block text-[13px] text-[var(--muted)]">历法</label>
+            <div class="inline-flex gap-2 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#0f1421] p-1.5">
               <button
-                class="segmented-btn"
-                :class="{ active: form.calendar === 'solar' }"
+                :class="[
+                  'flex-1 rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm text-[var(--muted)] transition-all duration-200',
+                  form.calendar === 'solar'
+                    ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0c0f15] font-semibold'
+                    : 'hover:bg-white/5'
+                ]"
                 type="button"
                 @click="form.calendar = 'solar'"
               >
                 公历
               </button>
               <button
-                class="segmented-btn"
-                :class="{ active: form.calendar === 'lunar' }"
+                :class="[
+                  'flex-1 rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm text-[var(--muted)] transition-all duration-200',
+                  form.calendar === 'lunar'
+                    ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0c0f15] font-semibold'
+                    : 'hover:bg-white/5'
+                ]"
                 type="button"
                 @click="form.calendar = 'lunar'"
               >
                 农历
               </button>
               <button
-                class="segmented-btn"
-                :class="{ active: form.calendar === 'pillar' }"
+                :class="[
+                  'flex-1 rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm text-[var(--muted)] transition-all duration-200',
+                  form.calendar === 'pillar'
+                    ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0c0f15] font-semibold'
+                    : 'hover:bg-white/5'
+                ]"
                 type="button"
                 @click="openPillarPicker"
               >
@@ -65,105 +95,177 @@
             </div>
           </div>
         </div>
-        <div class="field-group">
-          <label>出生时间（必填）</label>
-          <button class="date-display" type="button" @click="pickerOpen = !pickerOpen">
+        
+        <!-- 出生时间 -->
+        <div class="flex flex-col gap-1.5">
+          <label class="block text-[13px] text-[var(--muted)]">出生时间（必填）</label>
+          <button
+            class="flex w-full items-center justify-between gap-3 rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[rgba(15,24,40,0.9)] px-3.5 py-3 text-left text-[15px] text-[var(--text)] transition-all duration-200 hover:border-[rgba(255,255,255,0.2)] hover:-translate-y-[1px]"
+            type="button"
+            @click="pickerOpen = !pickerOpen"
+          >
             <span>{{ displayDate }}</span>
-            <span v-if="!pickerOpen" class="chevron">&gt;</span>
+            <span v-if="!pickerOpen" class="text-[var(--muted)] text-lg">&gt;</span>
           </button>
         </div>
-        <div v-if="pickerOpen" class="picker-overlay" role="dialog" aria-modal="true">
-          <div class="panel picker-card open">
-            <div class="picker-head">
-              <div class="segmented">
+        
+        <!-- 时间选择器弹窗 -->
+        <div
+          v-if="pickerOpen"
+          class="fixed inset-0 z-[200] flex items-center justify-center bg-[rgba(7,10,16,0.72)] p-5"
+          role="dialog"
+          aria-modal="true"
+          @click.self="pickerOpen = false"
+        >
+          <div class="flex w-full max-w-[720px] flex-col gap-4 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(15,24,40,0.65)] p-5 shadow-[0_22px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+            <!-- 选择器头部 -->
+            <div class="flex items-center justify-between gap-3">
+              <div class="inline-flex gap-2 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#0f1421] p-1.5">
                 <button
-                  class="segmented-btn"
-                  :class="{ active: form.calendar === 'solar' }"
+                  :class="[
+                    'rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm text-[var(--muted)] transition-all duration-200',
+                    form.calendar === 'solar'
+                      ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0c0f15] font-semibold'
+                      : 'hover:bg-white/5'
+                  ]"
                   type="button"
                   @click="form.calendar = 'solar'"
                 >
                   公历
                 </button>
                 <button
-                  class="segmented-btn"
-                  :class="{ active: form.calendar === 'lunar' }"
+                  :class="[
+                    'rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm text-[var(--muted)] transition-all duration-200',
+                    form.calendar === 'lunar'
+                      ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0c0f15] font-semibold'
+                      : 'hover:bg-white/5'
+                  ]"
                   type="button"
                   @click="form.calendar = 'lunar'"
                 >
                   农历
                 </button>
               </div>
-              <button class="btn ghost today-btn" type="button" @click="setToday">今天</button>
+              <button
+                class="rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.06)] px-3 py-1.5 text-xs font-semibold text-[var(--text)] transition-all duration-200 hover:bg-[rgba(255,255,255,0.1)]"
+                type="button"
+                @click="setToday"
+              >
+                今天
+              </button>
             </div>
-            <div class="picker-grid">
-              <div class="picker-column">
-                <span class="picker-label">年</span>
-                <select v-model.number="form.year" class="picker-select">
+            
+            <!-- 选择器网格 -->
+            <div class="grid grid-cols-[repeat(auto-fit,minmax(88px,1fr))] gap-3">
+              <div class="flex flex-col gap-2">
+                <span class="text-xs uppercase tracking-wider text-[var(--muted)]">年</span>
+                <select
+                  v-model.number="form.year"
+                  class="w-full rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0d1626] px-2.5 py-3 text-[15px] text-[var(--text)] outline-none transition-colors focus:border-[rgba(255,255,255,0.2)]"
+                >
                   <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
                 </select>
               </div>
-              <div class="picker-column">
-                <span class="picker-label">月</span>
-                <select v-model.number="form.month" class="picker-select">
+              <div class="flex flex-col gap-2">
+                <span class="text-xs uppercase tracking-wider text-[var(--muted)]">月</span>
+                <select
+                  v-model.number="form.month"
+                  class="w-full rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0d1626] px-2.5 py-3 text-[15px] text-[var(--text)] outline-none transition-colors focus:border-[rgba(255,255,255,0.2)]"
+                >
                   <option v-for="month in monthOptions" :key="month.value" :value="month.value">
                     {{ month.label }}
                   </option>
                 </select>
               </div>
-              <div class="picker-column">
-                <span class="picker-label">日</span>
-                <select v-model.number="form.day" class="picker-select">
+              <div class="flex flex-col gap-2">
+                <span class="text-xs uppercase tracking-wider text-[var(--muted)]">日</span>
+                <select
+                  v-model.number="form.day"
+                  class="w-full rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0d1626] px-2.5 py-3 text-[15px] text-[var(--text)] outline-none transition-colors focus:border-[rgba(255,255,255,0.2)]"
+                >
                   <option v-for="day in days" :key="day" :value="day">{{ day }}</option>
                 </select>
               </div>
-              <div class="picker-column">
-                <span class="picker-label">时</span>
-                <select v-model.number="form.hour" class="picker-select">
+              <div class="flex flex-col gap-2">
+                <span class="text-xs uppercase tracking-wider text-[var(--muted)]">时</span>
+                <select
+                  v-model.number="form.hour"
+                  class="w-full rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0d1626] px-2.5 py-3 text-[15px] text-[var(--text)] outline-none transition-colors focus:border-[rgba(255,255,255,0.2)]"
+                >
                   <option v-for="hour in hours" :key="hour" :value="hour">
                     {{ hour.toString().padStart(2, "0") }}
                   </option>
                 </select>
               </div>
-              <div class="picker-column">
-                <span class="picker-label">分</span>
-                <select v-model.number="form.minute" class="picker-select">
+              <div class="flex flex-col gap-2">
+                <span class="text-xs uppercase tracking-wider text-[var(--muted)]">分</span>
+                <select
+                  v-model.number="form.minute"
+                  class="w-full rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0d1626] px-2.5 py-3 text-[15px] text-[var(--text)] outline-none transition-colors focus:border-[rgba(255,255,255,0.2)]"
+                >
                   <option v-for="minute in minutes" :key="minute" :value="minute">
                     {{ minute.toString().padStart(2, "0") }}
                   </option>
                 </select>
               </div>
             </div>
-            <div v-if="isLunar" class="field-group">
-              <label>闰月</label>
-              <label class="check">
-                <input v-model="form.isLeapMonth" type="checkbox" />
+            
+            <!-- 闰月选项 -->
+            <div v-if="isLunar" class="flex flex-col gap-1.5">
+              <label class="block text-[13px] text-[var(--muted)]">闰月</label>
+              <label class="inline-flex items-center gap-2 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#0f1421] px-3 py-2.5 text-sm text-[var(--text)]">
+                <input
+                  v-model="form.isLeapMonth"
+                  type="checkbox"
+                  class="accent-[var(--accent-2)]"
+                />
                 <span>本月为闰月</span>
               </label>
             </div>
-            <div class="picker-footer">
-              <span class="muted picker-note">选择好后点击确定收起。</span>
-              <button class="btn primary" type="button" @click="pickerOpen = false">
+            
+            <!-- 选择器底部 -->
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-xs text-[var(--muted)]">选择好后点击确定收起。</span>
+              <button
+                class="rounded-xl border-none bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] px-4 py-2.5 font-semibold text-[#0c0f15] transition-all duration-200 hover:-translate-y-[1px]"
+                type="button"
+                @click="pickerOpen = false"
+              >
                 确定
               </button>
             </div>
           </div>
         </div>
-        <!-- 出生地点选择 -->
-        <div class="field-group">
-          <label>出生地点</label>
-          <button class="date-display" type="button" @click="showRegionPicker = true">
+        
+        <!-- 出生地点 -->
+        <div class="flex flex-col gap-1.5">
+          <label class="block text-[13px] text-[var(--muted)]">出生地点</label>
+          <button
+            class="flex w-full items-center justify-between gap-3 rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[rgba(15,24,40,0.9)] px-3.5 py-3 text-left text-[15px] text-[var(--text)] transition-all duration-200 hover:border-[rgba(255,255,255,0.2)] hover:-translate-y-[1px]"
+            type="button"
+            @click="showRegionPicker = true"
+          >
             <span>{{ form.birthPlace.fullName }}</span>
-            <span class="chevron">&gt;</span>
+            <span class="text-[var(--muted)] text-lg">&gt;</span>
           </button>
-          <span class="muted field-hint">
+          <span class="mt-2 block text-xs text-[var(--muted)] opacity-70">
             选择地区后将根据经度计算真太阳时，使排盘更加精确。
           </span>
         </div>
-        <div class="cta-row center">
-          <button class="btn primary cta-primary" :disabled="loading" @click="handleSubmit">
+        
+        <!-- 提交按钮 -->
+        <div class="flex flex-wrap items-center justify-center gap-4">
+          <button
+            :class="[
+              'min-w-[220px] rounded-xl border-none bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] px-8 py-3 font-semibold text-[#0c0f15] shadow-[0_14px_30px_rgba(0,0,0,0.35)] transition-all duration-200 hover:-translate-y-[1px] hover:shadow-[0_16px_34px_rgba(0,0,0,0.4)] disabled:opacity-50 disabled:cursor-not-allowed',
+              loading ? 'cursor-wait' : ''
+            ]"
+            :disabled="loading"
+            @click="handleSubmit"
+          >
             {{ loading ? "排盘中..." : "一键排盘" }}
           </button>
-          <span class="muted" v-if="error">{{ error }}</span>
+          <span v-if="error" class="text-sm text-[var(--muted)]">{{ error }}</span>
         </div>
       </div>
     </div>
