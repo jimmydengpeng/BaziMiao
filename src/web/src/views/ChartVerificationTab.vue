@@ -1,10 +1,10 @@
 <template>
   <div class="grid gap-4">
-    <div class="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[var(--panel)] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+    <div class="panel-card">
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-2 text-sm">
           <strong class="text-white">前事验盘</strong>
-          <span class="rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.06)] px-2 py-1 text-xs text-[var(--muted)]">占位</span>
+          <span class="rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.06)] px-2 py-1 text-xs text-[var(--muted)]">开发中</span>
         </div>
         <span class="text-xs text-[var(--muted)]">验证过往事件，校准推演</span>
       </div>

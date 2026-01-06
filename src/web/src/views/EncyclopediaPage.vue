@@ -1,6 +1,6 @@
 <template>
   <div class="mx-auto max-w-5xl px-3 pb-8 pt-16 md:px-4 md:pb-10 md:pt-18 lg:px-6 lg:pb-12 lg:pt-20">
-    <div class="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[var(--panel)] p-6 shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+    <div class="panel-card p-6">
       <div class="flex flex-col gap-2">
         <div class="flex items-center gap-2 text-sm">
           <strong class="text-white text-lg">命理百科</strong>

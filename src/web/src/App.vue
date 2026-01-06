@@ -14,8 +14,7 @@
     />
 
     <!-- 主内容区域：路由视图 -->
-    <!-- 三档响应式padding-top：手机 pt-12, 平板 pt-14, 桌面 pt-16 -->
-    <div class="app-content pt-12 md:pt-14 lg:pt-16">
+    <div class="app-content">
       <router-view />
     </div>
   </div>

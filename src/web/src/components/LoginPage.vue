@@ -1,7 +1,7 @@
 <template>
   <div class="flex min-h-[calc(100vh-64px)] items-center justify-center px-4 py-12">
     <div
-      class="w-full max-w-md rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,22,33,0.7)] p-6 text-left shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl"
+      class="panel-card w-full max-w-md p-6"
     >
       <div class="mb-4 flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-[var(--accent)]">
         <span class="h-1.5 w-1.5 rounded-full bg-[var(--accent)]"></span>
@@ -38,7 +38,7 @@
           </label>
           <button
             type="submit"
-            class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] px-4 py-2.5 text-sm font-semibold text-[#0a0604] shadow-[0_10px_30px_rgba(214,160,96,0.35)] transition hover:-translate-y-[1px] active:translate-y-0"
+            class="btn-primary w-full gap-2 text-sm"
           >
             邮箱登录
           </button>
@@ -52,7 +52,7 @@
 
         <button
           type="button"
-          class="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+          class="btn-ghost w-full gap-2 text-sm"
           @click="handleGoogle"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -82,7 +82,7 @@
       </template>
 
       <template v-else>
-        <div class="rounded-xl border border-[rgba(255,255,255,0.12)] bg-white/5 p-4 text-white/80">
+        <div class="panel-tile p-4 text-white/80">
           登录成功状态占位。后续可在此展示账户信息、历史记录等。
         </div>
       </template>

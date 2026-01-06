@@ -6,7 +6,7 @@
     class="top-nav fixed left-0 right-0 top-0 z-50 flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] backdrop-blur-xl px-3 md:px-4 lg:px-6"
     :class="[
       // 毛玻璃背景：使用主题深蓝色调，半透明
-      'bg-[rgba(18,22,33,0.72)]',
+      'bg-[rgba(18,22,33,0.75)]',
       // home 页面可选更透明
       isHome ? 'bg-[rgba(18,22,33,0.15)]' : ''
     ]"
@@ -509,57 +509,3 @@ const currentModuleLabel = computed(() => {
   return labels[props.activeModule] || '神机喵算';
 });
 </script>
-
-<style scoped>
-/* iOS safe-area 支持：让导航栏延伸到状态栏区域 */
-/* 使用 min-height 而不是固定 height，以便在添加 safe-area 后自动扩展 */
-.top-nav {
-  /* iOS 添加到主屏幕后，在顶部添加状态栏高度的 padding */
-  padding-top: env(safe-area-inset-top, 0px);
-  /* 移动端：总高度 = safe-area + 基础高度 3rem (48px) */
-  min-height: calc(env(safe-area-inset-top, 0px) + 3rem);
-}
-
-/* 平板端：基础高度 3.5rem (56px) */
-@media (min-width: 768px) {
-  .top-nav {
-    min-height: calc(env(safe-area-inset-top, 0px) + 3.5rem);
-  }
-}
-
-/* 桌面端：基础高度 4rem (64px) */
-@media (min-width: 1024px) {
-  .top-nav {
-    min-height: calc(env(safe-area-inset-top, 0px) + 4rem);
-  }
-}
-
-/* 遮罩淡入淡出动画 */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-/* 下拉菜单滑入滑出动画 */
-.slide-down-enter-active,
-.slide-down-leave-active {
-  transition: transform 0.25s ease, opacity 0.25s ease;
-}
-
-.slide-down-enter-from,
-.slide-down-leave-to {
-  transform: translateY(-10px);
-  opacity: 0;
-}
-
-.slide-down-enter-to,
-.slide-down-leave-from {
-  transform: translateY(0);
-  opacity: 1;
-}
-</style>

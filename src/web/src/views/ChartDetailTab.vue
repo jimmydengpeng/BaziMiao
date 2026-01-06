@@ -1,6 +1,6 @@
 <template>
   <div class="grid gap-4">
-    <div class="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[var(--panel)] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+    <div class="panel-card">
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-2 text-sm">
           <strong class="text-white">专业细盘</strong>

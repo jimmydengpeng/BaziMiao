@@ -2,7 +2,7 @@
   <!-- 双人合盘占位页面 -->
   <div class="flex h-full flex-col items-center justify-center px-6 py-12">
     <div
-      class="flex max-w-md flex-col items-center rounded-2xl border border-[rgba(255,255,255,0.1)] bg-[rgba(18,22,33,0.6)] px-8 py-12 text-center backdrop-blur-lg"
+      class="panel-card flex max-w-md flex-col items-center px-8 py-12 text-center"
     >
       <!-- 图标 -->
       <div

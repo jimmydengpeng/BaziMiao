@@ -40,7 +40,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'pro',
         name: 'ChartPro',
-        component: () => import('../views/ChartProTab.vue'),
+        component: () => import('../views/ChartDetailTab.vue'),
         meta: { title: '专业细盘' }
       },
       {

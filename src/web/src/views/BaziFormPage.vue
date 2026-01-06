@@ -2,11 +2,11 @@
   <div class="mx-auto max-w-[1100px] px-5 pb-16 pt-5">
     <!-- 选择模式：新建排盘 或 从档案选择 -->
     <div v-if="!showForm && !showArchiveList" class="flex flex-col gap-4 mb-6">
-      <div class="flex flex-col gap-3 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[var(--panel)] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+      <div class="panel-card flex flex-col gap-3">
         <h2 class="text-lg font-semibold text-[var(--accent-2)] mb-2">选择排盘方式</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <button
-            class="flex flex-col items-center gap-3 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(15,24,40,0.9)] p-5 text-left transition-all duration-200 hover:border-[rgba(214,160,96,0.4)] hover:-translate-y-0.5 hover:shadow-lg"
+            class="panel-tile flex flex-col items-center gap-3 py-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(214,160,96,0.4)] hover:shadow-lg"
             type="button"
             @click="showForm = true"
           >
@@ -21,7 +21,7 @@
             </div>
           </button>
           <button
-            class="flex flex-col items-center gap-3 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(15,24,40,0.9)] p-5 text-left transition-all duration-200 hover:border-[rgba(214,160,96,0.4)] hover:-translate-y-0.5 hover:shadow-lg"
+            class="panel-tile flex flex-col items-center gap-3 py-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(214,160,96,0.4)] hover:shadow-lg"
             type="button"
             @click="showArchiveList = true"
             :disabled="archives.length === 0"
@@ -45,7 +45,7 @@
 
     <!-- 档案列表 -->
     <div v-if="showArchiveList" class="flex flex-col gap-4 mb-6">
-      <div class="flex items-center justify-between gap-4 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[var(--panel)] p-5">
+      <div class="panel-card flex items-center justify-between gap-4">
         <div class="flex items-center gap-3">
           <button
             class="flex items-center justify-center w-8 h-8 rounded-lg border border-[rgba(255,255,255,0.08)] bg-[rgba(15,24,40,0.9)] text-white transition hover:bg-white/10"
@@ -68,7 +68,7 @@
           v-for="entry in archives"
           :key="entry.id"
           :class="[
-            'flex items-center justify-between gap-4 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(15,24,40,0.9)] px-5 py-4 text-left transition-all duration-200 hover:border-[rgba(214,160,96,0.4)] hover:-translate-y-0.5 hover:shadow-lg',
+            'panel-tile flex items-center justify-between gap-4 px-5 py-4 text-left transition-all duration-200 hover:border-[rgba(214,160,96,0.4)] hover:-translate-y-0.5 hover:shadow-lg',
             entry.id === activeArchiveId
               ? 'border-[rgba(214,160,96,0.85)] shadow-lg'
               : ''

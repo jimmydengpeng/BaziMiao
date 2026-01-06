@@ -100,7 +100,7 @@
         </button>
         <button
           v-if="isComplete"
-          class="rounded-xl border-none bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] px-4 py-2.5 font-semibold text-[#0c0f15] transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+          class="btn-primary"
           type="button"
           :disabled="loading"
           @click="findDates"
@@ -358,4 +358,3 @@ const selectDate = (date: MatchedDate) => {
 <style scoped>
 /* 所有样式已迁移到 Tailwind CSS，五行元素类在 main.css 中定义 */
 </style>
-

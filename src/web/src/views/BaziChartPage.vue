@@ -59,75 +59,7 @@
            - 手机端和平板端：统一固定在屏幕底部上方，参考 iOS 风格的悬浮 Tab Bar，背景使用毛玻璃效果
            - 平板端：宽度略更大，使用更“弹性”的宽度以适配不同尺寸的平板
            - 桌面端：由左侧 SideNav 负责导航，隐藏此 Tab Bar -->
-      <div class="mobile-tabs fixed inset-x-0 bottom-6 z-40 flex justify-center lg:hidden">
-        <div
-          class="inline-flex w-[calc(100%-32px)] max-w-[420px] items-stretch rounded-full border border-[rgba(255,255,255,0.16)] bg-[rgba(18,22,33,0.3)] px-1.5 py-1.5 shadow-[0_18px_48px_rgba(0,0,0,0.7)] backdrop-blur-2xl md:w-[calc(100%-96px)] md:max-w-[560px] md:bg-[rgba(18,22,33,0.65)]"
-        >
-          <!-- 命盘信息 -->
-          <router-link
-            :to="`/bazi/chart/${chartId}/pillars`"
-            :class="[
-              'flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-3 py-2 text-[10px] font-medium transition md:px-4 md:text-[11px]',
-              currentPage === 'chart'
-                ? 'bg-[rgba(214,160,96,0.3)] text-[var(--accent-2)]'
-                : 'text-white/75 hover:bg-white/5'
-            ]"
-          >
-            <span class="flex h-6 w-6 items-center justify-center md:h-7 md:w-7">
-              <img :src="baziChartIconUrl" alt="命盘信息" class="h-5 w-5 md:h-6 md:w-6 object-contain" />
-            </span>
-            <span class="font-medium" style="font-family: 'Noto Sans SC','Microsoft YaHei','PingFang SC',sans-serif;">命盘信息</span>
-          </router-link>
-
-          <!-- 命理报告（不可用时降权显示并禁用点击） -->
-          <router-link
-            :to="`/bazi/chart/${chartId}/report`"
-            :class="[
-              'flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-3 py-2 text-[10px] font-medium transition md:px-4 md:text-[11px]',
-              currentPage === 'report'
-                ? 'bg-[rgba(214,160,96,0.3)] text-[var(--accent-2)]'
-                : 'text-white/75 hover:bg-white/5'
-            ]"
-          >
-            <span class="flex h-6 w-6 items-center justify-center md:h-7 md:w-7">
-              <img :src="reportIconUrl" alt="命理报告" class="h-5 w-5 md:h-6 md:w-6 object-contain" />
-            </span>
-            <span class="font-medium" style="font-family: 'Noto Sans SC','Microsoft YaHei','PingFang SC',sans-serif;">命理报告</span>
-          </router-link>
-
-          <!-- 专业细盘 -->
-          <router-link
-            :to="`/bazi/chart/${chartId}/pro`"
-            :class="[
-              'flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-3 py-2 text-[10px] font-medium transition md:px-4 md:text-[11px]',
-              currentPage === 'pro'
-                ? 'bg-[rgba(214,160,96,0.3)] text-[var(--accent-2)]'
-                : 'text-white/75 hover:bg-white/5'
-            ]"
-          >
-            <span class="flex h-6 w-6 items-center justify-center md:h-7 md:w-7">
-              <img :src="archiveIconUrl" alt="专业细盘" class="h-5 w-5 md:h-6 md:w-6 object-contain" />
-            </span>
-            <span class="font-medium" style="font-family: 'Noto Sans SC','Microsoft YaHei','PingFang SC',sans-serif;">专业细盘</span>
-          </router-link>
-
-          <!-- 前事验盘 -->
-          <router-link
-            :to="`/bazi/chart/${chartId}/verification`"
-            :class="[
-              'flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-3 py-2 text-[10px] font-medium transition md:px-4 md:text-[11px]',
-              currentPage === 'verification'
-                ? 'bg-[rgba(214,160,96,0.3)] text-[var(--accent-2)]'
-                : 'text-white/75 hover:bg-white/5'
-            ]"
-          >
-            <span class="flex h-6 w-6 items-center justify-center md:h-7 md:w-7">
-              <img :src="chatIconUrl" alt="前事验盘" class="h-5 w-5 md:h-6 md:w-6 object-contain" />
-            </span>
-            <span class="font-medium" style="font-family: 'Noto Sans SC','Microsoft YaHei','PingFang SC',sans-serif;">前事验盘</span>
-          </router-link>
-        </div>
-      </div>
+      <TabBar :items="tabItems" />
     </section>
   </div>
 </template>
@@ -137,12 +69,13 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import SideNav from '../components/SideNav.vue';
 import SideChat from '../components/SideChat.vue';
+import TabBar from '../components/TabBar.vue';
 import { useStore } from '../composables/useStore';
 // 与侧边栏保持一致的核心功能图标
 import baziChartIconUrl from '../assets/bazi-chart.png';
 import reportIconUrl from '../assets/report.png';
-import archiveIconUrl from '../assets/archive.png';
-import chatIconUrl from '../assets/chat-dot-square.png';
+import detailChartIconUrl from '../assets/pages.png';
+import verifyChartIconUrl from  '../assets/check-list-1.png';
 
 const route = useRoute();
 const { report } = useStore();
@@ -160,6 +93,41 @@ const currentPage = computed(() => {
   if (path.includes('/pro')) return 'pro';
   if (path.includes('/verification')) return 'verification';
   return 'chart';
+});
+
+// 底部 Tab Bar 配置，复用统一的样式
+const tabItems = computed(() => {
+  const id = chartId.value;
+  return [
+    {
+      key: 'chart',
+      label: '命盘信息',
+      icon: baziChartIconUrl,
+      to: `/bazi/chart/${id}/pillars`,
+      active: currentPage.value === 'chart'
+    },
+    {
+      key: 'report',
+      label: '命理报告',
+      icon: reportIconUrl,
+      to: `/bazi/chart/${id}/report`,
+      active: currentPage.value === 'report'
+    },
+    {
+      key: 'pro',
+      label: '专业细盘',
+      icon: detailChartIconUrl,
+      to: `/bazi/chart/${id}/pro`,
+      active: currentPage.value === 'pro'
+    },
+    {
+      key: 'verification',
+      label: '前事验盘',
+      icon: verifyChartIconUrl,
+      to: `/bazi/chart/${id}/verification`,
+      active: currentPage.value === 'verification'
+    }
+  ];
 });
 
 // 是否可以查看报告

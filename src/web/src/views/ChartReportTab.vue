@@ -1,20 +1,20 @@
 <template>
   <div class="flex flex-col gap-3">
-    <div class="flex flex-col gap-4 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[var(--panel)] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+    <div class="panel-card flex flex-col gap-4">
       <div class="flex items-center gap-2 text-sm">
         <strong class="text-white">命理报告</strong>
         <span class="rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-2 py-1 text-xs text-[var(--muted)]">LLM 解释器</span>
       </div>
 
       <!-- AI 智能解析 CTA -->
-      <div class="flex flex-col gap-3 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] p-4">
+      <div class="panel-tile flex flex-col gap-3">
         <div class="flex items-center gap-2 text-sm">
           <strong class="text-white">AI智能解析</strong>
           <span class="text-[var(--muted)] text-sm">基于当前命盘生成详细报告</span>
         </div>
         <div class="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] items-center gap-3">
           <button
-            class="col-span-1 min-h-[48px] w-full rounded-xl border-none bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] px-7 py-3.5 text-base font-semibold text-[#0c0f15] shadow-[0_14px_30px_rgba(0,0,0,0.35)] transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+            class="btn-primary col-span-1 min-h-[48px] w-full text-base"
             type="button"
             :disabled="!chart || reportLoading || reportStreaming"
             @click="generateReport"
@@ -31,7 +31,7 @@
 
       <!-- 流式生成中 -->
       <div v-if="reportStreaming" class="grid gap-3">
-        <div v-if="reportThinking" class="rounded-xl border border-dashed border-[rgba(255,255,255,0.08)] bg-[rgba(214,160,96,0.08)] p-4">
+        <div v-if="reportThinking" class="panel-tile border-dashed border-[rgba(255,255,255,0.08)] bg-[rgba(214,160,96,0.08)]">
           <div class="mb-2 flex items-center justify-between gap-3">
             <h3 class="text-sm font-semibold text-[var(--accent)]">模型思考</h3>
           </div>
@@ -39,7 +39,7 @@
             {{ reportThinking }}
           </div>
         </div>
-        <div class="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] p-4">
+        <div class="panel-tile">
           <h3 class="mb-2 text-sm font-semibold text-[var(--accent)]">生成中...</h3>
           <div class="whitespace-pre-wrap break-words text-xs leading-relaxed">
             {{ reportDraft || '正在生成，请稍候...' }}
@@ -49,11 +49,11 @@
 
       <!-- 报告已生成 -->
       <div v-else-if="report" class="grid gap-4">
-        <div v-if="reportThinking" class="rounded-xl border border-dashed border-[rgba(255,255,255,0.08)] bg-[rgba(214,160,96,0.08)] p-4">
+        <div v-if="reportThinking" class="panel-tile border-dashed border-[rgba(255,255,255,0.08)] bg-[rgba(214,160,96,0.08)]">
           <div class="mb-2 flex items-center justify-between gap-3">
             <h3 class="text-sm font-semibold text-[var(--accent)]">模型思考</h3>
             <button
-              class="rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.06)] px-2.5 py-1 text-xs text-[var(--text)] transition-all duration-200 hover:bg-[rgba(255,255,255,0.1)]"
+              class="btn-ghost rounded-full px-2.5 py-1 text-xs"
               type="button"
               @click="reportThinkingCollapsed = !reportThinkingCollapsed"
             >
@@ -65,13 +65,13 @@
           </div>
         </div>
 
-        <div v-if="report.energy_chart" class="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] p-4">
+        <div v-if="report.energy_chart" class="panel-tile">
           <h3 class="mb-2 text-sm font-semibold text-[var(--accent)]">五行能量图</h3>
           <pre class="m-0 rounded-lg border border-dashed border-[rgba(255,255,255,0.08)] bg-[rgba(15,20,33,0.6)] p-3 font-mono text-[11px] leading-relaxed text-[var(--text)] whitespace-pre overflow-x-auto max-w-full">{{ report.energy_chart }}</pre>
         </div>
 
         <div class="grid gap-3">
-          <div class="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] p-4 break-words" v-for="(sec, idx) in report.sections" :key="idx">
+          <div class="panel-tile break-words" v-for="(sec, idx) in report.sections" :key="idx">
             <h3 class="mb-2 text-sm font-semibold text-[var(--accent)]">{{ sec.title }}</h3>
             <div class="markdown-body text-xs leading-relaxed break-words" v-html="renderMarkdown(sec.content)"></div>
           </div>

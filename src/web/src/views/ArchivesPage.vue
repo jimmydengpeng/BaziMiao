@@ -1,7 +1,7 @@
 <template>
   <div class="mx-auto max-w-[1600px] px-3 pb-6 md:px-4 md:pb-8 lg:px-6 lg:pb-10">
     <section class="relative flex flex-col gap-4">
-      <header class="flex items-center justify-between gap-4 rounded-[18px] border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,30,0.6)] px-4.5 py-4 backdrop-blur-[14px]">
+      <header class="panel-card flex items-center justify-between gap-4">
         <div class="flex items-center gap-3">
           <div>
             <div class="text-base font-semibold text-[var(--accent-2)]">档案列表</div>
@@ -10,7 +10,7 @@
         </div>
         <div class="flex items-center gap-2.5 flex-wrap">
           <button
-            class="rounded-xl border-none bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] px-4 py-2.5 font-semibold text-[#0c0f15] shadow-[0_14px_30px_rgba(0,0,0,0.35)] transition-all duration-200 hover:-translate-y-[1px] hover:border-[rgba(255,255,255,0.2)]"
+            class="btn-primary"
             type="button"
             @click="goToNewForm"
           >
@@ -24,12 +24,12 @@
           <!-- 空状态 -->
           <div
             v-if="archives.length === 0"
-            class="flex flex-col gap-2.5 rounded-2xl border border-[rgba(255,255,255,0.14)] bg-[rgba(16,12,10,0.7)] p-5 text-center"
+            class="panel-card flex flex-col gap-2.5 text-center bg-[rgba(16,12,10,0.7)]"
           >
             <h2 class="text-lg font-semibold text-white">还没有档案</h2>
             <p class="text-sm text-[var(--muted)]">先填写姓名与生日信息，再保存到这里。</p>
             <button
-              class="mx-auto mt-2 rounded-xl border-none bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] px-4 py-2.5 font-semibold text-[#0c0f15] shadow-[0_14px_30px_rgba(0,0,0,0.35)] transition-all duration-200 hover:-translate-y-[1px]"
+              class="btn-primary mx-auto mt-2"
               type="button"
               @click="goToNewForm"
             >
@@ -42,7 +42,7 @@
             v-for="entry in archives"
             :key="entry.id"
             :class="[
-              'grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-4 rounded-[18px] border border-[rgba(255,255,255,0.16)] bg-[rgba(20,18,28,0.58)] px-5 py-4 text-left shadow-[0_18px_40px_rgba(0,0,0,0.45)] backdrop-blur-[14px] transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(214,160,96,0.55)] hover:shadow-[0_22px_48px_rgba(0,0,0,0.5)]',
+              'panel-card grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-4 px-5 py-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(214,160,96,0.55)] hover:shadow-[0_22px_48px_rgba(0,0,0,0.5)]',
               entry.id === activeArchiveId
                 ? 'border-[rgba(214,160,96,0.85)] shadow-[0_22px_50px_rgba(0,0,0,0.55),inset_0_0_0_1px_rgba(214,160,96,0.35)]'
                 : ''

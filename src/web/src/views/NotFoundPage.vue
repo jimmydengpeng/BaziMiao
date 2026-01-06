@@ -5,7 +5,7 @@
     <p class="mb-8 text-white/60">抱歉，您访问的页面不存在。</p>
     <router-link
       to="/"
-      class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] px-6 py-3 font-semibold text-[#0a0604] shadow-lg transition hover:-translate-y-0.5"
+      class="btn-primary gap-2 px-6 py-3"
     >
       返回首页
     </router-link>

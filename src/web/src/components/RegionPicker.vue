@@ -77,14 +77,14 @@
 
       <div class="flex justify-end gap-3 border-t border-[rgba(255,255,255,0.1)] px-6 py-4">
         <button
-          class="rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(18,20,30,0.72)] px-4 py-2.5 font-semibold text-[#f3e4c8] transition-all duration-200 hover:bg-[rgba(255,255,255,0.08)]"
+          class="btn-ghost"
           type="button"
           @click="handleReset"
         >
           重置为未知
         </button>
         <button
-          class="rounded-xl border-none bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] px-4 py-2.5 font-semibold text-[#0c0f15] transition-all duration-200 hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed"
+          class="btn-primary"
           type="button"
           :disabled="!canConfirm"
           @click="handleConfirm"
@@ -196,13 +196,3 @@ watch(
   { immediate: true }
 );
 </script>
-
-<style scoped>
-/* 响应式调整 */
-@media (max-width: 720px) {
-  .region-picker-modal {
-    max-height: 90vh;
-  }
-}
-</style>
-
