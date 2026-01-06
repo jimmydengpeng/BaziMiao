@@ -39,7 +39,7 @@
           ]"
         >
           <div class="text-xs text-[var(--muted)]">{{ pillarLabels[idx] }}</div>
-          <div class="flex gap-2">
+          <div class="flex flex-col gap-1">
             <span
               :class="[
                 'flex h-12 w-12 items-center justify-center rounded-lg text-2xl font-bold',

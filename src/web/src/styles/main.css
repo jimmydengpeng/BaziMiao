@@ -400,6 +400,29 @@ button {
   font-size: 12px;
 }
 
+/* ========== iOS safe-area 支持 ========== */
+/* 确保主内容区域在 iOS 添加到主屏幕后，正确留出导航栏（含状态栏）的空间 */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .app-content {
+    /* 移动端：导航栏高度 (3rem = 48px) + safe-area-inset-top */
+    padding-top: calc(env(safe-area-inset-top) + 3rem);
+  }
+  
+  /* 平板端：导航栏高度 (3.5rem = 56px) + safe-area-inset-top */
+  @media (min-width: 768px) {
+    .app-content {
+      padding-top: calc(env(safe-area-inset-top) + 3.5rem);
+    }
+  }
+  
+  /* 桌面端：导航栏高度 (4rem = 64px) + safe-area-inset-top */
+  @media (min-width: 1024px) {
+    .app-content {
+      padding-top: calc(env(safe-area-inset-top) + 4rem);
+    }
+  }
+}
+
 /* ========== 响应式调整 ========== */
 @media (max-width: 480px) {
   .pillar-label-text {

@@ -29,10 +29,10 @@
             <div class="inline-flex gap-2 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#0f1421] p-1.5">
               <button
                 :class="[
-                  'flex-1 rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm text-[var(--muted)] transition-all duration-200',
+                  'flex-1 rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm transition-all duration-200',
                   form.gender === 'male'
-                    ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0c0f15] font-semibold'
-                    : 'hover:bg-white/5'
+                    ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0a0d12] font-semibold shadow-sm'
+                    : 'text-[var(--muted)] hover:bg-white/5'
                 ]"
                 type="button"
                 @click="form.gender = 'male'"
@@ -41,10 +41,10 @@
               </button>
               <button
                 :class="[
-                  'flex-1 rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm text-[var(--muted)] transition-all duration-200',
+                  'flex-1 rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm transition-all duration-200',
                   form.gender === 'female'
-                    ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0c0f15] font-semibold'
-                    : 'hover:bg-white/5'
+                    ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0a0d12] font-semibold shadow-sm'
+                    : 'text-[var(--muted)] hover:bg-white/5'
                 ]"
                 type="button"
                 @click="form.gender = 'female'"
@@ -58,10 +58,10 @@
             <div class="inline-flex gap-2 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#0f1421] p-1.5">
               <button
                 :class="[
-                  'flex-1 rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm text-[var(--muted)] transition-all duration-200',
+                  'flex-1 rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm transition-all duration-200',
                   form.calendar === 'solar'
-                    ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0c0f15] font-semibold'
-                    : 'hover:bg-white/5'
+                    ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0a0d12] font-semibold shadow-sm'
+                    : 'text-[var(--muted)] hover:bg-white/5'
                 ]"
                 type="button"
                 @click="form.calendar = 'solar'"
@@ -70,10 +70,10 @@
               </button>
               <button
                 :class="[
-                  'flex-1 rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm text-[var(--muted)] transition-all duration-200',
+                  'flex-1 rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm transition-all duration-200',
                   form.calendar === 'lunar'
-                    ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0c0f15] font-semibold'
-                    : 'hover:bg-white/5'
+                    ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0a0d12] font-semibold shadow-sm'
+                    : 'text-[var(--muted)] hover:bg-white/5'
                 ]"
                 type="button"
                 @click="form.calendar = 'lunar'"
@@ -82,10 +82,10 @@
               </button>
               <button
                 :class="[
-                  'flex-1 rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm text-[var(--muted)] transition-all duration-200',
+                  'flex-1 rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm transition-all duration-200',
                   form.calendar === 'pillar'
-                    ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0c0f15] font-semibold'
-                    : 'hover:bg-white/5'
+                    ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0a0d12] font-semibold shadow-sm'
+                    : 'text-[var(--muted)] hover:bg-white/5'
                 ]"
                 type="button"
                 @click="openPillarPicker"
@@ -123,10 +123,10 @@
               <div class="inline-flex gap-2 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#0f1421] p-1.5">
                 <button
                   :class="[
-                    'rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm text-[var(--muted)] transition-all duration-200',
+                    'rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm transition-all duration-200',
                     form.calendar === 'solar'
-                      ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0c0f15] font-semibold'
-                      : 'hover:bg-white/5'
+                      ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0a0d12] font-semibold shadow-sm'
+                      : 'text-[var(--muted)] hover:bg-white/5'
                   ]"
                   type="button"
                   @click="form.calendar = 'solar'"
@@ -135,10 +135,10 @@
                 </button>
                 <button
                   :class="[
-                    'rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm text-[var(--muted)] transition-all duration-200',
+                    'rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm transition-all duration-200',
                     form.calendar === 'lunar'
-                      ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0c0f15] font-semibold'
-                      : 'hover:bg-white/5'
+                      ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0a0d12] font-semibold shadow-sm'
+                      : 'text-[var(--muted)] hover:bg-white/5'
                   ]"
                   type="button"
                   @click="form.calendar = 'lunar'"
@@ -280,7 +280,7 @@
     <!-- 四柱输入选择器 -->
     <PillarPicker
       v-if="showPillarPicker"
-      @close="showPillarPicker = false"
+      @close="handlePillarClose"
       @select="handlePillarSelect"
     />
   </section>
@@ -323,6 +323,7 @@ const form = ref<BirthFormValues>({
 const pickerOpen = ref(false);
 const showRegionPicker = ref(false);
 const showPillarPicker = ref(false);
+const previousCalendar = ref<"solar" | "lunar">("solar"); // 保存打开四柱选择器前的历法状态
 
 const nowYear = new Date().getFullYear();
 const years = Array.from({ length: nowYear - 1801 + 1 }, (_, idx) => nowYear - idx);
@@ -393,6 +394,8 @@ const setToday = () => {
 };
 
 const openPillarPicker = () => {
+  // 记住进入四柱模式前的历法，关闭时恢复，避免提交时 calendar 留在 pillar
+  previousCalendar.value = form.value.calendar === "lunar" ? "lunar" : "solar";
   form.value.calendar = "pillar";
   showPillarPicker.value = true;
 };
@@ -405,6 +408,13 @@ const handlePillarSelect = (date: PillarMatchedDate) => {
   form.value.hour = date.hour;
   form.value.minute = date.minute;
   showPillarPicker.value = false;
+};
+
+const handlePillarClose = () => {
+  showPillarPicker.value = false;
+  if (form.value.calendar === "pillar") {
+    form.value.calendar = previousCalendar.value;
+  }
 };
 
 const handleSubmit = () => {

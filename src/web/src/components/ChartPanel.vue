@@ -333,31 +333,48 @@
           </div>
 
           <!-- 五行占比 -->
-          <div class="flex flex-col gap-3">
-            <div class="mb-2 flex items-center gap-2 text-[13px]">
+          <div class="flex flex-col gap-2.5 md:gap-3">
+            <div class="mb-1.5 flex items-center gap-2 text-xs md:mb-2 md:text-[13px]">
               <strong>五行占比</strong>
               <span class="text-[var(--muted)]">基于天干与藏干统计</span>
             </div>
-            <div class="flex flex-col gap-3">
+            <div class="flex flex-col gap-2.5 md:gap-3">
               <div v-for="item in energyItems" :key="item.element" class="flex flex-col gap-1.5">
-                <div class="flex items-center justify-between text-[13px]">
-                  <div class="flex items-center gap-2">
-                    <span :class="['h-2.5 w-2.5 rounded-full shadow-[0_0_8px_rgba(255,255,255,0.2)]', elementClass(item.element)]"></span>
-                    <span class="font-semibold">{{ item.element }}</span>
-                    <span class="text-[11px] text-[var(--muted)]">{{ item.relation }}</span>
+                <div class="flex items-center justify-between gap-2 text-xs md:text-[13px]">
+                  <div class="flex items-center gap-1.5 md:gap-2">
+                    <!-- 五行标识圆点：使用对应颜色 -->
+                    <span
+                      class="h-2.5 w-2.5 shrink-0 rounded-full shadow-[0_0_8px_currentColor]"
+                      :style="{ 
+                        backgroundColor: elementColorMap[item.element],
+                        color: elementColorMap[item.element],
+                        boxShadow: `0 0 8px ${elementColorMap[item.element]}40`
+                      }"
+                    ></span>
+                    <!-- 五行名称：使用对应颜色 -->
+                    <span
+                      class="font-semibold"
+                      :style="{ color: elementColorMap[item.element] }"
+                    >{{ item.element }}</span>
+                    <span class="text-[10px] text-[var(--muted)] md:text-[11px]">{{ item.relation }}</span>
                   </div>
-                  <div class="flex items-center gap-2.5">
-                    <span class="min-w-[48px] text-right font-semibold">{{ formatPercent(item.ratio) }}</span>
-                    <span class="min-w-[28px] text-[11px] text-[var(--muted)]">{{ item.count }}个</span>
+                  <div class="flex items-center gap-2 md:gap-2.5">
+                    <!-- 百分比：使用对应颜色 -->
+                    <span
+                      class="min-w-[42px] text-right text-xs font-semibold md:min-w-[48px] md:text-[13px]"
+                      :style="{ color: elementColorMap[item.element] }"
+                    >{{ formatPercent(item.ratio) }}</span>
+                    <span class="min-w-[24px] text-[10px] text-[var(--muted)] md:min-w-[28px] md:text-[11px]">{{ item.count }}个</span>
                   </div>
                 </div>
-                <div class="h-2 overflow-hidden rounded bg-[rgba(255,255,255,0.08)]">
+                <!-- 百分比条：使用对应颜色的渐变 -->
+                <div class="h-1.5 overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)] md:h-2">
                   <div
-                    :class="[
-                      'h-full rounded transition-[width] duration-500',
-                      elementClass(item.element)
-                    ]"
-                    :style="{ width: `${(item.ratio / maxEnergyRatio) * 100}%` }"
+                    class="h-full rounded-full transition-[width] duration-500"
+                    :style="{
+                      width: `${(item.ratio / maxEnergyRatio) * 100}%`,
+                      background: `linear-gradient(90deg, ${elementColorMap[item.element]}dd, ${elementColorMap[item.element]})`
+                    }"
                   ></div>
                 </div>
               </div>

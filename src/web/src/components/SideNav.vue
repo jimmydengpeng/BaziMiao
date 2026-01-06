@@ -1,5 +1,5 @@
 <template>
-  <!-- 侧边导航栏（命理报告模块专用） -->
+  <!-- 侧边导航栏（命盘解析模块专用） -->
   <!-- 桌面端：固定侧边栏；移动端：使用底部导航，侧边栏隐藏 -->
   <aside
     :class="[
@@ -18,14 +18,13 @@
           @click="handleNav('chart')"
         >
           <span :class="navIconClass">
-            <img :src="baziChartIconUrl" alt="八字命盘" class="h-6 w-6 object-contain" />
+            <img :src="baziChartIconUrl" alt="命盘信息" class="h-6 w-6 object-contain" />
           </span>
-          <span class="flex-1 font-medium">八字命盘</span>
+          <span class="flex-1 font-medium">命盘信息</span>
         </button>
         <button
           :class="[navBtnBase, { [navBtnActive]: currentPage === 'report' }]"
           type="button"
-          :disabled="!canViewReport"
           @click="handleNav('report')"
         >
           <span :class="navIconClass">
@@ -34,50 +33,24 @@
           <span class="flex-1 font-medium">命理报告</span>
         </button>
         <button
-          :class="[navBtnBase, { [navBtnActive]: currentPage === 'archive' }]"
+          :class="[navBtnBase, { [navBtnActive]: currentPage === 'pro' }]"
           type="button"
-          @click="handleNav('archive')"
+          @click="handleNav('pro')"
         >
           <span :class="navIconClass">
-            <img :src="archiveIconUrl" alt="档案列表" class="h-6 w-6 object-contain" />
+            <img :src="archiveIconUrl" alt="专业细盘" class="h-6 w-6 object-contain" />
           </span>
-          <span class="flex-1 font-medium">档案列表</span>
+          <span class="flex-1 font-medium">专业细盘</span>
         </button>
         <button
-          :class="[navBtnBase, { [navBtnActive]: currentPage === 'master-chat' }]"
+          :class="[navBtnBase, { [navBtnActive]: currentPage === 'verification' }]"
           type="button"
-          @click="handleNav('master-chat')"
+          @click="handleNav('verification')"
         >
           <span :class="navIconClass">
-            <img :src="chatIconUrl" alt="神喵大师" class="h-6 w-6 object-contain" />
+            <img :src="chatIconUrl" alt="前事验盘" class="h-6 w-6 object-contain" />
           </span>
-          <span class="flex-1 font-medium">神喵大师</span>
-        </button>
-      </div>
-
-      <!-- 更多模块（禁用状态） -->
-      <div class="grid gap-2 opacity-80">
-        <div class="text-[11px] uppercase tracking-[0.12em] text-white/60">更多模块</div>
-        <button
-          class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[15px] text-white/60"
-          type="button"
-          disabled
-        >
-          运势测算
-        </button>
-        <button
-          class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[15px] text-white/60"
-          type="button"
-          disabled
-        >
-          今日运势
-        </button>
-        <button
-          class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-[15px] text-white/60"
-          type="button"
-          disabled
-        >
-          命理百科
+          <span class="flex-1 font-medium">前事验盘</span>
         </button>
       </div>
 
@@ -94,9 +67,9 @@
         <button
           class="flex w-full items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-left text-[15px] text-white transition hover:bg-white/5"
           type="button"
-          @click="handleNav('home')"
+          @click="handleNav('archive')"
         >
-          回到首页
+          切换档案
         </button>
       </div>
     </div>
@@ -117,7 +90,7 @@ const { activeArchiveId } = useStore();
 
 // Props
 defineProps<{
-  currentPage: 'chart' | 'report' | 'archive' | 'master-chat' | 'form' | 'home';
+  currentPage: 'chart' | 'report' | 'pro' | 'verification' | 'archive' | 'form';
   canViewReport: boolean; // 是否可以查看报告（需要已生成报告）
 }>();
 
@@ -129,7 +102,7 @@ const navBtnActive =
 const navIconClass = 'flex h-10 w-10 items-center justify-center rounded-lg shrink-0';
 
 // 处理导航点击
-const handleNav = (page: 'chart' | 'report' | 'archive' | 'master-chat' | 'form' | 'home') => {
+const handleNav = (page: 'chart' | 'report' | 'pro' | 'verification' | 'archive' | 'form') => {
   // 根据页面类型导航到对应路由
   switch (page) {
     case 'chart': {
@@ -142,17 +115,21 @@ const handleNav = (page: 'chart' | 'report' | 'archive' | 'master-chat' | 'form'
       router.push(`/bazi/chart/${chartId}/report`);
       break;
     }
+    case 'pro': {
+      const chartId = route.params.id || activeArchiveId.value || 'temp';
+      router.push(`/bazi/chart/${chartId}/pro`);
+      break;
+    }
+    case 'verification': {
+      const chartId = route.params.id || activeArchiveId.value || 'temp';
+      router.push(`/bazi/chart/${chartId}/verification`);
+      break;
+    }
     case 'archive':
       router.push('/bazi/archives');
       break;
-    case 'master-chat':
-      router.push('/bazi/chat');
-      break;
     case 'form':
       router.push('/bazi/form');
-      break;
-    case 'home':
-      router.push('/');
       break;
   }
 };

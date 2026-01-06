@@ -13,6 +13,7 @@ const STORAGE_KEYS = {
   CURRENT_REPORT: 'bazi_current_report',
   ARCHIVE_COUNTER: 'bazi_archive_counter',
   ACTIVE_ARCHIVE_ID: 'bazi_active_archive_id',
+  BAZI_VIEW_STATE: 'bazi_view_state', // 命盘解析模块的浏览状态
 } as const;
 
 // 档案条目类型定义
@@ -188,6 +189,43 @@ export const loadActiveArchiveId = (): number | null => {
     return data ? parseInt(data, 10) : null;
   } catch (error) {
     console.error('加载激活档案ID失败:', error);
+    return null;
+  }
+};
+
+/**
+ * 命盘解析模块的浏览状态
+ */
+export type BaziViewState = {
+  page: 'chart' | 'report' | 'pro' | 'verification'; // 当前浏览的页面
+  scrollPosition: number; // 滚动位置
+  chartId: string | number; // 命盘ID
+};
+
+/**
+ * 保存命盘解析模块的浏览状态
+ */
+export const saveBaziViewState = (state: BaziViewState | null): void => {
+  try {
+    if (state) {
+      localStorage.setItem(STORAGE_KEYS.BAZI_VIEW_STATE, JSON.stringify(state));
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.BAZI_VIEW_STATE);
+    }
+  } catch (error) {
+    console.error('保存浏览状态失败:', error);
+  }
+};
+
+/**
+ * 加载命盘解析模块的浏览状态
+ */
+export const loadBaziViewState = (): BaziViewState | null => {
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.BAZI_VIEW_STATE);
+    return data ? JSON.parse(data) : null;
+  } catch (error) {
+    console.error('加载浏览状态失败:', error);
     return null;
   }
 };

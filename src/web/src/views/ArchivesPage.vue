@@ -1,5 +1,5 @@
 <template>
-  <div class="mx-auto max-w-[1600px] px-4 pb-10 lg:px-6">
+  <div class="mx-auto max-w-[1600px] px-3 pb-6 md:px-4 md:pb-8 lg:px-6 lg:pb-10">
     <section class="relative flex flex-col gap-4">
       <header class="flex items-center justify-between gap-4 rounded-[18px] border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,30,0.6)] px-4.5 py-4 backdrop-blur-[14px]">
         <div class="flex items-center gap-3">

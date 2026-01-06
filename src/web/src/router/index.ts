@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
+import { loadBaziViewState } from '../utils/storage';
 
 // 路由配置
 const routes: RouteRecordRaw[] = [
@@ -35,6 +36,18 @@ const routes: RouteRecordRaw[] = [
         name: 'ChartReport',
         component: () => import('../views/ChartReportTab.vue'),
         meta: { title: '命理报告' }
+      },
+      {
+        path: 'pro',
+        name: 'ChartPro',
+        component: () => import('../views/ChartProTab.vue'),
+        meta: { title: '专业细盘' }
+      },
+      {
+        path: 'verification',
+        name: 'ChartVerification',
+        component: () => import('../views/ChartVerificationTab.vue'),
+        meta: { title: '前事验盘' }
       }
     ]
   },
@@ -49,6 +62,12 @@ const routes: RouteRecordRaw[] = [
     name: 'MasterChat',
     component: () => import('../views/MasterChatPage.vue'),
     meta: { title: '神喵大师' }
+  },
+  {
+    path: '/encyclopedia',
+    name: 'Encyclopedia',
+    component: () => import('../views/EncyclopediaPage.vue'),
+    meta: { title: '命理百科' }
   },
   {
     path: '/compatibility',
@@ -75,13 +94,31 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
-  // 路由切换时滚动到顶部
+  // 路由切换时的滚动行为
   scrollBehavior(to, from, savedPosition) {
+    // 如果浏览器保存了位置（如前进/后退），优先使用
     if (savedPosition) {
       return savedPosition;
-    } else {
-      return { top: 0 };
     }
+    
+    // 如果是命盘解析模块的页面切换，尝试恢复保存的滚动位置
+    if (to.path.startsWith('/bazi/chart/')) {
+      const viewState = loadBaziViewState();
+      const chartId = to.params.id as string;
+      
+      // 如果保存的状态与当前路由匹配，恢复滚动位置
+      if (viewState && viewState.chartId === chartId) {
+        // 延迟恢复，等待页面渲染完成
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            resolve({ top: viewState.scrollPosition, behavior: 'smooth' });
+          }, 100);
+        });
+      }
+    }
+    
+    // 默认滚动到顶部
+    return { top: 0 };
   }
 });
 
