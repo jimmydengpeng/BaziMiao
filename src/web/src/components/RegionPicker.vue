@@ -1,7 +1,7 @@
 <template>
-  <div class="fixed inset-0 z-[300] flex items-center justify-center bg-[rgba(7,10,16,0.8)] p-5" @click.self="handleClose">
-    <div class="flex h-[80vh] w-full min-w-0 max-w-[900px] flex-col overflow-hidden rounded-[20px] border border-[rgba(255,255,255,0.15)] bg-[rgba(18,20,28,0.95)] shadow-[0_24px_60px_rgba(0,0,0,0.5)] backdrop-blur-[20px]">
-      <div class="flex items-center justify-between border-b border-[rgba(255,255,255,0.1)] px-6 py-4.5">
+  <div class="fixed inset-0 z-[300] flex items-center justify-center bg-[rgba(7,10,16,0.8)] p-3" @click.self="handleClose">
+    <div class="flex h-[88vh] w-full min-w-0 max-w-[900px] flex-col overflow-hidden rounded-[20px] border border-[rgba(255,255,255,0.15)] bg-[rgba(18,20,28,0.95)] shadow-[0_24px_60px_rgba(0,0,0,0.5)] backdrop-blur-[20px]">
+      <div class="flex items-center justify-between border-b border-[rgba(255,255,255,0.1)] px-5 py-3.5">
         <div class="text-lg font-semibold text-[var(--accent-2)]">选择出生地区</div>
         <button
           class="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[rgba(255,255,255,0.08)] text-xl text-[var(--muted)] transition-all duration-200 hover:bg-[rgba(255,255,255,0.15)] hover:text-[var(--text)]"
@@ -12,20 +12,20 @@
         </button>
       </div>
 
-      <div class="flex flex-1 min-h-0 flex-col gap-4 overflow-hidden p-6">
+      <div class="flex flex-1 min-h-0 flex-col gap-3 overflow-hidden p-4">
         <!-- 两栏选择器 -->
-        <div class="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-2">
+        <div class="grid min-h-0 flex-1 grid-cols-2 gap-2.5 max-[340px]:grid-cols-1">
           <!-- 省份列 -->
           <div class="flex min-h-0 flex-col overflow-hidden rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.2)]">
-            <div class="border-b border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.05)] px-3.5 py-3 text-[13px] font-semibold text-[var(--muted)]">
+            <div class="border-b border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.05)] px-3 py-2.5 text-[12px] font-semibold text-[var(--muted)]">
               省份/直辖市
             </div>
-            <div class="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-white/15 scrollbar-track-black/20">
+            <div class="flex-1 overflow-y-auto p-1.5 scrollbar-thin scrollbar-thumb-white/15 scrollbar-track-black/20">
               <button
                 v-for="province in provinces"
                 :key="province.name"
                 :class="[
-                  'block w-full rounded-lg border-0 bg-transparent px-3 py-2.5 text-left text-[13px] text-[var(--text)] transition-all duration-150',
+                  'block w-full rounded-lg border-0 bg-transparent px-3 py-2 text-left text-[12px] text-[var(--text)] transition-all duration-150',
                   selectedProvince?.name === province.name
                     ? 'bg-gradient-to-br from-[rgba(214,160,96,0.3)] to-[rgba(240,192,122,0.2)] font-medium text-[var(--accent-2)]'
                     : 'hover:bg-[rgba(255,255,255,0.08)]'
@@ -40,15 +40,15 @@
 
           <!-- 城市/区域列 -->
           <div class="flex min-h-0 flex-col overflow-hidden rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.2)]">
-            <div class="border-b border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.05)] px-3.5 py-3 text-[13px] font-semibold text-[var(--muted)]">
+            <div class="border-b border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.05)] px-3 py-2.5 text-[12px] font-semibold text-[var(--muted)]">
               城市/区域
             </div>
-            <div class="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-white/15 scrollbar-track-black/20">
+            <div class="flex-1 overflow-y-auto p-1.5 scrollbar-thin scrollbar-thumb-white/15 scrollbar-track-black/20">
               <button
                 v-for="city in cities"
                 :key="city.name"
                 :class="[
-                  'block w-full rounded-lg border-0 bg-transparent px-3 py-2.5 text-left text-[13px] text-[var(--text)] transition-all duration-150',
+                  'block w-full rounded-lg border-0 bg-transparent px-3 py-2 text-left text-[12px] text-[var(--text)] transition-all duration-150',
                   selectedCity?.name === city.name
                     ? 'bg-gradient-to-br from-[rgba(214,160,96,0.3)] to-[rgba(240,192,122,0.2)] font-medium text-[var(--accent-2)]'
                     : 'hover:bg-[rgba(255,255,255,0.08)]'
@@ -58,7 +58,7 @@
               >
                 {{ city.name }}
               </button>
-              <div v-if="!cities.length" class="px-5 py-5 text-center text-[13px] text-[var(--muted)]">
+              <div v-if="!cities.length" class="px-4 py-4 text-center text-[12px] text-[var(--muted)]">
                 请先选择省份
               </div>
             </div>
@@ -66,16 +66,16 @@
         </div>
 
         <!-- 当前选择预览 -->
-        <div class="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-4 py-3.5">
+        <div class="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-3.5 py-3">
           <div class="mb-1.5 text-xs text-[var(--muted)]">当前选择：</div>
-          <div class="text-[15px] font-medium text-[var(--text)]">{{ previewText }}</div>
-          <div v-if="selectedCity" class="mt-1.5 text-xs text-[var(--muted)]">
+          <div class="text-[14px] font-medium text-[var(--text)]">{{ previewText }}</div>
+          <div v-if="selectedCity" class="mt-1 text-[11px] text-[var(--muted)]">
             经度: {{ selectedCity.lng.toFixed(4) }}°，纬度: {{ selectedCity.lat.toFixed(4) }}°
           </div>
         </div>
       </div>
 
-      <div class="flex justify-end gap-3 border-t border-[rgba(255,255,255,0.1)] px-6 py-4">
+      <div class="flex justify-end gap-2.5 border-t border-[rgba(255,255,255,0.1)] px-4 py-3">
         <button
           class="btn-ghost"
           type="button"
