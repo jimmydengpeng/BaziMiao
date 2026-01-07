@@ -2,8 +2,9 @@
   <!-- 顶部导航栏 - 毛玻璃效果，固定覆盖层 -->
   <!-- 三档响应式：手机(<768px) h-12 px-3, 平板(768-1023px) h-14 px-4, 桌面(≥1024px) h-16 px-6 -->
   <!-- iOS 添加到主屏幕后，通过 safe-area-inset-top 让导航栏延伸到状态栏区域 -->
+  <!-- touch-none: 阻止触摸事件参与 body 的滚动行为链，确保惯性滚动时点击也能立即响应 -->
   <header
-    class="top-nav fixed left-0 right-0 top-0 z-50 flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] backdrop-blur-xl px-3 md:px-4 lg:px-6"
+    class="top-nav fixed left-0 right-0 top-0 z-50 flex items-center justify-between border-b border-[rgba(255,255,255,0.08)] backdrop-blur-xl px-3 md:px-4 lg:px-6 touch-none"
     :class="[
       // 毛玻璃背景：使用主题深蓝色调，半透明
       'bg-[rgba(18,22,33,0.75)]',
@@ -205,7 +206,7 @@
   <Transition name="slide-down">
     <div
       v-if="isModuleMenuOpen"
-      class="module-menu-panel fixed left-0 right-0 z-50 overflow-y-auto border-b border-[rgba(255,255,255,0.08)] bg-[rgba(18,22,33,0.95)] backdrop-blur-xl md:hidden"
+      class="module-menu-panel fixed left-0 right-0 z-50 overflow-y-auto border-b border-[rgba(255,255,255,0.08)] bg-[rgba(18,22,33,0.95)] backdrop-blur-xl md:hidden touch-none"
     >
       <div class="flex flex-col gap-3 p-3">
         <!-- 模块导航（使用完全竖向的列表，样式凸显这是模块基本的切换按钮） -->
@@ -252,7 +253,7 @@
   <Transition name="slide-down">
     <div
       v-if="isHamburgerMenuOpen"
-      class="hamburger-menu-panel fixed left-0 right-0 z-50 overflow-y-auto border-b border-[rgba(255,255,255,0.08)] bg-[rgba(18,22,33,0.95)] backdrop-blur-xl lg:hidden"
+      class="hamburger-menu-panel fixed left-0 right-0 z-50 overflow-y-auto border-b border-[rgba(255,255,255,0.08)] bg-[rgba(18,22,33,0.95)] backdrop-blur-xl lg:hidden touch-none"
     >
       <div class="flex flex-col gap-3 p-3 md:gap-4 md:p-4">
         <!-- 当前模块的侧边导航栏（如果有的话，横向flex布局，尽可能均匀分散填满横向空间） -->

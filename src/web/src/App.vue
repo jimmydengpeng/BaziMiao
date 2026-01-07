@@ -1,5 +1,5 @@
 <template>
-  <div class="app-root min-h-screen">
+  <div class="app-root h-[100dvh] overflow-hidden">
     <!-- 顶部导航栏（所有页面都显示） -->
     <TopNav
       :active-module="activeModule"
@@ -13,15 +13,25 @@
       @go-login="goToLogin"
     />
 
-    <!-- 主内容区域：路由视图 -->
-    <div class="app-content">
-      <router-view />
+    <!-- 主内容区域：路由视图（滚动由 app-scroll 容器接管） -->
+    <div class="app-content h-full pt-0 md:pt-0 lg:pt-0">
+      <div
+        ref="scrollEl"
+        class="app-scroll h-full overflow-y-auto overscroll-contain"
+        :class="
+          isHomePage
+            ? ''
+            : 'pt-[calc(48px+env(safe-area-inset-top,0px))] md:pt-[calc(56px+env(safe-area-inset-top,0px))] lg:pt-[calc(64px+env(safe-area-inset-top,0px))]'
+        "
+      >
+        <router-view />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import TopNav from './components/TopNav.vue';
 import { useStore } from './composables/useStore';
@@ -30,6 +40,7 @@ import { loadBaziViewState, saveBaziViewState } from './utils/storage';
 const router = useRouter();
 const route = useRoute();
 const { isAuthenticated, activeArchiveId, report, chart } = useStore();
+const scrollEl = ref<HTMLElement | null>(null);
 
 // 根据当前路由计算激活的模块
 const activeModule = computed(() => {
@@ -80,12 +91,7 @@ const handleNavigate = (module: 'bazi' | 'compatibility' | 'profile' | 'master' 
           if (viewState && viewState.chartId === chartId) {
             // 有保存的状态，恢复到之前的页面和滚动位置
             const pagePath = viewState.page === 'chart' ? 'pillars' : viewState.page;
-            router.push(`/bazi/chart/${chartId}/${pagePath}`).then(() => {
-              // 延迟恢复滚动位置，等待页面渲染完成
-              setTimeout(() => {
-                window.scrollTo({ top: viewState.scrollPosition, behavior: 'smooth' });
-              }, 100);
-            });
+            router.push(`/bazi/chart/${chartId}/${pagePath}`);
           } else {
             // 没有保存的状态，跳转到默认页面（命盘信息）
             router.push(`/bazi/chart/${chartId}/pillars`);
@@ -129,6 +135,11 @@ const goToLogin = () => {
   router.push('/profile');
 };
 
+const getScrollTop = () => scrollEl.value?.scrollTop ?? 0;
+const setScrollTop = (top: number, behavior: ScrollBehavior = 'auto') => {
+  scrollEl.value?.scrollTo({ top, behavior });
+};
+
 // 根据路由更新 body 类名（用于样式）
 watch(
   () => route.path,
@@ -158,7 +169,7 @@ watch(
       if (chartId && page) {
         saveBaziViewState({
           page,
-          scrollPosition: window.scrollY || document.documentElement.scrollTop,
+          scrollPosition: getScrollTop(),
           chartId,
         });
       }
@@ -180,7 +191,7 @@ const handleScroll = () => {
       if (chartId && page) {
         saveBaziViewState({
           page,
-          scrollPosition: window.scrollY || document.documentElement.scrollTop,
+          scrollPosition: getScrollTop(),
           chartId,
         });
       }
@@ -188,25 +199,37 @@ const handleScroll = () => {
   }, 200); // 200ms 节流
 };
 
-// 在命盘解析模块页面时监听滚动
+// 路由切换后，恢复滚动位置（由 App 内的滚动容器接管）
 watch(
-  () => route.path,
-  (path, oldPath) => {
-    // 移除旧路径的监听器
-    if (oldPath && oldPath.startsWith('/bazi/chart/')) {
-      window.removeEventListener('scroll', handleScroll);
+  () => route.fullPath,
+  async () => {
+    await nextTick();
+    if (!scrollEl.value) return;
+
+    if (route.path.startsWith('/bazi/chart/')) {
+      const viewState = loadBaziViewState();
+      const chartId = route.params.id as string;
+      if (viewState && viewState.chartId === chartId) {
+        setScrollTop(viewState.scrollPosition, 'auto');
+        return;
+      }
     }
-    // 添加新路径的监听器
-    if (path.startsWith('/bazi/chart/')) {
-      window.addEventListener('scroll', handleScroll, { passive: true });
-    }
+    setScrollTop(0, 'auto');
   },
   { immediate: true }
 );
 
+onMounted(() => {
+  if (scrollEl.value) {
+    scrollEl.value.addEventListener('scroll', handleScroll, { passive: true });
+  }
+});
+
 // 组件卸载时清理
 onUnmounted(() => {
-  window.removeEventListener('scroll', handleScroll);
+  if (scrollEl.value) {
+    scrollEl.value.removeEventListener('scroll', handleScroll);
+  }
   if (scrollTimer) {
     clearTimeout(scrollTimer);
   }

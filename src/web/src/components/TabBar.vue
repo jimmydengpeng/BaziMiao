@@ -49,9 +49,10 @@ const props = defineProps<{
 }>();
 
 // 基础类名：外层定位 + 容器 + 每个条目 + 图标大小
-const wrapperBaseClass = 'mobile-tabs fixed inset-x-0 bottom-6 z-40 flex justify-center lg:hidden';
+// touch-none: 阻止触摸事件参与 body 的滚动行为链，确保惯性滚动时点击也能立即响应
+const wrapperBaseClass = 'mobile-tabs fixed inset-x-0 bottom-6 z-40 flex justify-center lg:hidden touch-none';
 const containerBaseClass =
-  'inline-flex w-[calc(100%-56px)] max-w-[400px] items-stretch rounded-full border border-[rgba(255,255,255,0.16)] bg-[rgba(18,22,33,0.75)] px-1.5 py-1.5 shadow-[0_10px_25px_rgba(0,0,0,0.45)] backdrop-blur-md md:w-[calc(100%-120px)] md:max-w-[520px] md:bg-[rgba(18,22,33,0.5)]';
+  'inline-flex w-[calc(100%-56px)] max-w-[400px] items-stretch rounded-full border border-[rgba(255,255,255,0.16)] bg-[rgba(18,22,33,0.15)] px-1.5 py-1.5 shadow-[0_10px_25px_rgba(0,0,0,0.45)] backdrop-blur-lg md:w-[calc(100%-120px)] md:max-w-[520px] md:bg-[rgba(18,22,33,0.35)]';
 const itemBaseClass =
   'flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-2.5 py-1 text-[10px] font-medium transition md:px-3 md:py-2 md:text-[11px]';
 const iconWrapperBaseClass = 'flex h-7 w-7 items-center justify-center md:h-8 md:w-8';

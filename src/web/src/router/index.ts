@@ -1,6 +1,4 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
-import { loadBaziViewState } from '../utils/storage';
-
 // 路由配置
 const routes: RouteRecordRaw[] = [
   {
@@ -94,32 +92,10 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
-  // 路由切换时的滚动行为
-  scrollBehavior(to, from, savedPosition) {
-    // 如果浏览器保存了位置（如前进/后退），优先使用
-    if (savedPosition) {
-      return savedPosition;
-    }
-    
-    // 如果是命盘解析模块的页面切换，尝试恢复保存的滚动位置
-    if (to.path.startsWith('/bazi/chart/')) {
-      const viewState = loadBaziViewState();
-      const chartId = to.params.id as string;
-      
-      // 如果保存的状态与当前路由匹配，恢复滚动位置
-      if (viewState && viewState.chartId === chartId) {
-        // 延迟恢复，等待页面渲染完成
-        return new Promise((resolve) => {
-          setTimeout(() => {
-            resolve({ top: viewState.scrollPosition, behavior: 'smooth' });
-          }, 100);
-        });
-      }
-    }
-    
-    // 默认滚动到顶部
+  // 滚动由 App.vue 的 app-scroll 容器接管，这里只保持默认行为
+  scrollBehavior() {
     return { top: 0 };
-  }
+  },
 });
 
 // 全局前置守卫 - 设置页面标题

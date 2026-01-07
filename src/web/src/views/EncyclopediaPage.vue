@@ -1,5 +1,6 @@
 <template>
-  <div class="mx-auto max-w-5xl px-3 pb-8 pt-16 md:px-4 md:pb-10 md:pt-18 lg:px-6 lg:pb-12 lg:pt-20">
+  <!-- 顶部间距已由 App.vue 统一处理，此处仅保留少量装饰性间距 -->
+  <div class="mx-auto max-w-5xl px-3 pb-8 pt-4 md:px-4 md:pb-10 lg:px-6 lg:pb-12">
     <div class="panel-card p-6">
       <div class="flex flex-col gap-2">
         <div class="flex items-center gap-2 text-sm">
