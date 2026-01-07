@@ -205,11 +205,7 @@
   <Transition name="slide-down">
     <div
       v-if="isModuleMenuOpen"
-      class="fixed left-0 right-0 z-50 overflow-y-auto border-b border-[rgba(255,255,255,0.08)] bg-[rgba(18,22,33,0.95)] backdrop-blur-xl md:hidden"
-      :class="[
-        'top-12',
-        'max-h-[calc(100vh-3rem)]'
-      ]"
+      class="module-menu-panel fixed left-0 right-0 z-50 overflow-y-auto border-b border-[rgba(255,255,255,0.08)] bg-[rgba(18,22,33,0.95)] backdrop-blur-xl md:hidden"
     >
       <div class="flex flex-col gap-3 p-3">
         <!-- 模块导航（使用完全竖向的列表，样式凸显这是模块基本的切换按钮） -->
@@ -256,13 +252,7 @@
   <Transition name="slide-down">
     <div
       v-if="isHamburgerMenuOpen"
-      class="fixed left-0 right-0 z-50 overflow-y-auto border-b border-[rgba(255,255,255,0.08)] bg-[rgba(18,22,33,0.95)] backdrop-blur-xl lg:hidden"
-      :class="[
-        // 根据导航栏高度定位：手机 top-12, 平板 top-14
-        'top-12 md:top-14',
-        // 最大高度：手机 max-h-[calc(100vh-3rem)], 平板 max-h-[calc(100vh-3.5rem)]
-        'max-h-[calc(100vh-3rem)] md:max-h-[calc(100vh-3.5rem)]'
-      ]"
+      class="hamburger-menu-panel fixed left-0 right-0 z-50 overflow-y-auto border-b border-[rgba(255,255,255,0.08)] bg-[rgba(18,22,33,0.95)] backdrop-blur-xl lg:hidden"
     >
       <div class="flex flex-col gap-3 p-3 md:gap-4 md:p-4">
         <!-- 当前模块的侧边导航栏（如果有的话，横向flex布局，尽可能均匀分散填满横向空间） -->
@@ -509,3 +499,22 @@ const currentModuleLabel = computed(() => {
   return labels[props.activeModule] || '神机喵算';
 });
 </script>
+
+<style scoped>
+.module-menu-panel {
+  top: calc(env(safe-area-inset-top, 0px) + 3rem);
+  max-height: calc(100vh - (env(safe-area-inset-top, 0px) + 3rem));
+}
+
+.hamburger-menu-panel {
+  top: calc(env(safe-area-inset-top, 0px) + 3rem);
+  max-height: calc(100vh - (env(safe-area-inset-top, 0px) + 3rem));
+}
+
+@media (min-width: 768px) {
+  .hamburger-menu-panel {
+    top: calc(env(safe-area-inset-top, 0px) + 3.5rem);
+    max-height: calc(100vh - (env(safe-area-inset-top, 0px) + 3.5rem));
+  }
+}
+</style>
