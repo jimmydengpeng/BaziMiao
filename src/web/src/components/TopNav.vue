@@ -14,12 +14,12 @@
   >
     <!-- 左侧区域：Logo -->
     <div class="flex items-center gap-2 md:gap-3">
-      <!-- Logo（可点击回首页） -->
+      <!-- Logo（点击弹出对话框） -->
       <button
         class="flex items-center gap-1.5 rounded-lg transition hover:opacity-80 md:gap-2.5 lg:gap-3"
         type="button"
         @click="handleLogoClick"
-        aria-label="回到首页"
+        aria-label="打开神机喵算菜单"
       >
         <!-- Logo尺寸：手机 h-7 w-7, 平板 h-8 w-8, 桌面 h-9 w-9 -->
         <div class="h-7 w-7 md:h-8 md:w-8 lg:h-9 lg:w-9">
@@ -372,7 +372,7 @@ const props = defineProps<{
 // 事件
 const emit = defineEmits<{
   (e: 'navigate', module: 'bazi' | 'compatibility' | 'profile' | 'master' | 'encyclopedia'): void;
-  (e: 'goHome'): void;
+  (e: 'openLogoDialog'): void;
   (e: 'start'): void;
   (e: 'goLogin'): void;
 }>();
@@ -384,7 +384,6 @@ const isHamburgerMenuOpen = ref(false); // 右侧汉堡按钮的完整菜单
 // 导航项配置（MVP 阶段移除登录限制，所有功能游客可用）
 const navItems = [
   { key: 'bazi' as const, label: '命盘解析', requiresAuth: false },
-  { key: 'master' as const, label: '神喵大师', requiresAuth: false },
   { key: 'compatibility' as const, label: '双人合盘', requiresAuth: false },
   { key: 'encyclopedia' as const, label: '命理百科', requiresAuth: false }
 ];
@@ -401,7 +400,7 @@ const baziSubNavItems = computed(() => [
 const isLanding = computed(() => props.isHome);
 
 // 仅非 home 时显示激活态
-const isNavActive = (key: 'bazi' | 'compatibility' | 'master' | 'encyclopedia') =>
+const isNavActive = (key: 'bazi' | 'compatibility' | 'encyclopedia') =>
   !props.isHome && props.activeModule === key;
 
 // 切换模块导航菜单（移动端中间标题按钮使用）
@@ -428,7 +427,7 @@ const closeHamburgerMenu = () => {
 const handleLogoClick = () => {
   closeModuleMenu();
   closeHamburgerMenu();
-  emit('goHome');
+  emit('openLogoDialog');
 };
 
 // 处理模块导航点击（桌面端）

@@ -62,6 +62,13 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '神喵大师' }
   },
   {
+    // 移动端/PWA 全屏聊天页面
+    path: '/chat',
+    name: 'Chat',
+    component: () => import('../views/ChatPage.vue'),
+    meta: { title: '喵算大师', overlay: true }
+  },
+  {
     path: '/encyclopedia',
     name: 'Encyclopedia',
     component: () => import('../views/EncyclopediaPage.vue'),

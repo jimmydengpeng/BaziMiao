@@ -690,12 +690,41 @@
           因八字合化论流派繁多且断法各异，故以上仅展示正化结果；实际应用中需考虑是否反化或合而不化的可能，故以上结果仅供基本参考，具体结论以个体判断为准
         </div>
       </div>
+
+      <!-- 试验卡片：用于观察输入时，顶部导航栏是否会被顶出屏幕（尤其是移动端软键盘弹起时） -->
+      <div class="rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.65)] p-5 backdrop-blur-[16px]">
+        <div class="mb-4 flex items-center justify-between gap-3 border-b border-[rgba(255,255,255,0.08)] pb-3">
+          <div class="text-base font-semibold text-[var(--accent-2)]">输入框试验（实验）</div>
+          <button
+            class="flex items-center gap-1.5 rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-3.5 py-2 text-[13px] text-[var(--muted)] transition-all duration-200 hover:bg-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.2)] hover:text-[var(--text)]"
+            type="button"
+            @click="focusNavTestInput"
+          >
+            聚焦测试
+            <span class="text-base font-semibold">›</span>
+          </button>
+        </div>
+        <div class="flex flex-col gap-2.5">
+          <div class="text-xs leading-relaxed text-[var(--muted)]">
+            点击输入框并输入内容，观察顶部导航栏是否会被顶出屏幕（手机端更明显）。
+          </div>
+          <input
+            ref="navTestInputEl"
+            v-model="navTestText"
+            placeholder="点这里输入任意内容…"
+            class="w-full rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0d1626] px-3.5 py-3 text-[15px] text-[var(--text)] outline-none transition-colors focus:border-[rgba(255,255,255,0.2)]"
+          />
+          <div class="text-xs text-[var(--muted)]">
+            当前输入：<span class="text-[var(--text)]">{{ navTestText || "（空）" }}</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, nextTick, ref } from "vue";
 import type { Chart, GanZhiRelation, PillarInfo, HeavenStemInfo, EarthBranchInfo } from "../types";
 // 导入性别图标
 import maleIconUrl from "../assets/gender-male.png";
@@ -710,6 +739,14 @@ const isCurrentMode = ref(false);
 
 const toggleGanziMode = () => {
   isCurrentMode.value = !isCurrentMode.value;
+};
+
+// 输入框试验：用于复现/观察移动端软键盘导致的页面滚动或布局变化
+const navTestText = ref("");
+const navTestInputEl = ref<HTMLInputElement | null>(null);
+const focusNavTestInput = async () => {
+  await nextTick();
+  navTestInputEl.value?.focus();
 };
 
 // 农历数字转中文
