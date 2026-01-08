@@ -2,7 +2,7 @@
   <!-- 统一聊天组件：支持桌面弹窗模式和移动全屏模式 -->
   <div
     :class="[
-      'unified-chat flex flex-col',
+      'unified-chat flex min-h-0 flex-col',
       // 桌面弹窗模式
       mode === 'modal' && 'h-full w-full overflow-hidden rounded-[20px] border border-[rgba(255,255,255,0.12)] bg-gradient-to-br from-[rgba(18,16,24,0.95)] to-[rgba(10,12,18,0.92)] shadow-[0_24px_60px_rgba(0,0,0,0.5)] backdrop-blur-[14px]',
       // 移动全屏模式：绝对定位在外层容器内
@@ -83,8 +83,9 @@
     <!-- 中间对话区：移动模式需要预留顶部和底部空间 -->
     <div
       ref="messagesContainer"
+      @scroll.passive="handleMessagesScroll"
       :class="[
-        'flex-1 overflow-y-auto bg-[rgba(18,20,28,0.35)] px-4 backdrop-blur-[16px] scroll-smooth md:px-6',
+        'unified-chat-scroll min-h-0 flex-1 overflow-y-auto bg-[rgba(18,20,28,0.35)] px-4 backdrop-blur-[16px] md:px-6',
         mode === 'page' ? 'pt-[calc(68px+env(safe-area-inset-top,0px))] pb-[calc(80px+env(safe-area-inset-bottom,0px))]' : 'py-6'
       ]"
     >
@@ -230,7 +231,7 @@
         </header>
 
         <!-- 历史列表 -->
-        <div class="flex-1 overflow-y-auto p-4">
+        <div class="unified-chat-scroll flex-1 overflow-y-auto p-4">
           <div v-if="historySessions.length === 0" class="flex flex-col items-center justify-center py-16 text-center">
             <svg class="mb-4 h-12 w-12 text-[var(--muted)] opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -298,11 +299,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onActivated, onDeactivated } from "vue";
+import { ref, computed, nextTick, onMounted, onActivated, watch } from "vue";
 import logoNavUrl from "../assets/logo-nav.png";
 import logoAvatarUrl from "../assets/logo-bazi_meow.png";
 import chatHistoryIconUrl from "../assets/chat_history.png";
 import chatNewIconUrl from "../assets/chat_new.png";
+import { useUnifiedChatStore } from "../composables/useUnifiedChatStore";
 
 // Props
 const props = withDefaults(defineProps<{
@@ -316,47 +318,26 @@ const emit = defineEmits<{
   (event: "close"): void;
 }>();
 
-// ========== 类型定义 ==========
-type Message = {
-  role: "user" | "assistant";
-  content: string;
-  timestamp: Date;
-};
-
-type ChatSession = {
-  id: string;
-  title: string;
-  preview: string;
-  messages: Message[];
-  createdAt: Date;
-  updatedAt: Date;
-  // draft 会话：空对话占位，不写入 localStorage，也不出现在历史列表
-  isDraft?: boolean;
-};
+const {
+  historySessions,
+  currentMessages,
+  currentSessionId,
+  isThinking,
+  isStreamingActive,
+  mutationTick,
+  newChat: newChatInStore,
+  switchSession: switchSessionInStore,
+  deleteSession: deleteSessionInStore,
+  sendMessage: sendMessageInStore,
+} = useUnifiedChatStore();
 
 // ========== 状态 ==========
 const inputText = ref("");
-const isThinking = ref(false);
-const isStreamingActive = ref(false);
 const showHistoryPanel = ref(false);
 const messagesContainer = ref<HTMLElement | null>(null);
 const inputTextarea = ref<HTMLTextAreaElement | null>(null);
-let updateTimer: number | null = null;
-
-// 聊天会话管理
-const chatSessions = ref<ChatSession[]>([]);
-const currentSessionId = ref<string | null>(null);
-
-// 只展示“真正有内容”的历史会话（避免出现一堆空的新对话）
-const historySessions = computed(() =>
-  chatSessions.value.filter(session => !session.isDraft && session.messages.length > 0)
-);
-
-// 当前会话的消息
-const currentMessages = computed(() => {
-  const session = chatSessions.value.find(s => s.id === currentSessionId.value);
-  return session?.messages || [];
-});
+const autoScrollEnabled = ref(true);
+const lastScrollTop = ref(0);
 
 const suggestedQuestions = ref([
   "八字中的五行是什么意思？",
@@ -365,87 +346,9 @@ const suggestedQuestions = ref([
   "天干地支代表什么？"
 ]);
 
-const canSend = computed(() => inputText.value.trim().length > 0 && !isThinking.value);
-
-// ========== 存储管理 ==========
-const STORAGE_KEY = "unified-chat-sessions";
-const CURRENT_SESSION_KEY = "unified-chat-current-session";
-
-const loadSessions = (): ChatSession[] => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return [];
-    const parsed = JSON.parse(saved);
-    const sessions: ChatSession[] = parsed.map((s: any) => ({
-      ...s,
-      messages: s.messages.map((m: any) => ({
-        ...m,
-        timestamp: new Date(m.timestamp)
-      })),
-      createdAt: new Date(s.createdAt),
-      updatedAt: new Date(s.updatedAt)
-    }));
-    // 兼容旧数据：过滤掉空会话（新的逻辑不再保存空会话）
-    return sessions.filter(s => Array.isArray(s.messages) && s.messages.length > 0);
-  } catch (err) {
-    console.warn("加载聊天会话失败:", err);
-    return [];
-  }
-};
-
-const saveSessions = () => {
-  try {
-    // 只持久化非 draft 且有消息的会话
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(historySessions.value));
-    const currentSession = chatSessions.value.find(s => s.id === currentSessionId.value);
-    if (currentSession && !currentSession.isDraft && currentSession.messages.length > 0) {
-      localStorage.setItem(CURRENT_SESSION_KEY, currentSessionId.value);
-    } else {
-      localStorage.removeItem(CURRENT_SESSION_KEY);
-    }
-  } catch (err) {
-    console.warn("保存聊天会话失败:", err);
-  }
-};
-
-const loadCurrentSessionId = (): string | null => {
-  try {
-    return localStorage.getItem(CURRENT_SESSION_KEY);
-  } catch {
-    return null;
-  }
-};
-
-// ========== 会话管理 ==========
-const generateSessionId = () => `session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
-const createNewSession = (options?: { isDraft?: boolean }): ChatSession => {
-  const session: ChatSession = {
-    id: generateSessionId(),
-    title: "",
-    preview: "新对话",
-    messages: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    isDraft: options?.isDraft ?? false,
-  };
-  chatSessions.value.unshift(session);
-  currentSessionId.value = session.id;
-  if (!session.isDraft) saveSessions();
-  return session;
-};
-
-const getCurrentSession = () =>
-  chatSessions.value.find(session => session.id === currentSessionId.value) || null;
-
-const cleanupEmptyDraftSession = () => {
-  const session = getCurrentSession();
-  if (!session) return;
-  if (!session.isDraft) return;
-  if (session.messages.length > 0) return;
-  const index = chatSessions.value.findIndex(s => s.id === session.id);
-  if (index > -1) chatSessions.value.splice(index, 1);
-};
+const canSend = computed(
+  () => inputText.value.trim().length > 0 && !isThinking.value && !isStreamingActive.value,
+);
 
 // ========== 轻提示（Toast） ==========
 const toastVisible = ref(false);
@@ -462,24 +365,10 @@ const showToast = (message: string) => {
 };
 
 const newChat = () => {
-  if (isThinking.value || isStreamingActive.value) {
-    showToast("正在生成回复，稍后再新建对话");
-    return;
-  }
-
-  const session = getCurrentSession();
-  const isAlreadyNewChat = !session || session.messages.length === 0;
-  if (isAlreadyNewChat) {
-    showToast("当前已经是新对话，无需新建");
-    return;
-  }
-
-  // 当前会话有记录：确保落盘后再开启一轮新的空对话（空对话不落盘）
-  saveSessions();
-  cleanupEmptyDraftSession();
-  createNewSession({ isDraft: true });
-  // 当前是空对话占位：不应记录“上一次会话 id”
-  saveSessions();
+  const result = newChatInStore();
+  if (!result.ok) showToast(result.reason);
+  showHistoryPanel.value = false;
+  autoScrollEnabled.value = true;
   nextTick(() => {
     scrollToBottom();
     inputTextarea.value?.focus();
@@ -487,187 +376,35 @@ const newChat = () => {
 };
 
 const switchSession = (sessionId: string) => {
-  if (isThinking.value || isStreamingActive.value) {
-    showToast("正在生成回复，稍后再切换对话");
+  const result = switchSessionInStore(sessionId);
+  if (!result.ok) {
+    showToast(result.reason);
     return;
   }
-  // 切换前：有内容的会话需要保存；空的新对话（draft）不保存，直接丢弃
-  cleanupEmptyDraftSession();
-  saveSessions();
-  currentSessionId.value = sessionId;
   showHistoryPanel.value = false;
-  saveSessions();
+  autoScrollEnabled.value = true;
   nextTick(() => {
     scrollToBottom();
   });
 };
 
 const deleteSession = (sessionId: string) => {
-  const index = chatSessions.value.findIndex(s => s.id === sessionId);
-  if (index > -1) {
-    chatSessions.value.splice(index, 1);
-    // 如果删除的是当前会话，切换到第一个或创建新会话
-    if (sessionId === currentSessionId.value) {
-      if (chatSessions.value.length > 0) {
-        currentSessionId.value = chatSessions.value[0].id;
-      } else {
-        createNewSession({ isDraft: true });
-      }
-    }
-    saveSessions();
-  }
-};
-
-const updateCurrentSession = (messages: Message[]) => {
-  const session = chatSessions.value.find(s => s.id === currentSessionId.value);
-  if (session) {
-    session.messages = messages;
-    session.updatedAt = new Date();
-    // draft 只要产生了内容，就转为真实会话并落盘
-    if (session.isDraft && messages.length > 0) {
-      session.isDraft = false;
-    }
-    // 更新标题和预览
-    const firstUserMsg = messages.find(m => m.role === 'user');
-    if (firstUserMsg) {
-      session.title = firstUserMsg.content.slice(0, 30) + (firstUserMsg.content.length > 30 ? '...' : '');
-    }
-    const lastMsg = messages[messages.length - 1];
-    if (lastMsg) {
-      session.preview = lastMsg.content.slice(0, 50) + (lastMsg.content.length > 50 ? '...' : '');
-    }
-    saveSessions();
-  }
+  deleteSessionInStore(sessionId);
 };
 
 // ========== 消息处理 ==========
 const sendMessage = async () => {
   if (!canSend.value) return;
 
-  // 确保有当前会话
-  if (!currentSessionId.value) {
-    createNewSession();
-  }
-
-  const messages = [...currentMessages.value];
-  const userMessage: Message = {
-    role: "user",
-    content: inputText.value.trim(),
-    timestamp: new Date()
-  };
-
-  messages.push(userMessage);
-  updateCurrentSession(messages);
+  const text = inputText.value;
   inputText.value = "";
   resetTextareaHeight();
 
+  // 用户主动发送时：默认“贴底”，不要被流式更新打断滚动体验
+  autoScrollEnabled.value = true;
+  sendMessageInStore(text);
   await nextTick();
   scrollToBottom();
-
-  // 调用 AI API
-  isThinking.value = true;
-
-  const assistantMessage: Message = {
-    role: "assistant",
-    content: "",
-    timestamp: new Date()
-  };
-  messages.push(assistantMessage);
-  updateCurrentSession(messages);
-
-  try {
-    const history = messages.slice(0, -1).map(msg => ({
-      role: msg.role,
-      content: msg.content
-    }));
-
-    const response = await fetch("/api/bazi/general-chat/stream", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ history })
-    });
-
-    if (!response.ok) {
-      throw new Error(await response.text());
-    }
-
-    if (!response.body) {
-      throw new Error("浏览器不支持流式响应");
-    }
-
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder("utf-8");
-    let buffer = "";
-
-    isStreamingActive.value = true;
-
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-
-        try {
-          const event = JSON.parse(trimmed);
-
-          if (event.type === "delta") {
-            messages[messages.length - 1].content += event.text;
-            updateCurrentSession(messages);
-            await nextTick();
-            scrollToBottom();
-          } else if (event.type === "done") {
-            messages[messages.length - 1].content = event.reply;
-            isThinking.value = false;
-            isStreamingActive.value = false;
-            updateCurrentSession(messages);
-          } else if (event.type === "error") {
-            throw new Error(event.message || "对话失败");
-          }
-        } catch (parseErr) {
-          console.warn("解析事件失败:", parseErr);
-        }
-      }
-    }
-
-    // 处理剩余 buffer
-    buffer += decoder.decode();
-    if (buffer.trim()) {
-      const lines = buffer.split("\n");
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-        try {
-          const event = JSON.parse(trimmed);
-          if (event.type === "done") {
-            messages[messages.length - 1].content = event.reply;
-            isStreamingActive.value = false;
-            updateCurrentSession(messages);
-          }
-        } catch (parseErr) {
-          console.warn("解析最终事件失败:", parseErr);
-        }
-      }
-    }
-  } catch (err) {
-    const errorMsg = err instanceof Error ? err.message : String(err);
-    messages[messages.length - 1].content = `出错了：${errorMsg}`;
-    updateCurrentSession(messages);
-  } finally {
-    isThinking.value = false;
-    isStreamingActive.value = false;
-    if (updateTimer !== null) {
-      clearInterval(updateTimer);
-      updateTimer = null;
-    }
-    await nextTick();
-    scrollToBottom();
-  }
 };
 
 const selectSuggestion = (question: string) => {
@@ -686,9 +423,33 @@ const handleBack = () => {
 };
 
 const scrollToBottom = () => {
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+  const el = messagesContainer.value;
+  if (!el) return;
+  el.scrollTop = el.scrollHeight;
+  lastScrollTop.value = el.scrollTop;
+};
+
+const isNearBottom = () => {
+  const el = messagesContainer.value;
+  if (!el) return true;
+  const threshold = 80;
+  return el.scrollHeight - (el.scrollTop + el.clientHeight) <= threshold;
+};
+
+const handleMessagesScroll = () => {
+  const el = messagesContainer.value;
+  if (!el) return;
+
+  // 关键：只要用户往上滚（哪怕一点点），就立刻关闭自动贴底
+  const currentTop = el.scrollTop;
+  const scrolledUp = currentTop < lastScrollTop.value - 2;
+  lastScrollTop.value = currentTop;
+  if (scrolledUp) {
+    autoScrollEnabled.value = false;
+    return;
   }
+
+  autoScrollEnabled.value = isNearBottom();
 };
 
 const adjustTextareaHeight = () => {
@@ -741,20 +502,6 @@ const isMobile = () => {
 
 // ========== 生命周期 ==========
 onMounted(() => {
-  // 加载会话数据
-  chatSessions.value = loadSessions();
-  const savedCurrentId = loadCurrentSessionId();
-
-  if (savedCurrentId && chatSessions.value.some(s => s.id === savedCurrentId)) {
-    currentSessionId.value = savedCurrentId;
-  } else if (chatSessions.value.length > 0) {
-    currentSessionId.value = chatSessions.value[0].id;
-  } else {
-    createNewSession({ isDraft: true });
-  }
-  // 统一一次落盘：清理旧的空会话/无效 currentSessionId
-  saveSessions();
-
   // 桌面端自动聚焦，移动端不自动聚焦（避免键盘弹出）
   if (props.mode === 'modal' || !isMobile()) {
     inputTextarea.value?.focus();
@@ -773,37 +520,28 @@ onActivated(() => {
     inputTextarea.value?.focus();
   }
 
+  autoScrollEnabled.value = true;
   nextTick(() => {
     scrollToBottom();
   });
-
-  if (isStreamingActive.value) {
-    updateTimer = window.setInterval(() => {
-      if (!isStreamingActive.value) {
-        if (updateTimer !== null) {
-          clearInterval(updateTimer);
-          updateTimer = null;
-        }
-        return;
-      }
-      nextTick(() => {
-        scrollToBottom();
-      });
-    }, 100);
-  }
 });
 
-onDeactivated(() => {
-  if (updateTimer !== null) {
-    clearInterval(updateTimer);
-    updateTimer = null;
-  }
-  saveSessions();
+watch(mutationTick, () => {
+  if (!autoScrollEnabled.value) return;
+  nextTick(() => {
+    scrollToBottom();
+  });
 });
 
 </script>
 
 <style scoped>
+.unified-chat-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
 /* 消息滑入动画 */
 @keyframes messageSlideIn {
   from {
