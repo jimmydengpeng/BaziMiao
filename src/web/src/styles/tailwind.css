@@ -3,6 +3,12 @@
 @source "../../index.html";
 @source "../**/*.{vue,js,ts,jsx,tsx}";
 
+@layer base {
+  button {
+    font: inherit;
+  }
+}
+
 @layer components {
   /* 常用文本色 */
   .muted {

@@ -332,6 +332,7 @@ const sendMessage = async (content: string, options?: SendMessageOptions) => {
 
   let flushRaf: number | null = null;
   let pendingDelta = "";
+  let didReceiveFirstDelta = false;
 
   const flushDelta = () => {
     flushRaf = null;
@@ -413,6 +414,10 @@ const sendMessage = async (content: string, options?: SendMessageOptions) => {
           if (event.type === "delta") {
             pendingDelta += String(event.text ?? "");
             scheduleFlush();
+            if (!didReceiveFirstDelta && pendingDelta) {
+              didReceiveFirstDelta = true;
+              isThinking.value = false;
+            }
           } else if (event.type === "done") {
             // 先把 pending delta 刷到 message，再用 done 覆盖最终文本（避免重复/缺字）
             if (flushRaf !== null) {

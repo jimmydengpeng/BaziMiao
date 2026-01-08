@@ -112,12 +112,11 @@
       </div>
     </header>
 
-    <!-- 中间对话区：背景图片固定，不随对话滚动 -->
+    <!-- 中间对话区：背景渐变固定，不随对话滚动 -->
     <div class="relative min-h-0 flex-1">
       <div
         aria-hidden="true"
-        class="pointer-events-none absolute inset-0 bg-cover bg-center"
-        :style="{ backgroundImage: `url(${chatBgUrl})` }"
+        class="pointer-events-none absolute inset-0 bg-gradient-to-b from-[rgba(14,14,21,0.92)] via-[rgba(11,15,33,0.96)] to-[rgba(7,9,17,0.98)]"
       ></div>
 
       <div
@@ -151,7 +150,7 @@
 
         <!-- 消息列表 -->
         <div
-          v-for="(msg, index) in currentMessages"
+          v-for="(msg, index) in visibleMessages"
           :key="msg.id"
           :class="[
             'animate-[messageSlideIn_0.3s_ease]',
@@ -159,18 +158,19 @@
           ]"
         >
           <!-- 用户消息：气泡样式 -->
-          <div
-            v-if="msg.role === 'user'"
-            class="relative max-w-[75%] break-words rounded-2xl rounded-tr-sm bg-gradient-to-br from-[rgba(214,160,96,0.45)] to-[rgba(240,192,122,0.35)] px-4 py-3 backdrop-blur-md border border-[rgba(240,192,122,0.5)] md:max-w-[70%]"
-          >
-            <div class="text-sm leading-relaxed text-[var(--text)]" v-html="renderMessageContent(msg.content)"></div>
-            <div class="mt-1 text-[11px] text-[var(--muted)] opacity-70 text-right">{{ formatTime(msg.timestamp) }}</div>
+          <div v-if="msg.role === 'user'" class="flex max-w-[75%] flex-col items-end md:max-w-[70%]">
+            <div
+              class="relative w-full break-words rounded-2xl rounded-tr-sm bg-gradient-to-br from-[rgba(214,160,96,0.45)] to-[rgba(240,192,122,0.35)] px-4 py-3 backdrop-blur-md border border-[rgba(240,192,122,0.5)]"
+            >
+              <div class="text-sm leading-relaxed text-[var(--text)]" v-html="renderMessageContent(msg.content)"></div>
+            </div>
+            <div class="mt-1 text-[11px] text-[var(--muted)] opacity-70">{{ formatTime(msg.timestamp) }}</div>
           </div>
 
           <!-- AI 回复：毛玻璃圆角框包裹内容，点赞按钮在框外 -->
           <div v-else class="w-full">
             <!-- AI 回复内容框：毛玻璃深蓝背景 -->
-            <div class="rounded-2xl border border-[rgba(255,255,255,0.1)] bg-[rgba(20,28,50,0.55)] px-4 py-3 backdrop-blur-xl">
+            <div class="rounded-2xl border border-[rgba(255,255,255,0.1)] bg-[rgba(20,28,50,0.25)] px-4 py-3 backdrop-blur-sm">
               <div class="text-sm leading-relaxed text-[var(--text)]" v-html="renderMessageContent(msg.content)"></div>
             </div>
             <!-- 点赞点踩按钮：在框外，只在非流式状态且有内容时显示 -->
@@ -209,7 +209,7 @@
         <!-- 正在思考指示器：渐变闪烁文字 -->
         <div v-if="isThinking" class="animate-[messageSlideIn_0.3s_ease]">
           <div class="thinking-text text-sm py-2">
-            {{ currentThinkingText }}...
+            {{ displayedThinkingText }}...
           </div>
         </div>
       </div>
@@ -220,7 +220,7 @@
     <div
       ref="inputDock"
       :class="[
-        'flex-shrink-0 px-3 py-3 md:px-4 md:py-4',
+        'flex-shrink-0 px-3 py-2 md:px-4 md:py-3',
         // 移动全屏模式：绝对定位在底部
         mode === 'page'
           ? 'absolute inset-x-0 bottom-0 z-20 pb-[calc(8px+env(safe-area-inset-bottom,0px))]'
@@ -243,13 +243,13 @@
       </div>
 
       <!-- 悬浮输入面板：毛玻璃 + 全圆角 -->
-      <div class="flex flex-col gap-2 rounded-[30px] border border-[rgba(255,255,255,0.15)] bg-[rgba(18,20,28,0.45)] px-3 py-3 shadow-lg backdrop-blur-xl">
+      <div class="flex flex-col gap-1.5 rounded-3xl border border-[rgba(255,255,255,0.15)] bg-[rgba(18,20,28,0.35)] px-1.5 py-2 shadow-[0_-8px_16px_rgba(10,10,10,0.55)] backdrop-blur-xl">
         <!-- 上层：输入区域（点击进入输入状态） -->
         <div class="flex" @click="focusInput">
           <textarea
             v-model="inputText"
             ref="inputTextarea"
-            class="max-h-[160px] min-h-[44px] w-full flex-1 resize-none border-0 bg-transparent px-2 py-2 text-sm text-[var(--text)] placeholder-white/40 outline-none"
+            class="max-h-[160px] min-h-[40px] w-full flex-1 resize-none border-0 bg-transparent px-2 py-1.5 text-sm text-[var(--text)] placeholder-white/40 outline-none"
             placeholder="向喵算大师提问..."
             rows="1"
             @keydown.enter.exact.prevent="handleSendOrStop"
@@ -262,12 +262,12 @@
           <div class="flex min-w-0 items-center gap-2">
             <!-- 1. “+” 选择档案 -->
             <button
-              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/85 transition hover:bg-white/10 active:opacity-70"
+              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/85 transition hover:bg-white/10 active:opacity-70"
               type="button"
               @click="toggleArchivePicker"
               aria-label="选择命主档案"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
             </button>
@@ -275,7 +275,7 @@
             <!-- 2. 当前对话命主名称（可切换选中/未选中） -->
             <button
               :class="[
-                'min-w-0 max-w-[52vw] md:max-w-[380px] truncate rounded-full border px-2.5 py-1 text-[10px] transition',
+                'min-w-0 max-w-[52vw] md:max-w-[380px] truncate rounded-full border px-2 py-1 text-sm transition',
                 selectedArchive
                   ? (subjectEnabled ? 'border-[rgba(214,160,96,0.55)] bg-[rgba(214,160,96,0.18)] text-[var(--accent-2)]' : 'border-white/10 bg-white/5 text-white/75 hover:bg-white/10')
                   : 'border-white/10 bg-white/5 text-white/60'
@@ -291,7 +291,7 @@
             <!-- 3. 深度思考（切换激活状态） -->
             <button
               :class="[
-                'shrink-0 rounded-full border px-2.5 py-1 text-[10px] transition',
+                'deep-thinking-font shrink-0 rounded-xl border px-2.5 py-1 text-sm transition',
                 deepThinkingEnabled
                   ? 'border-[rgba(125,213,111,0.55)] bg-[rgba(125,213,111,0.16)] text-[#7dd56f]'
                   : 'border-white/10 bg-white/5 text-white/75 hover:bg-white/10'
@@ -307,7 +307,7 @@
           <!-- 右侧：发送/停止按钮（保持原逻辑） -->
           <button
             :class="[
-              'flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-200',
+              'flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200',
               isStreamingActive
                 ? 'bg-[rgba(59,66,92,0.52)] ring-1 ring-white/10 hover:bg-[rgba(18,20,28,1)]'
                 : 'bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] hover:scale-105 active:scale-95',
@@ -319,9 +319,9 @@
             :aria-label="isStreamingActive ? '停止' : '发送'"
           >
             <!-- 发送图标：使用 arrow-up.png -->
-            <img v-if="!isStreamingActive" :src="arrowUpIconUrl" alt="" class="h-5 w-5 object-contain" />
+            <img v-if="!isStreamingActive" :src="arrowUpIconUrl" alt="" class="h-4 w-4 object-contain" />
             <!-- 停止图标：带圆角的矩形 -->
-            <svg v-else width="14" height="14" viewBox="0 0 14 14" fill="currentColor" class="text-white">
+            <svg v-else width="12" height="12" viewBox="0 0 14 14" fill="currentColor" class="text-white">
               <rect x="0" y="0" width="14" height="14" rx="2" ry="2"/>
             </svg>
           </button>
@@ -491,7 +491,6 @@ import { ref, computed, nextTick, onMounted, onActivated, onUnmounted, watch } f
 import logoNavUrl from "../assets/logo-nav.png";
 import logoAvatarUrl from "../assets/logo-bazi_meow.png";
 import chatNewIconUrl from "../assets/chat_new.png";
-import chatBgUrl from "../assets/chat_bg.png";
 import arrowUpIconUrl from "../assets/arrow-up.png";
 import thumbUpUrl from "../assets/thumb-up.png";
 import thumbDownUrl from "../assets/thumb-down.png";
@@ -526,6 +525,12 @@ const {
 } = useUnifiedChatStore();
 
 const { archives, activeArchiveId } = useStore();
+
+// 仅展示“有效消息”：隐藏等待期间用于占位的空 assistant 消息
+const visibleMessages = computed(() => currentMessages.value.filter((msg) => {
+  if (msg.role !== "assistant") return true;
+  return msg.content.trim().length > 0;
+}));
 
 // ========== 状态 ==========
 const inputText = ref("");
@@ -609,8 +614,102 @@ const thinkingTexts = [
   "正在观星推演",
   "正在卜卦问天",
   "正在参悟玄机",
+  "正在排盘校时",
+  "正在推演十神旺衰",
+  "正在比对天干地支合冲刑害",
+  "正在细算流年流月的起伏",
+  "正在斟酌用神与忌神",
+  "正在核对五行强弱与调候",
+  "正在拆解格局与喜忌取舍",
+  "正在看大运交接点的变化",
+  "正在合参命盘与现实经历",
+  "正在抓取关键时间节点",
+  "正在整理结论与建议",
+  "正在用更直白的话说明白",
+  "正在把复杂推演变简单",
+  "正在确认你的问题重点",
+  "正在把答案写得更具体些",
+  "正在结合你提供的信息复核",
+  "正在给出可执行的建议清单",
+  "正在避免空泛，尽量说人话",
+  "正在收尾，马上就好",
 ];
 const currentThinkingText = ref(thinkingTexts[0]);
+const displayedThinkingText = ref("");
+let thinkingTextTimer: number | null = null;
+let thinkingLoopActive = false;
+
+const TYPEWRITER_STEP_MS = 160;
+const TYPEWRITER_DONE_PAUSE_MS = 2500;
+
+const pickRandomThinkingText = () => {
+  if (thinkingTexts.length === 0) return;
+  if (thinkingTexts.length === 1) {
+    currentThinkingText.value = thinkingTexts[0];
+    return;
+  }
+
+  let next = currentThinkingText.value;
+  for (let i = 0; i < 6 && next === currentThinkingText.value; i += 1) {
+    next = thinkingTexts[Math.floor(Math.random() * thinkingTexts.length)];
+  }
+  currentThinkingText.value = next;
+};
+
+const startThinkingTextCarousel = () => {
+  if (thinkingLoopActive) return;
+  thinkingLoopActive = true;
+
+  const clearTimer = () => {
+    if (thinkingTextTimer === null) return;
+    window.clearTimeout(thinkingTextTimer);
+    thinkingTextTimer = null;
+  };
+
+  const typeText = (text: string) => {
+    if (!thinkingLoopActive) return;
+    clearTimer();
+
+    if (!text) {
+      pickRandomThinkingText();
+      return typeText(currentThinkingText.value);
+    }
+
+    let index = 1;
+    displayedThinkingText.value = text.slice(0, index);
+
+    const step = () => {
+      if (!thinkingLoopActive) return;
+      if (index >= text.length) {
+        thinkingTextTimer = window.setTimeout(() => {
+          if (!thinkingLoopActive) return;
+          pickRandomThinkingText();
+          typeText(currentThinkingText.value);
+        }, TYPEWRITER_DONE_PAUSE_MS);
+        return;
+      }
+
+      index += 1;
+      displayedThinkingText.value = text.slice(0, index);
+      thinkingTextTimer = window.setTimeout(step, TYPEWRITER_STEP_MS);
+    };
+
+    thinkingTextTimer = window.setTimeout(step, TYPEWRITER_STEP_MS);
+  };
+
+  // 首次启动：如果外部已经挑好了（sendMessage），就直接用那条；否则随机挑一条。
+  if (!currentThinkingText.value) pickRandomThinkingText();
+  typeText(currentThinkingText.value);
+};
+
+const stopThinkingTextCarousel = () => {
+  thinkingLoopActive = false;
+  if (thinkingTextTimer !== null) {
+    window.clearTimeout(thinkingTextTimer);
+    thinkingTextTimer = null;
+  }
+  displayedThinkingText.value = "";
+};
 
 const suggestedQuestions = ref([
   "八字中的五行是什么意思？",
@@ -673,8 +772,9 @@ const sendMessage = async () => {
   inputText.value = "";
   resetTextareaHeight();
 
-  // 随机选择等待文字
-  currentThinkingText.value = thinkingTexts[Math.floor(Math.random() * thinkingTexts.length)];
+  // 立即给一个文案，避免等待态出现时空白
+  pickRandomThinkingText();
+  displayedThinkingText.value = currentThinkingText.value.slice(0, 1);
 
   // 用户主动发送时：默认"贴底"，不要被流式更新打断滚动体验
   autoScrollEnabled.value = true;
@@ -883,6 +983,12 @@ watch(mutationTick, () => {
 onUnmounted(() => {
   inputDockResizeObserver?.disconnect();
   inputDockResizeObserver = null;
+  stopThinkingTextCarousel();
+});
+
+watch(isThinking, (value) => {
+  if (value) startThinkingTextCarousel();
+  else stopThinkingTextCarousel();
 });
 
 </script>
@@ -925,10 +1031,10 @@ onUnmounted(() => {
 
 @keyframes shimmer {
   0% {
-    background-position: 100% 50%;
+    background-position: -100% 50%;
   }
   100% {
-    background-position: -100% 50%;
+    background-position: 100% 50%;
   }
 }
 
@@ -972,5 +1078,10 @@ onUnmounted(() => {
   border-radius: 4px;
   font-family: monospace;
   font-size: 13px;
+}
+
+.deep-thinking-font {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
+    Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
 }
 </style>
