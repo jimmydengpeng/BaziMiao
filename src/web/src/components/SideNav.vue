@@ -5,7 +5,7 @@
     :class="[
       'side-nav z-40 hidden flex-col gap-3 border border-[rgba(255,255,255,0.14)] bg-[rgba(18,22,33,0.62)] px-4 py-4 shadow-[0_18px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl',
       // 桌面端样式：显示侧边栏
-      'lg:flex lg:sticky lg:top-20 lg:max-h-[calc(100vh-96px)] lg:w-[clamp(180px,18vw,240px)] lg:rounded-2xl lg:overflow-y-auto'
+      'lg:flex lg:sticky lg:top-[calc(64px+env(safe-area-inset-top,0px))] lg:max-h-[calc(100vh-96px)] lg:w-[clamp(180px,18vw,240px)] lg:rounded-2xl lg:overflow-y-auto'
     ]"
   >
     <!-- 核心功能导航 -->
@@ -33,9 +33,9 @@
           <span class="flex-1 font-medium">命理报告</span>
         </button>
         <button
-          :class="[navBtnBase, { [navBtnActive]: currentPage === 'pro' }]"
+          :class="[navBtnBase, { [navBtnActive]: currentPage === 'detail' }]"
           type="button"
-          @click="handleNav('pro')"
+          @click="handleNav('detail')"
         >
           <span :class="navIconClass">
             <img :src="archiveIconUrl" alt="专业细盘" class="h-6 w-6 object-contain" />
@@ -90,7 +90,7 @@ const { activeArchiveId } = useStore();
 
 // Props
 defineProps<{
-  currentPage: 'chart' | 'report' | 'pro' | 'verification' | 'archive' | 'form';
+  currentPage: 'chart' | 'report' | 'detail' | 'verification' | 'archive' | 'form';
   canViewReport: boolean; // 是否可以查看报告（需要已生成报告）
 }>();
 
@@ -102,7 +102,7 @@ const navBtnActive =
 const navIconClass = 'flex h-10 w-10 items-center justify-center rounded-lg shrink-0';
 
 // 处理导航点击
-const handleNav = (page: 'chart' | 'report' | 'pro' | 'verification' | 'archive' | 'form') => {
+const handleNav = (page: 'chart' | 'report' | 'detail' | 'verification' | 'archive' | 'form') => {
   // 根据页面类型导航到对应路由
   switch (page) {
     case 'chart': {
@@ -115,9 +115,9 @@ const handleNav = (page: 'chart' | 'report' | 'pro' | 'verification' | 'archive'
       router.push(`/bazi/chart/${chartId}/report`);
       break;
     }
-    case 'pro': {
+    case 'detail': {
       const chartId = route.params.id || activeArchiveId.value || 'temp';
-      router.push(`/bazi/chart/${chartId}/pro`);
+      router.push(`/bazi/chart/${chartId}/detail`);
       break;
     }
     case 'verification': {

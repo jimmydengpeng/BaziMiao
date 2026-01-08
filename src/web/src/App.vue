@@ -119,7 +119,7 @@ const showChatFab = computed(() => {
 const currentPage = computed(() => {
   const path = layoutRoute.value.path;
   if (path.includes('/report')) return 'report';
-  if (path.includes('/pro')) return 'pro';
+  if (path.includes('/detail') || path.includes('/pro')) return 'detail';
   if (path.includes('/verification')) return 'verification';
   if (path.includes('/pillars')) return 'chart';
   if (path.includes('/chart')) return 'chart';
@@ -260,7 +260,7 @@ watch(
     // 如果当前在命盘解析模块的页面
     if (path.startsWith('/bazi/chart/')) {
       const chartId = route.params.id as string;
-      const page = currentPage.value as 'chart' | 'report' | 'pro' | 'verification';
+      const page = currentPage.value as 'chart' | 'report' | 'detail' | 'verification';
 
       // 保存浏览状态（包括当前页面和滚动位置）
       if (chartId && page) {
@@ -283,7 +283,7 @@ const handleScroll = () => {
   scrollTimer = window.setTimeout(() => {
     if (route.path.startsWith('/bazi/chart/')) {
       const chartId = route.params.id as string;
-      const page = currentPage.value as 'chart' | 'report' | 'pro' | 'verification';
+      const page = currentPage.value as 'chart' | 'report' | 'detail' | 'verification';
 
       if (chartId && page) {
         saveBaziViewState({

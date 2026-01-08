@@ -11,11 +11,14 @@ import { computed, ref } from "vue";
 
 export type MessageRole = "user" | "assistant";
 
+export type FeedbackType = 'like' | 'dislike';
+
 export type Message = {
   id: string;
   role: MessageRole;
   content: string;
   timestamp: Date;
+  feedback?: FeedbackType; // 点赞/点踩反馈
 };
 
 export type ChatSession = {
@@ -27,6 +30,20 @@ export type ChatSession = {
   updatedAt: Date;
   // draft 会话：空对话占位，不写入 localStorage，也不出现在历史列表
   isDraft?: boolean;
+};
+
+export type ChatSubject = {
+  name: string;
+  birth: string;
+};
+
+export type SendMessageOptions = {
+  // 命主上下文（可选）：用于把“姓名 + 出生日期文本”发送给后端做提示词增强
+  subject?: ChatSubject | null;
+  // 深度思考开关（可选）
+  deepThinking?: boolean;
+  // 自定义系统提示词（可选，覆盖默认）
+  systemPrompt?: string | null;
 };
 
 const STORAGE_KEY = "unified-chat-sessions";
@@ -235,7 +252,41 @@ const stopStreaming = () => {
   activeStream.value?.abortController.abort();
 };
 
-const sendMessage = async (content: string) => {
+// 发送反馈（点赞/点踩）
+const sendFeedback = async (messageId: string, feedback: FeedbackType) => {
+  const session = currentSession.value;
+  if (!session) return;
+
+  const message = session.messages.find((m) => m.id === messageId);
+  if (!message) return;
+
+  // 如果已经是同样的反馈，取消反馈
+  if (message.feedback === feedback) {
+    message.feedback = undefined;
+  } else {
+    message.feedback = feedback;
+  }
+
+  schedulePersist();
+  bumpMutation();
+
+  // 发送到后端
+  try {
+    await fetch("/api/bazi/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        session_id: session.id,
+        message_id: messageId,
+        feedback: message.feedback ?? null,
+      }),
+    });
+  } catch (err) {
+    console.warn("发送反馈失败:", err);
+  }
+};
+
+const sendMessage = async (content: string, options?: SendMessageOptions) => {
   const text = content.trim();
   if (!text) return;
 
@@ -320,7 +371,14 @@ const sendMessage = async (content: string) => {
     const response = await fetch("/api/bazi/general-chat/stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ history }),
+      body: JSON.stringify({
+        history,
+        system_prompt: options?.systemPrompt ?? undefined,
+        subject_enabled: Boolean(options?.subject),
+        subject_name: options?.subject?.name ?? undefined,
+        subject_birth: options?.subject?.birth ?? undefined,
+        deep_think: Boolean(options?.deepThinking),
+      }),
       signal: abortController.signal,
     });
 
@@ -499,5 +557,6 @@ export const useUnifiedChatStore = () => {
     newChat,
     sendMessage,
     stopStreaming,
+    sendFeedback,
   };
 };

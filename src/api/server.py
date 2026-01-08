@@ -11,7 +11,12 @@ from typing import Any, Dict, Iterator, List, Optional, Union
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 
-from src.api.schemas import ChartRequest, ChatRequest, ReportRequest, PillarSearchRequest, GeneralChatRequest
+from src.api.schemas import ChartRequest, ChatRequest, ReportRequest, PillarSearchRequest, GeneralChatRequest, FeedbackRequest
+import logging
+
+# 配置日志
+feedback_logger = logging.getLogger("feedback")
+feedback_logger.setLevel(logging.INFO)
 from src.engine.bazi_engine import BaziPaipanEngine
 from src.knowledge.base import retrieve_knowledge
 from src.llm import OllamaError, chat, stream_chat_with_reasoning
@@ -178,6 +183,25 @@ def general_chat_stream(payload: GeneralChatRequest):
     )
     system_prompt = payload.system_prompt or default_system
 
+    # 可选：命主上下文（前端只传姓名 + 出生日期文本，后端用提示词方式注入，避免改动更大结构）
+    if payload.subject_enabled and payload.subject_name:
+        birth = payload.subject_birth or ""
+        system_prompt += (
+            "\n\n【当前对话命主信息】\n"
+            f"- 姓名：{payload.subject_name}\n"
+            f"- 出生：{birth}\n"
+            "当用户的问题与命理分析相关时，请结合以上命主信息进行推演；"
+            "当问题与命理无关时，正常回答即可。"
+        )
+
+    # 可选：深度思考模式（仅提示词增强，不改变接口形态）
+    if payload.deep_think:
+        system_prompt += (
+            "\n\n【深度思考模式】\n"
+            "请在回答前进行更充分的推演，给出更结构化的结论与依据；"
+            "如信息不足，可以先提出关键澄清问题或给出多个合理假设分支。"
+        )
+
     # 构建对话消息
     messages = [{"role": "system", "content": system_prompt}]
     for turn in payload.history:
@@ -261,6 +285,19 @@ def find_dates_by_pillars(payload: PillarSearchRequest):
         }
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"查找失败: {exc}") from exc
+
+
+@app.post("/api/bazi/feedback")
+def submit_feedback(payload: FeedbackRequest):
+    """
+    接收用户对 AI 回复的反馈（点赞/点踩）
+    MVP 阶段：记录到日志，后续可扩展到数据库
+    """
+    feedback_logger.info(
+        f"Feedback received - session: {payload.session_id}, "
+        f"message: {payload.message_id}, feedback: {payload.feedback}"
+    )
+    return {"ok": True, "message": "反馈已记录"}
 
 
 def _prepare_report_context(payload: ReportRequest):

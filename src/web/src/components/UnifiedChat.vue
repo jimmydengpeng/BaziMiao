@@ -45,15 +45,7 @@
 
         <!-- 右侧按钮 -->
         <div class="flex items-center gap-2">
-          <button
-            class="flex h-9 w-9 items-center justify-center rounded-lg transition-opacity duration-200 hover:opacity-80 active:opacity-60"
-            type="button"
-            @click="showHistoryPanel = true"
-            aria-label="对话历史"
-          >
-            <img :src="chatHistoryIconUrl" alt="" class="h-6 w-6 object-contain" />
-          </button>
-
+          <!-- 新建对话按钮 -->
           <button
             class="flex h-9 w-9 items-center justify-center rounded-lg transition-opacity duration-200 hover:opacity-80 active:opacity-60"
             type="button"
@@ -62,6 +54,46 @@
           >
             <img :src="chatNewIconUrl" alt="" class="h-6 w-6 object-contain" />
           </button>
+
+          <!-- 更多按钮（三个点） -->
+          <div class="relative">
+            <button
+              class="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--muted)] transition-opacity duration-200 hover:text-[var(--text)] hover:opacity-80 active:opacity-60"
+              type="button"
+              @click="showMoreMenu = !showMoreMenu"
+              aria-label="更多"
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                <circle cx="10" cy="4" r="1.5"/>
+                <circle cx="10" cy="10" r="1.5"/>
+                <circle cx="10" cy="16" r="1.5"/>
+              </svg>
+            </button>
+            <!-- 更多菜单下拉 -->
+            <Transition name="menu-fade">
+              <div
+                v-if="showMoreMenu"
+                class="absolute right-0 top-full z-50 mt-2 min-w-[140px] rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(18,20,28,0.95)] py-2 shadow-lg backdrop-blur-xl"
+              >
+                <button
+                  class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-[var(--text)] transition-colors hover:bg-[rgba(255,255,255,0.08)]"
+                  @click="openHistoryFromMenu"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12,6 12,12 16,14"/>
+                  </svg>
+                  历史对话
+                </button>
+              </div>
+            </Transition>
+            <!-- 点击外部关闭菜单 -->
+            <div
+              v-if="showMoreMenu"
+              class="fixed inset-0 z-40"
+              @click="closeMoreMenu"
+            ></div>
+          </div>
 
           <!-- 桌面弹窗模式：关闭按钮 -->
           <button
@@ -80,20 +112,30 @@
       </div>
     </header>
 
-    <!-- 中间对话区：移动模式需要预留顶部和底部空间 -->
-    <div
-      ref="messagesContainer"
-      @scroll.passive="handleMessagesScroll"
-      :class="[
-        'unified-chat-scroll min-h-0 flex-1 overflow-y-auto bg-[rgba(18,20,28,0.35)] px-4 backdrop-blur-[16px] md:px-6',
-        mode === 'page' ? 'pt-[calc(68px+env(safe-area-inset-top,0px))] pb-[calc(80px+env(safe-area-inset-bottom,0px))]' : 'py-6'
-      ]"
-    >
-      <div class="mx-auto flex max-w-[700px] flex-col gap-4">
+    <!-- 中间对话区：背景图片固定，不随对话滚动 -->
+    <div class="relative min-h-0 flex-1">
+      <div
+        aria-hidden="true"
+        class="pointer-events-none absolute inset-0 bg-cover bg-center"
+        :style="{ backgroundImage: `url(${chatBgUrl})` }"
+      ></div>
+
+      <div
+        ref="messagesContainer"
+        @scroll.passive="handleMessagesScroll"
+        :class="[
+          'unified-chat-scroll absolute inset-x-0 top-0 bottom-0 z-[1] overflow-y-auto px-4 md:px-6',
+          mode === 'page'
+            ? 'pt-[calc(68px+env(safe-area-inset-top,0px))]'
+            : 'py-6'
+        ]"
+        :style="mode === 'page' ? { paddingBottom: `calc(${inputDockHeight}px + 16px)` } : undefined"
+      >
+        <div class="mx-auto flex max-w-[700px] flex-col gap-5">
         <!-- 欢迎消息 -->
         <div
           v-if="currentMessages.length === 0"
-          class="mx-auto my-8 max-w-[420px] rounded-2xl border border-[rgba(255,255,255,0.1)] bg-[rgba(18,20,28,0.6)] p-6 text-center backdrop-blur-[16px] md:my-12 md:p-8"
+          class="mx-auto my-8 max-w-[420px] rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.7)] p-6 text-center backdrop-blur-xl md:my-12 md:p-8"
         >
           <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-[rgba(0,0,0,0.25)] md:h-20 md:w-20">
             <img :src="logoAvatarUrl" alt="喵算大师" class="h-full w-full object-cover" />
@@ -110,59 +152,88 @@
         <!-- 消息列表 -->
         <div
           v-for="(msg, index) in currentMessages"
-          :key="index"
+          :key="msg.id"
           :class="[
-            'flex items-start gap-3 animate-[messageSlideIn_0.3s_ease]',
-            msg.role === 'user' ? 'flex-row-reverse' : ''
+            'animate-[messageSlideIn_0.3s_ease]',
+            msg.role === 'user' ? 'flex justify-end' : ''
           ]"
         >
-          <div v-if="msg.role === 'assistant'" class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[rgba(0,0,0,0.25)] md:h-9 md:w-9">
-            <img :src="logoAvatarUrl" alt="喵大师" class="h-full w-full object-cover" />
-          </div>
+          <!-- 用户消息：气泡样式 -->
           <div
-            :class="[
-              'relative max-w-[75%] break-words rounded-2xl px-4 py-3 md:max-w-[70%]',
-              msg.role === 'assistant'
-                ? 'rounded-tl bg-[rgba(40,45,60,0.4)] backdrop-blur-[12px] border border-[rgba(255,255,255,0.08)]'
-                : 'rounded-tr bg-gradient-to-br from-[rgba(214,160,96,0.35)] to-[rgba(240,192,122,0.25)] backdrop-blur-[12px] border border-[rgba(240,192,122,0.45)]'
-            ]"
+            v-if="msg.role === 'user'"
+            class="relative max-w-[75%] break-words rounded-2xl rounded-tr-sm bg-gradient-to-br from-[rgba(214,160,96,0.45)] to-[rgba(240,192,122,0.35)] px-4 py-3 backdrop-blur-md border border-[rgba(240,192,122,0.5)] md:max-w-[70%]"
           >
-            <div class="mb-1 text-sm leading-relaxed text-[var(--text)]" v-html="renderMessageContent(msg.content)"></div>
-            <div class="text-[11px] text-[var(--muted)] opacity-70">{{ formatTime(msg.timestamp) }}</div>
+            <div class="text-sm leading-relaxed text-[var(--text)]" v-html="renderMessageContent(msg.content)"></div>
+            <div class="mt-1 text-[11px] text-[var(--muted)] opacity-70 text-right">{{ formatTime(msg.timestamp) }}</div>
           </div>
-        </div>
 
-        <!-- 正在输入指示器 -->
-        <div v-if="isThinking" class="flex items-start gap-3">
-          <div class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[rgba(0,0,0,0.25)] md:h-9 md:w-9">
-            <img :src="logoAvatarUrl" alt="喵大师" class="h-full w-full object-cover" />
-          </div>
-          <div class="rounded-2xl rounded-tl bg-[rgba(40,45,60,0.4)] border border-[rgba(255,255,255,0.08)] backdrop-blur-[12px] p-4">
-            <div class="flex gap-1 items-center">
-              <span class="h-1.5 w-1.5 rounded-full bg-[var(--muted)] animate-[typingBounce_1.4s_infinite_ease-in-out]" style="animation-delay: -0.32s;"></span>
-              <span class="h-1.5 w-1.5 rounded-full bg-[var(--muted)] animate-[typingBounce_1.4s_infinite_ease-in-out]" style="animation-delay: -0.16s;"></span>
-              <span class="h-1.5 w-1.5 rounded-full bg-[var(--muted)] animate-[typingBounce_1.4s_infinite_ease-in-out]"></span>
+          <!-- AI 回复：毛玻璃圆角框包裹内容，点赞按钮在框外 -->
+          <div v-else class="w-full">
+            <!-- AI 回复内容框：毛玻璃深蓝背景 -->
+            <div class="rounded-2xl border border-[rgba(255,255,255,0.1)] bg-[rgba(20,28,50,0.55)] px-4 py-3 backdrop-blur-xl">
+              <div class="text-sm leading-relaxed text-[var(--text)]" v-html="renderMessageContent(msg.content)"></div>
+            </div>
+            <!-- 点赞点踩按钮：在框外，只在非流式状态且有内容时显示 -->
+            <div
+              v-if="msg.content && !isStreamingActive"
+              class="mt-2 flex items-center gap-3"
+            >
+              <button
+                :class="[
+                  'flex h-7 w-7 items-center justify-center rounded-lg transition-all duration-200',
+                  msg.feedback === 'like'
+                    ? 'bg-[rgba(125,213,111,0.2)] scale-110'
+                    : 'opacity-50 hover:opacity-100 hover:bg-[rgba(255,255,255,0.08)]'
+                ]"
+                @click="sendFeedback(msg.id, 'like')"
+                aria-label="点赞"
+              >
+                <img :src="thumbUpUrl" alt="" class="h-4 w-4 object-contain" />
+              </button>
+              <button
+                :class="[
+                  'flex h-7 w-7 items-center justify-center rounded-lg transition-all duration-200',
+                  msg.feedback === 'dislike'
+                    ? 'bg-[rgba(200,16,46,0.2)] scale-110'
+                    : 'opacity-50 hover:opacity-100 hover:bg-[rgba(255,255,255,0.08)]'
+                ]"
+                @click="sendFeedback(msg.id, 'dislike')"
+                aria-label="点踩"
+              >
+                <img :src="thumbDownUrl" alt="" class="h-4 w-4 object-contain" />
+              </button>
             </div>
           </div>
         </div>
+
+        <!-- 正在思考指示器：渐变闪烁文字 -->
+        <div v-if="isThinking" class="animate-[messageSlideIn_0.3s_ease]">
+          <div class="thinking-text text-sm py-2">
+            {{ currentThinkingText }}...
+          </div>
+        </div>
+      </div>
       </div>
     </div>
 
-    <!-- 底部输入区：移动模式绝对定位 -->
+    <!-- 底部输入区：悬浮面板 -->
     <div
+      ref="inputDock"
       :class="[
-        'flex-shrink-0 border-t border-[rgba(255,255,255,0.08)] bg-[rgba(18,20,28,0.9)] px-4 py-3 backdrop-blur-[20px] md:px-6 md:py-4',
+        'flex-shrink-0 px-3 py-3 md:px-4 md:py-4',
         // 移动全屏模式：绝对定位在底部
-        mode === 'page' ? 'absolute inset-x-0 bottom-0 pb-[calc(12px+env(safe-area-inset-bottom,0px))]' : 'relative'
+        mode === 'page'
+          ? 'absolute inset-x-0 bottom-0 z-20 pb-[calc(8px+env(safe-area-inset-bottom,0px))]'
+          : 'relative z-20'
       ]"
     >
       <!-- 提示词建议 -->
-      <div v-if="suggestedQuestions.length > 0 && currentMessages.length === 0" class="mb-3 overflow-hidden">
+      <div v-if="suggestedQuestions.length > 0 && currentMessages.length === 0" class="mb-3 overflow-hidden px-1">
         <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
           <button
             v-for="(question, index) in suggestedQuestions"
             :key="index"
-            class="shrink-0 rounded-full border border-[rgba(214,160,96,0.35)] bg-[rgba(18,20,30,0.55)] px-3 py-1.5 text-xs text-[var(--text)] transition-all duration-200 hover:border-[rgba(214,160,96,0.7)] hover:text-[#f3e4c8] hover:-translate-y-[1px]"
+            class="shrink-0 rounded-full border border-[rgba(214,160,96,0.35)] bg-[rgba(18,20,30,0.7)] px-3 py-1.5 text-xs text-[var(--text)] backdrop-blur-md transition-all duration-200 hover:border-[rgba(214,160,96,0.7)] hover:text-[#f3e4c8] hover:-translate-y-[1px]"
             type="button"
             @click="selectSuggestion(question)"
           >
@@ -171,30 +242,87 @@
         </div>
       </div>
 
-      <!-- 输入框 -->
-      <div class="flex items-end gap-2">
-        <div class="flex flex-1 items-end gap-2 rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(14,16,24,0.7)] p-2">
+      <!-- 悬浮输入面板：毛玻璃 + 全圆角 -->
+      <div class="flex flex-col gap-2 rounded-[30px] border border-[rgba(255,255,255,0.15)] bg-[rgba(18,20,28,0.45)] px-3 py-3 shadow-lg backdrop-blur-xl">
+        <!-- 上层：输入区域（点击进入输入状态） -->
+        <div class="flex" @click="focusInput">
           <textarea
             v-model="inputText"
             ref="inputTextarea"
-            class="max-h-[120px] min-h-[40px] flex-1 resize-none rounded-lg border-0 bg-transparent px-3 py-2 text-sm text-[var(--text)] placeholder-white/40 outline-none"
+            class="max-h-[160px] min-h-[44px] w-full flex-1 resize-none border-0 bg-transparent px-2 py-2 text-sm text-[var(--text)] placeholder-white/40 outline-none"
             placeholder="向喵算大师提问..."
             rows="1"
-            @keydown.enter.exact.prevent="sendMessage"
+            @keydown.enter.exact.prevent="handleSendOrStop"
             @input="adjustTextareaHeight"
           ></textarea>
+        </div>
+
+        <!-- 下层：功能区（左/右两个区域） -->
+        <div class="flex items-center justify-between gap-2 px-1">
+          <div class="flex min-w-0 items-center gap-2">
+            <!-- 1. “+” 选择档案 -->
+            <button
+              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/85 transition hover:bg-white/10 active:opacity-70"
+              type="button"
+              @click="toggleArchivePicker"
+              aria-label="选择命主档案"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+            </button>
+
+            <!-- 2. 当前对话命主名称（可切换选中/未选中） -->
+            <button
+              :class="[
+                'min-w-0 max-w-[52vw] md:max-w-[380px] truncate rounded-full border px-2.5 py-1 text-[10px] transition',
+                selectedArchive
+                  ? (subjectEnabled ? 'border-[rgba(214,160,96,0.55)] bg-[rgba(214,160,96,0.18)] text-[var(--accent-2)]' : 'border-white/10 bg-white/5 text-white/75 hover:bg-white/10')
+                  : 'border-white/10 bg-white/5 text-white/60'
+              ]"
+              type="button"
+              @click="toggleSubjectEnabled"
+              :aria-pressed="subjectEnabled"
+              :disabled="!selectedArchive"
+            >
+              {{ selectedArchive ? selectedArchive.displayName : '未选择命主' }}
+            </button>
+
+            <!-- 3. 深度思考（切换激活状态） -->
+            <button
+              :class="[
+                'shrink-0 rounded-full border px-2.5 py-1 text-[10px] transition',
+                deepThinkingEnabled
+                  ? 'border-[rgba(125,213,111,0.55)] bg-[rgba(125,213,111,0.16)] text-[#7dd56f]'
+                  : 'border-white/10 bg-white/5 text-white/75 hover:bg-white/10'
+              ]"
+              type="button"
+              @click="deepThinkingEnabled = !deepThinkingEnabled"
+              :aria-pressed="deepThinkingEnabled"
+            >
+              深度思考
+            </button>
+          </div>
+
+          <!-- 右侧：发送/停止按钮（保持原逻辑） -->
           <button
             :class="[
-              'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0c0f15] transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed',
-              canSend ? '' : 'opacity-50'
+              'flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all duration-200',
+              isStreamingActive
+                ? 'bg-[rgba(59,66,92,0.52)] ring-1 ring-white/10 hover:bg-[rgba(18,20,28,1)]'
+                : 'bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] hover:scale-105 active:scale-95',
+              !canSend && !isStreamingActive ? 'opacity-50 cursor-not-allowed' : ''
             ]"
             type="button"
-            :disabled="!canSend"
-            @click="sendMessage"
-            aria-label="发送"
+            :disabled="!canSend && !isStreamingActive"
+            @click="handleSendOrStop"
+            :aria-label="isStreamingActive ? '停止' : '发送'"
           >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M2 10l16-8-8 16-2-8-6-0z" transform="rotate(45 10 10)"/>
+            <!-- 发送图标：使用 arrow-up.png -->
+            <img v-if="!isStreamingActive" :src="arrowUpIconUrl" alt="" class="h-5 w-5 object-contain" />
+            <!-- 停止图标：带圆角的矩形 -->
+            <svg v-else width="14" height="14" viewBox="0 0 14 14" fill="currentColor" class="text-white">
+              <rect x="0" y="0" width="14" height="14" rx="2" ry="2"/>
             </svg>
           </button>
         </div>
@@ -274,6 +402,66 @@
       </div>
     </Transition>
 
+    <!-- 档案选择面板（不离开当前界面） -->
+    <teleport to="body">
+      <Transition name="menu-fade">
+        <div v-if="archivePickerOpen" class="fixed inset-0 z-[500]">
+          <div class="absolute inset-0 bg-black/50" @click="closeArchivePicker"></div>
+          <div class="absolute inset-x-0 bottom-0 pb-[env(safe-area-inset-bottom,0px)]">
+            <div class="mx-auto w-full max-w-[720px] rounded-t-2xl border border-white/10 bg-[rgba(18,20,28,0.96)] shadow-[0_-18px_50px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+              <div class="flex items-center justify-between gap-3 px-4 py-3">
+                <div class="min-w-0">
+                  <div class="text-sm font-semibold text-white/90">选择命主档案</div>
+                  <div class="text-[11px] text-white/55">选中后会显示在下方“命主”按钮里</div>
+                </div>
+                <button
+                  class="flex h-9 w-9 items-center justify-center rounded-lg text-white/70 transition hover:bg-white/10 hover:text-white"
+                  type="button"
+                  @click="closeArchivePicker"
+                  aria-label="关闭"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+
+              <div class="px-4 pb-4">
+                <input
+                  v-model="archivePickerQuery"
+                  type="text"
+                  class="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/85 placeholder-white/35 outline-none focus:border-[rgba(214,160,96,0.55)]"
+                  placeholder="搜索档案名称..."
+                />
+              </div>
+
+              <div class="max-h-[55vh] overflow-y-auto px-2 pb-4">
+                <div v-if="filteredArchives.length === 0" class="px-4 py-8 text-center text-sm text-white/60">
+                  暂无可选档案
+                </div>
+                <button
+                  v-for="entry in filteredArchives"
+                  :key="entry.id"
+                  :class="[
+                    'mx-2 mb-2 flex w-[calc(100%-16px)] items-start justify-between gap-3 rounded-xl border px-4 py-3 text-left transition',
+                    entry.id === selectedArchiveId ? 'border-[rgba(214,160,96,0.55)] bg-[rgba(214,160,96,0.12)]' : 'border-white/10 bg-white/5 hover:bg-white/10'
+                  ]"
+                  type="button"
+                  @click="selectArchiveForChat(entry.id)"
+                >
+                  <div class="min-w-0">
+                    <div class="truncate text-sm font-medium text-white/90">{{ entry.displayName }}</div>
+                    <div class="mt-1 truncate text-xs text-white/55">{{ entry.birthLabel }}</div>
+                  </div>
+                  <div class="shrink-0 pt-0.5 text-[11px] text-white/45">#{{ entry.id }}</div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </teleport>
+
     <!-- 轻提示（Toast）：用于“已是新对话”等弱打断提示 -->
     <teleport to="body">
       <Transition
@@ -299,12 +487,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onActivated, watch } from "vue";
+import { ref, computed, nextTick, onMounted, onActivated, onUnmounted, watch } from "vue";
 import logoNavUrl from "../assets/logo-nav.png";
 import logoAvatarUrl from "../assets/logo-bazi_meow.png";
-import chatHistoryIconUrl from "../assets/chat_history.png";
 import chatNewIconUrl from "../assets/chat_new.png";
+import chatBgUrl from "../assets/chat_bg.png";
+import arrowUpIconUrl from "../assets/arrow-up.png";
+import thumbUpUrl from "../assets/thumb-up.png";
+import thumbDownUrl from "../assets/thumb-down.png";
 import { useUnifiedChatStore } from "../composables/useUnifiedChatStore";
+import { useStore } from "../composables/useStore";
 
 // Props
 const props = withDefaults(defineProps<{
@@ -329,15 +521,96 @@ const {
   switchSession: switchSessionInStore,
   deleteSession: deleteSessionInStore,
   sendMessage: sendMessageInStore,
+  stopStreaming,
+  sendFeedback: sendFeedbackInStore,
 } = useUnifiedChatStore();
+
+const { archives, activeArchiveId } = useStore();
 
 // ========== 状态 ==========
 const inputText = ref("");
 const showHistoryPanel = ref(false);
+const showMoreMenu = ref(false); // 更多菜单显示状态
 const messagesContainer = ref<HTMLElement | null>(null);
 const inputTextarea = ref<HTMLTextAreaElement | null>(null);
+const inputDock = ref<HTMLElement | null>(null);
+const inputDockHeight = ref(0);
 const autoScrollEnabled = ref(true);
 const lastScrollTop = ref(0);
+
+// ========== 输入区：命主/档案上下文 ==========
+const archivePickerOpen = ref(false);
+const archivePickerQuery = ref("");
+// 选中的“命主档案”（只影响聊天上下文，不会改变当前浏览的命盘页面）
+const selectedArchiveId = ref<number | null>(null);
+// 是否把命主信息一起发给后端（命主按钮的选中/未选中状态）
+const subjectEnabled = ref(true);
+// 深度思考开关（仅影响系统提示词，保持现有发送/停止逻辑不变）
+const deepThinkingEnabled = ref(false);
+// 是否跟随当前正在查看的档案（activeArchiveId）。用户手动选择后会切到 manual。
+const archiveSelectionMode = ref<"auto" | "manual">("auto");
+const didInitSubjectDefaults = ref(false);
+
+const selectedArchive = computed(() => {
+  if (selectedArchiveId.value == null) return null;
+  return archives.value.find((entry) => entry.id === selectedArchiveId.value) ?? null;
+});
+
+const filteredArchives = computed(() => {
+  const query = archivePickerQuery.value.trim();
+  if (!query) return archives.value;
+  return archives.value.filter((entry) => {
+    const haystack = `${entry.displayName} ${entry.birthLabel} #${entry.id}`.toLowerCase();
+    return haystack.includes(query.toLowerCase());
+  });
+});
+
+const closeArchivePicker = () => {
+  archivePickerOpen.value = false;
+  archivePickerQuery.value = "";
+};
+
+const toggleArchivePicker = () => {
+  archivePickerOpen.value = !archivePickerOpen.value;
+  if (!archivePickerOpen.value) {
+    archivePickerQuery.value = "";
+  }
+};
+
+const selectArchiveForChat = (archiveId: number) => {
+  selectedArchiveId.value = archiveId;
+  archiveSelectionMode.value = "manual";
+  subjectEnabled.value = true;
+  closeArchivePicker();
+};
+
+const toggleSubjectEnabled = () => {
+  if (!selectedArchive.value) return;
+  subjectEnabled.value = !subjectEnabled.value;
+};
+
+const focusInput = () => {
+  inputTextarea.value?.focus();
+};
+
+let inputDockResizeObserver: ResizeObserver | null = null;
+const updateInputDockHeight = () => {
+  if (!inputDock.value) {
+    inputDockHeight.value = 0;
+    return;
+  }
+  inputDockHeight.value = Math.ceil(inputDock.value.getBoundingClientRect().height);
+};
+
+// 等待状态随机文字
+const thinkingTexts = [
+  "正在掐指一算",
+  "正在翻阅古籍",
+  "正在观星推演",
+  "正在卜卦问天",
+  "正在参悟玄机",
+];
+const currentThinkingText = ref(thinkingTexts[0]);
 
 const suggestedQuestions = ref([
   "八字中的五行是什么意思？",
@@ -400,11 +673,43 @@ const sendMessage = async () => {
   inputText.value = "";
   resetTextareaHeight();
 
-  // 用户主动发送时：默认“贴底”，不要被流式更新打断滚动体验
+  // 随机选择等待文字
+  currentThinkingText.value = thinkingTexts[Math.floor(Math.random() * thinkingTexts.length)];
+
+  // 用户主动发送时：默认"贴底"，不要被流式更新打断滚动体验
   autoScrollEnabled.value = true;
-  sendMessageInStore(text);
+  // 命主信息：只有 subjectEnabled 为 true 时才随消息发送（目前只传姓名 + 出生日期文本，简化后端处理）
+  const subject = subjectEnabled.value && selectedArchive.value
+    ? { name: selectedArchive.value.displayName, birth: selectedArchive.value.birthLabel }
+    : null;
+  sendMessageInStore(text, { subject, deepThinking: deepThinkingEnabled.value });
   await nextTick();
   scrollToBottom();
+};
+
+// 处理发送/停止按钮点击
+const handleSendOrStop = () => {
+  if (isStreamingActive.value) {
+    stopStreaming();
+  } else {
+    sendMessage();
+  }
+};
+
+// 发送反馈
+const sendFeedback = (messageId: string, feedback: 'like' | 'dislike') => {
+  sendFeedbackInStore(messageId, feedback);
+};
+
+// 关闭更多菜单
+const closeMoreMenu = () => {
+  showMoreMenu.value = false;
+};
+
+// 点击更多菜单中的历史对话
+const openHistoryFromMenu = () => {
+  showMoreMenu.value = false;
+  showHistoryPanel.value = true;
 };
 
 const selectSuggestion = (question: string) => {
@@ -455,7 +760,7 @@ const handleMessagesScroll = () => {
 const adjustTextareaHeight = () => {
   if (!inputTextarea.value) return;
   inputTextarea.value.style.height = "auto";
-  const maxHeight = 120;
+  const maxHeight = 160;
   const newHeight = Math.min(inputTextarea.value.scrollHeight, maxHeight);
   inputTextarea.value.style.height = `${newHeight}px`;
 };
@@ -500,11 +805,53 @@ const isMobile = () => {
   return window.matchMedia('(max-width: 1023px)').matches;
 };
 
+// 让聊天“命主上下文”默认跟随当前正在查看的档案（activeArchiveId），用户手动选中后则不再自动跟随
+watch([archives, activeArchiveId], ([nextArchives, nextActiveId]) => {
+  // 当前选中的档案不存在了（被删除等），则回退到 auto 模式
+  if (selectedArchiveId.value !== null) {
+    const exists = nextArchives.some((entry) => entry.id === selectedArchiveId.value);
+    if (!exists) {
+      selectedArchiveId.value = null;
+      archiveSelectionMode.value = "auto";
+    }
+  }
+
+  if (archiveSelectionMode.value === "auto") {
+    const fallbackId = nextArchives[0]?.id ?? null;
+    selectedArchiveId.value = nextActiveId ?? fallbackId;
+  } else if (selectedArchiveId.value === null) {
+    // manual 模式但没有选中（极端情况）：给一个合理默认值
+    selectedArchiveId.value = nextActiveId ?? nextArchives[0]?.id ?? null;
+  }
+
+  // 只在首次初始化时自动开启；之后尊重用户的手动开关
+  if (!didInitSubjectDefaults.value) {
+    subjectEnabled.value = selectedArchiveId.value !== null;
+    didInitSubjectDefaults.value = true;
+    return;
+  }
+
+  // 没有命主可选时，强制关闭（避免“选中但无内容”）
+  if (selectedArchiveId.value === null) {
+    subjectEnabled.value = false;
+  }
+}, { immediate: true, deep: true });
+
 // ========== 生命周期 ==========
 onMounted(() => {
   // 桌面端自动聚焦，移动端不自动聚焦（避免键盘弹出）
   if (props.mode === 'modal' || !isMobile()) {
     inputTextarea.value?.focus();
+  }
+
+  updateInputDockHeight();
+  if (typeof ResizeObserver !== "undefined") {
+    inputDockResizeObserver = new ResizeObserver(() => {
+      updateInputDockHeight();
+    });
+    if (inputDock.value) {
+      inputDockResizeObserver.observe(inputDock.value);
+    }
   }
 
   if (currentMessages.value.length > 0) {
@@ -533,6 +880,11 @@ watch(mutationTick, () => {
   });
 });
 
+onUnmounted(() => {
+  inputDockResizeObserver?.disconnect();
+  inputDockResizeObserver = null;
+});
+
 </script>
 
 <style scoped>
@@ -554,16 +906,42 @@ watch(mutationTick, () => {
   }
 }
 
-/* 输入指示器动画 */
-@keyframes typingBounce {
-  0%, 80%, 100% {
-    opacity: 0.4;
-    transform: scale(0.8);
+/* 渐变闪烁文字动画 */
+.thinking-text {
+  background: linear-gradient(
+    90deg,
+    rgba(214, 160, 96, 0.9) 0%,
+    rgba(240, 192, 122, 1) 25%,
+    rgba(255, 220, 160, 1) 50%,
+    rgba(240, 192, 122, 1) 75%,
+    rgba(214, 160, 96, 0.9) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 50%;
   }
-  40% {
-    opacity: 1;
-    transform: scale(1);
+  100% {
+    background-position: -100% 50%;
   }
+}
+
+/* 更多菜单淡入淡出 */
+.menu-fade-enter-active,
+.menu-fade-leave-active {
+  transition: all 0.2s ease;
+}
+
+.menu-fade-enter-from,
+.menu-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-8px) scale(0.95);
 }
 
 /* 历史面板滑入 */

@@ -196,8 +196,10 @@ export const loadActiveArchiveId = (): number | null => {
 /**
  * 命盘解析模块的浏览状态
  */
+export type BaziViewPage = 'chart' | 'report' | 'detail' | 'verification';
+
 export type BaziViewState = {
-  page: 'chart' | 'report' | 'pro' | 'verification'; // 当前浏览的页面
+  page: BaziViewPage; // 当前浏览的页面
   scrollPosition: number; // 滚动位置
   chartId: string | number; // 命盘ID
 };
@@ -223,7 +225,33 @@ export const saveBaziViewState = (state: BaziViewState | null): void => {
 export const loadBaziViewState = (): BaziViewState | null => {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.BAZI_VIEW_STATE);
-    return data ? JSON.parse(data) : null;
+    if (!data) return null;
+
+    const raw = JSON.parse(data) as unknown;
+    if (!raw || typeof raw !== 'object') return null;
+
+    const record = raw as { [key: string]: unknown };
+    const rawPage = record.page;
+    // 兼容旧值 pro -> detail
+    const page: BaziViewPage | null = (() => {
+      if (rawPage === 'pro') return 'detail';
+      if (rawPage === 'chart') return 'chart';
+      if (rawPage === 'report') return 'report';
+      if (rawPage === 'detail') return 'detail';
+      if (rawPage === 'verification') return 'verification';
+      return null;
+    })();
+
+    const chartId = record.chartId;
+    const scrollPosition = record.scrollPosition;
+
+    if (!page) return null;
+    if (typeof chartId !== 'string' && typeof chartId !== 'number') return null;
+
+    const normalizedScrollPosition =
+      typeof scrollPosition === 'number' && Number.isFinite(scrollPosition) ? scrollPosition : 0;
+
+    return { page, chartId, scrollPosition: normalizedScrollPosition };
   } catch (error) {
     console.error('加载浏览状态失败:', error);
     return null;

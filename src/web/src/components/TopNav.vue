@@ -365,7 +365,7 @@ const props = defineProps<{
   activeModule: 'bazi' | 'compatibility' | 'profile' | 'master' | 'encyclopedia';
   isHome?: boolean; // 是否在 home 页面
   isAuthenticated?: boolean; // 登录态
-  currentPage?: 'chart' | 'report' | 'pro' | 'verification' | 'archive' | 'master-chat' | 'form' | 'home'; // 当前页面
+  currentPage?: 'chart' | 'report' | 'detail' | 'verification' | 'archive' | 'master-chat' | 'form' | 'home'; // 当前页面
   canViewReport?: boolean; // 是否可以查看报告
 }>();
 
@@ -392,7 +392,7 @@ const navItems = [
 const baziSubNavItems = computed(() => [
   { key: 'chart' as const, label: '命盘信息', icon: baziChartIconUrl, disabled: false },
   { key: 'report' as const, label: '命理报告', icon: reportIconUrl, disabled: false },
-  { key: 'pro' as const, label: '专业细盘', icon: archiveIconUrl, disabled: false },
+  { key: 'detail' as const, label: '专业细盘', icon: archiveIconUrl, disabled: false },
   { key: 'verification' as const, label: '前事验盘', icon: chatIconUrl, disabled: false }
 ]);
 
@@ -443,7 +443,7 @@ const handleModuleClickMobile = (item: (typeof navItems)[number]) => {
 };
 
 // 处理子导航点击
-const handleSubNavClick = (page: 'chart' | 'report' | 'pro' | 'verification' | 'archive' | 'master-chat') => {
+const handleSubNavClick = (page: 'chart' | 'report' | 'detail' | 'verification' | 'archive' | 'master-chat') => {
   closeHamburgerMenu();
   // 根据页面类型导航到对应路由
   const chartId = (route.params?.id as string | undefined) || activeArchiveId.value || 'temp';
@@ -456,8 +456,8 @@ const handleSubNavClick = (page: 'chart' | 'report' | 'pro' | 'verification' | '
       router.push(`/bazi/chart/${chartId}/report`);
       break;
     }
-    case 'pro': {
-      router.push(`/bazi/chart/${chartId}/pro`);
+    case 'detail': {
+      router.push(`/bazi/chart/${chartId}/detail`);
       break;
     }
     case 'verification': {

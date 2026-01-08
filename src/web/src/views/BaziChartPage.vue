@@ -58,7 +58,7 @@ const currentPage = computed(() => {
   const path = route.path;
   if (path.includes('/pillars')) return 'chart';
   if (path.includes('/report')) return 'report';
-  if (path.includes('/pro')) return 'pro';
+  if (path.includes('/detail') || path.includes('/pro')) return 'detail';
   if (path.includes('/verification')) return 'verification';
   return 'chart';
 });
@@ -82,11 +82,11 @@ const tabItems = computed(() => {
       active: currentPage.value === 'report'
     },
     {
-      key: 'pro',
+      key: 'detail',
       label: '专业细盘',
       icon: detailChartIconUrl,
-      to: `/bazi/chart/${id}/pro`,
-      active: currentPage.value === 'pro'
+      to: `/bazi/chart/${id}/detail`,
+      active: currentPage.value === 'detail'
     },
     {
       key: 'verification',

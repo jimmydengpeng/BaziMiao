@@ -36,10 +36,20 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '命理报告' }
       },
       {
-        path: 'pro',
-        name: 'ChartPro',
+        path: 'detail',
+        name: 'ChartDetail',
         component: () => import('../views/ChartDetailTab.vue'),
         meta: { title: '专业细盘' }
+      },
+      {
+        // 兼容旧链接：/bazi/chart/:id/pro -> /bazi/chart/:id/detail
+        path: 'pro',
+        redirect: (to) => ({
+          name: 'ChartDetail',
+          params: to.params,
+          query: to.query,
+          hash: to.hash,
+        }),
       },
       {
         path: 'verification',
