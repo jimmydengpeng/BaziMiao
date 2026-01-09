@@ -8,7 +8,7 @@ setup:
 	$(PIP) install -r requirements.txt
 
 dev:
-	uvicorn src.api.server:app --reload --port 8000
+	@if [ -f .env ]; then uvicorn src.api.server:app --reload --port 8000 --env-file .env; else uvicorn src.api.server:app --reload --port 8000; fi
 
 web-setup:
 	cd $(WEB_DIR) && npm install

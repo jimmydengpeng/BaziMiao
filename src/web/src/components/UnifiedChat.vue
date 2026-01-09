@@ -288,17 +288,34 @@
               {{ selectedArchive ? selectedArchive.displayName : '未选择命主' }}
             </button>
 
-            <!-- 3. 深度思考（切换激活状态） -->
+            <!-- 3. 模型选择（本地 / DeepSeek） -->
             <button
               :class="[
-                'deep-thinking-font shrink-0 rounded-xl border px-2.5 py-1 text-sm transition',
-                deepThinkingEnabled
-                  ? 'border-[rgba(125,213,111,0.55)] bg-[rgba(125,213,111,0.16)] text-[#7dd56f]'
+                'shrink-0 rounded-full border px-2.5 py-1 text-sm transition',
+                selectedLlmProvider === 'deepseek'
+                  ? 'border-[rgba(88,150,250,0.55)] bg-[rgba(88,150,250,0.14)] text-[#7fb0ff]'
                   : 'border-white/10 bg-white/5 text-white/75 hover:bg-white/10'
               ]"
               type="button"
-              @click="deepThinkingEnabled = !deepThinkingEnabled"
-              :aria-pressed="deepThinkingEnabled"
+              @click="toggleLlmProvider"
+              aria-label="选择模型"
+            >
+              {{ selectedLlmProvider === 'deepseek' ? 'DeepSeek' : '本地' }}
+            </button>
+
+            <!-- 4. 深度思考（仅 DeepSeek 可切换；本地默认开启） -->
+            <button
+              :class="[
+                'deep-thinking-font shrink-0 rounded-xl border px-2.5 py-1 text-sm transition',
+                effectiveDeepThinkingEnabled
+                  ? 'border-[rgba(125,213,111,0.55)] bg-[rgba(125,213,111,0.16)] text-[#7dd56f]'
+                  : 'border-white/10 bg-white/5 text-white/75 hover:bg-white/10',
+                selectedLlmProvider === 'local' ? 'cursor-not-allowed opacity-70' : ''
+              ]"
+              type="button"
+              @click="toggleDeepThinking"
+              :aria-pressed="effectiveDeepThinkingEnabled"
+              :disabled="selectedLlmProvider === 'local'"
             >
               深度思考
             </button>
@@ -564,11 +581,27 @@ const archivePickerQuery = ref("");
 const selectedArchiveId = ref<number | null>(null);
 // 是否把命主信息一起发给后端（命主按钮的选中/未选中状态）
 const subjectEnabled = ref(true);
-// 深度思考开关（仅影响系统提示词，保持现有发送/停止逻辑不变）
-const deepThinkingEnabled = ref(false);
+// LLM 渠道选择：local(本地 Ollama) / deepseek(云端)
+const selectedLlmProvider = ref<"local" | "deepseek">("local");
+// 深度思考开关：仅 DeepSeek 可切换；本地默认开启
+const deepThinkingEnabledForDeepseek = ref(false);
 // 是否跟随当前正在查看的档案（activeArchiveId）。用户手动选择后会切到 manual。
 const archiveSelectionMode = ref<"auto" | "manual">("auto");
 const didInitSubjectDefaults = ref(false);
+
+const effectiveDeepThinkingEnabled = computed(() => {
+  if (selectedLlmProvider.value === "local") return true;
+  return deepThinkingEnabledForDeepseek.value;
+});
+
+const toggleLlmProvider = () => {
+  selectedLlmProvider.value = selectedLlmProvider.value === "local" ? "deepseek" : "local";
+};
+
+const toggleDeepThinking = () => {
+  if (selectedLlmProvider.value !== "deepseek") return;
+  deepThinkingEnabledForDeepseek.value = !deepThinkingEnabledForDeepseek.value;
+};
 
 const selectedArchive = computed(() => {
   if (selectedArchiveId.value == null) return null;
@@ -796,7 +829,11 @@ const sendMessage = async () => {
   const subject = subjectEnabled.value && selectedArchive.value
     ? { name: selectedArchive.value.displayName, birth: selectedArchive.value.birthLabel }
     : null;
-  sendMessageInStore(text, { subject, deepThinking: deepThinkingEnabled.value });
+  sendMessageInStore(text, {
+    subject,
+    deepThinking: effectiveDeepThinkingEnabled.value,
+    llmProvider: selectedLlmProvider.value,
+  });
   await nextTick();
   scrollToBottom();
 };

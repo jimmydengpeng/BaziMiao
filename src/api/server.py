@@ -19,13 +19,35 @@ feedback_logger = logging.getLogger("feedback")
 feedback_logger.setLevel(logging.INFO)
 from src.engine.bazi_engine import BaziPaipanEngine
 from src.knowledge.base import retrieve_knowledge
-from src.llm import OllamaError, chat, stream_chat_with_reasoning
+from src.llm import LLMError, chat, stream_chat_with_reasoning
 from src.models.chart import Chart
 from src.prompt.report_prompt import build_report_prompt
 from src.rules.analysis import evaluate_chart
 
 app = FastAPI(title="神机喵算 / BaziMiao API", version="0.1.0")
 engine = BaziPaipanEngine()
+
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _resolve_llm_provider(requested: Optional[str] = None) -> str:
+    provider = (requested or "").strip()
+    if provider in {"local", "deepseek"}:
+        return provider
+    return os.getenv("LLM_PROVIDER", "local").strip() or "local"
+
+
+def _resolve_enable_thinking(provider: str, requested: Optional[bool] = None) -> bool:
+    if provider == "local":
+        return True
+    if requested is not None:
+        return bool(requested)
+    return _env_flag("DEEPSEEK_ENABLE_THINKING", True)
 
 
 def _build_solar_datetime(payload: Union[ChartRequest, ReportRequest]) -> datetime:
@@ -69,8 +91,9 @@ def generate_report(payload: ReportRequest):
     messages = _build_llm_messages(prompt)
 
     try:
-        raw_text = chat(messages)
-    except OllamaError as exc:
+        provider = _resolve_llm_provider()
+        raw_text = chat(messages, provider=provider, enable_thinking=_resolve_enable_thinking(provider))
+    except LLMError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     report = _normalize_llm_report(raw_text, prompt)
@@ -87,6 +110,8 @@ def generate_report(payload: ReportRequest):
 def generate_report_stream(payload: ReportRequest):
     chart, analysis, knowledge, prompt = _prepare_report_context(payload)
     messages = _build_llm_messages(prompt)
+    provider = _resolve_llm_provider()
+    enable_thinking = _resolve_enable_thinking(provider)
 
     def _event_stream() -> Iterator[str]:
         meta = {
@@ -101,7 +126,9 @@ def generate_report_stream(payload: ReportRequest):
         chunks: List[str] = []
         thinking_chunks: List[str] = []
         try:
-            for chunk in stream_chat_with_reasoning(messages):
+            for chunk in stream_chat_with_reasoning(
+                messages, provider=provider, enable_thinking=enable_thinking
+            ):
                 if chunk.reasoning:
                     thinking_chunks.append(chunk.reasoning)
                     yield json.dumps(
@@ -110,7 +137,7 @@ def generate_report_stream(payload: ReportRequest):
                 if chunk.content:
                     chunks.append(chunk.content)
                     yield json.dumps({"type": "delta", "text": chunk.content}, ensure_ascii=False) + "\n"
-        except OllamaError as exc:
+        except LLMError as exc:
             yield json.dumps({"type": "error", "message": str(exc)}, ensure_ascii=False) + "\n"
             return
 
@@ -131,8 +158,11 @@ def generate_report_stream(payload: ReportRequest):
 def chat_with_chart(payload: ChatRequest):
     prompt = _build_chat_prompt(payload)
     try:
-        raw_text = chat(_build_llm_messages(prompt))
-    except OllamaError as exc:
+        provider = _resolve_llm_provider()
+        raw_text = chat(
+            _build_llm_messages(prompt), provider=provider, enable_thinking=_resolve_enable_thinking(provider)
+        )
+    except LLMError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     reply = _normalize_llm_report(raw_text, prompt)
@@ -143,12 +173,16 @@ def chat_with_chart(payload: ChatRequest):
 def chat_with_chart_stream(payload: ChatRequest):
     prompt = _build_chat_prompt(payload)
     messages = _build_llm_messages(prompt)
+    provider = _resolve_llm_provider()
+    enable_thinking = _resolve_enable_thinking(provider)
 
     def _event_stream() -> Iterator[str]:
         chunks: List[str] = []
         thinking_chunks: List[str] = []
         try:
-            for chunk in stream_chat_with_reasoning(messages):
+            for chunk in stream_chat_with_reasoning(
+                messages, provider=provider, enable_thinking=enable_thinking
+            ):
                 if chunk.reasoning:
                     thinking_chunks.append(chunk.reasoning)
                     yield json.dumps(
@@ -157,7 +191,7 @@ def chat_with_chart_stream(payload: ChatRequest):
                 if chunk.content:
                     chunks.append(chunk.content)
                     yield json.dumps({"type": "delta", "text": chunk.content}, ensure_ascii=False) + "\n"
-        except OllamaError as exc:
+        except LLMError as exc:
             yield json.dumps({"type": "error", "message": str(exc)}, ensure_ascii=False) + "\n"
             return
 
@@ -182,6 +216,8 @@ def general_chat_stream(payload: GeneralChatRequest):
         "4）保持友好、耐心的对话风格。"
     )
     system_prompt = payload.system_prompt or default_system
+    provider = _resolve_llm_provider(payload.llm_provider)
+    enable_thinking = _resolve_enable_thinking(provider, payload.deep_think)
 
     # 可选：命主上下文（前端只传姓名 + 出生日期文本，后端用提示词方式注入，避免改动更大结构）
     if payload.subject_enabled and payload.subject_name:
@@ -194,14 +230,6 @@ def general_chat_stream(payload: GeneralChatRequest):
             "当问题与命理无关时，正常回答即可。"
         )
 
-    # 可选：深度思考模式（仅提示词增强，不改变接口形态）
-    if payload.deep_think:
-        system_prompt += (
-            "\n\n【深度思考模式】\n"
-            "请在回答前进行更充分的推演，给出更结构化的结论与依据；"
-            "如信息不足，可以先提出关键澄清问题或给出多个合理假设分支。"
-        )
-
     # 构建对话消息
     messages = [{"role": "system", "content": system_prompt}]
     for turn in payload.history:
@@ -211,7 +239,9 @@ def general_chat_stream(payload: GeneralChatRequest):
         chunks: List[str] = []
         thinking_chunks: List[str] = []
         try:
-            for chunk in stream_chat_with_reasoning(messages):
+            for chunk in stream_chat_with_reasoning(
+                messages, provider=provider, enable_thinking=enable_thinking
+            ):
                 if chunk.reasoning:
                     thinking_chunks.append(chunk.reasoning)
                     yield json.dumps(
@@ -220,7 +250,7 @@ def general_chat_stream(payload: GeneralChatRequest):
                 if chunk.content:
                     chunks.append(chunk.content)
                     yield json.dumps({"type": "delta", "text": chunk.content}, ensure_ascii=False) + "\n"
-        except OllamaError as exc:
+        except LLMError as exc:
             yield json.dumps({"type": "error", "message": str(exc)}, ensure_ascii=False) + "\n"
             return
 

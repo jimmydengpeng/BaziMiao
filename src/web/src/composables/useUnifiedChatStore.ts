@@ -42,6 +42,8 @@ export type SendMessageOptions = {
   subject?: ChatSubject | null;
   // 深度思考开关（可选）
   deepThinking?: boolean;
+  // LLM 渠道（可选）
+  llmProvider?: "local" | "deepseek";
   // 自定义系统提示词（可选，覆盖默认）
   systemPrompt?: string | null;
 };
@@ -375,6 +377,7 @@ const sendMessage = async (content: string, options?: SendMessageOptions) => {
       body: JSON.stringify({
         history,
         system_prompt: options?.systemPrompt ?? undefined,
+        llm_provider: options?.llmProvider ?? "local",
         subject_enabled: Boolean(options?.subject),
         subject_name: options?.subject?.name ?? undefined,
         subject_birth: options?.subject?.birth ?? undefined,

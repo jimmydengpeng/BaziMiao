@@ -310,7 +310,7 @@
   /* Markdown 渲染 */
   .markdown-body {
     line-height: 1.7;
-    font-size: 12px;
+    font-size: 14px;
     overflow-wrap: anywhere;
     word-break: break-word;
   }

@@ -39,7 +39,7 @@
     <!-- 移动端：当前模块标题（非首页时显示，可点击打开仅模块导航的下拉菜单） -->
     <button
       v-if="!isHome"
-      class="absolute left-1/2 -translate-x-1/2 md:hidden inline-flex items-center gap-1.5 text-sm font-medium text-white transition-opacity hover:opacity-80"
+      class="absolute left-1/2 -translate-x-1/2 md:hidden inline-flex items-center gap-1.5 text-base font-semibold text-white transition-opacity hover:opacity-80"
       type="button"
       @click="toggleModuleMenu"
       aria-haspopup="true"

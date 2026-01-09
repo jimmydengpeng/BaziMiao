@@ -35,6 +35,11 @@
       <!-- 浮动聊天按钮：非聊天页面且弹窗未打开时显示 -->
       <ChatFab
         v-if="showChatFab && !chatModalOpen"
+        :hint-text="chatFabHintText"
+        :hint-visible="chatFabHintVisible"
+        :nudge-key="chatFabNudgeKey"
+        :nudge-kind="chatFabNudgeKind"
+        :sparkle-visible="chatFabSparkleVisible"
         @click="handleChatFabClick"
       />
 
@@ -71,17 +76,200 @@ import ChatFab from './components/ChatFab.vue';
 import UnifiedChat from './components/UnifiedChat.vue';
 import LogoDialog from './components/LogoDialog.vue';
 import { useStore } from './composables/useStore';
+import { useUnifiedChatStore } from './composables/useUnifiedChatStore';
 import { loadBaziViewState, saveBaziViewState } from './utils/storage';
 
 const router = useRouter();
 const route = useRoute();
 const { isAuthenticated, activeArchiveId, report, chart } = useStore();
+const { isStreamingActive } = useUnifiedChatStore();
 const scrollEl = ref<HTMLElement | null>(null);
+
+// ========== ChatFab：提示气泡/动效/提醒 ==========
+const CHAT_FAB_LAST_CLICK_AT_KEY = 'chatfab:last_click_at';
+const CHAT_FAB_CHART_INTRO_SHOWN_KEY = 'chatfab:chart_intro_shown:v1';
+const CHAT_FAB_CLICK_COOLDOWN_MS = 10 * 60 * 1000; // 10 分钟
+
+// 调试开关：先强制显示气泡，方便你肉眼确认样式/位置是否正常
+const FORCE_CHAT_FAB_HINT = true;
+const FORCE_CHAT_FAB_HINT_TEXT = '要不要，我帮你看看？';
+
+const chatFabHintText = ref<string | null>(null);
+const chatFabHintVisible = ref(false);
+const chatFabNudgeKey = ref(0);
+const chatFabNudgeKind = ref<'pop' | 'wiggle'>('pop');
+const chatFabSparkleVisible = ref(false);
+
+let chatFabIntroTimer: number | null = null;
+let chatFabIdleTimer: number | null = null;
+let chatFabHideHintTimer: number | null = null;
+
+// “停留>8秒但没有任何操作”：只要用户在进入命盘页后有过任何交互，就不再触发该提示
+let chartHasAnyUserAction = false;
+
+const safeGetNumber = (key: string) => {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return 0;
+    const num = Number(raw);
+    return Number.isFinite(num) ? num : 0;
+  } catch {
+    return 0;
+  }
+};
+
+const safeSetNumber = (key: string, value: number) => {
+  try {
+    localStorage.setItem(key, String(value));
+  } catch {
+    // ignore
+  }
+};
+
+const safeGetBool = (key: string) => {
+  try {
+    return localStorage.getItem(key) === '1';
+  } catch {
+    return false;
+  }
+};
+
+const safeSetBool = (key: string, value: boolean) => {
+  try {
+    localStorage.setItem(key, value ? '1' : '0');
+  } catch {
+    // ignore
+  }
+};
+
+const getChatFabLastClickAt = () => safeGetNumber(CHAT_FAB_LAST_CLICK_AT_KEY);
+const setChatFabLastClickAt = (ts: number) => safeSetNumber(CHAT_FAB_LAST_CLICK_AT_KEY, ts);
+const isChatFabInClickCooldown = () => {
+  const last = getChatFabLastClickAt();
+  if (!last) return false;
+  return Date.now() - last < CHAT_FAB_CLICK_COOLDOWN_MS;
+};
+
+const hideChatFabHint = () => {
+  chatFabHintVisible.value = false;
+  if (chatFabHideHintTimer) {
+    clearTimeout(chatFabHideHintTimer);
+    chatFabHideHintTimer = null;
+  }
+};
+
+const showChatFabHint = (text: string, durationMs = 2500) => {
+  chatFabHintText.value = text;
+  chatFabHintVisible.value = true;
+  if (chatFabHideHintTimer) clearTimeout(chatFabHideHintTimer);
+  chatFabHideHintTimer = window.setTimeout(() => {
+    chatFabHintVisible.value = false;
+    chatFabHideHintTimer = null;
+  }, durationMs);
+};
+
+const nudgeChatFab = (kind: 'pop' | 'wiggle') => {
+  chatFabNudgeKind.value = kind;
+  chatFabNudgeKey.value += 1;
+};
+
+const pickOne = (items: string[]) => items[Math.floor(Math.random() * items.length)];
+
+const INTRO_HINTS = [
+  '要不要，我帮你看看？',
+  '此命，有几处可问',
+  '你可以直接问我',
+  '看不懂的地方，直接问我就好',
+  '想知道重点在哪？我来帮你抓',
+  '我在这儿，随时可以问',
+];
+
+const IDLE_HINTS = [
+  '有疑惑，可直接问',
+  '命盘之事，我可细说',
+  '这里看不懂也没关系',
+  '想从哪里开始看？我带你',
+  '我可以帮你把重点翻译成人话',
+  '要我给你一个“先看哪里”的建议吗？',
+];
+
+const isChartPage = computed(() => layoutRoute.value.path.startsWith('/bazi/chart/'));
+
+const clearChatFabTimers = () => {
+  if (chatFabIntroTimer) {
+    clearTimeout(chatFabIntroTimer);
+    chatFabIntroTimer = null;
+  }
+  if (chatFabIdleTimer) {
+    clearTimeout(chatFabIdleTimer);
+    chatFabIdleTimer = null;
+  }
+  if (chatFabHideHintTimer) {
+    clearTimeout(chatFabHideHintTimer);
+    chatFabHideHintTimer = null;
+  }
+};
+
+const markChartUserAction = () => {
+  if (!isChartPage.value) return;
+  if (chartHasAnyUserAction) return;
+  chartHasAnyUserAction = true;
+  if (chatFabIdleTimer) {
+    clearTimeout(chatFabIdleTimer);
+    chatFabIdleTimer = null;
+  }
+};
+
+const handleAnyUserAction = () => markChartUserAction();
+
+const scheduleChartHints = () => {
+  if (FORCE_CHAT_FAB_HINT) return;
+  clearChatFabTimers();
+  hideChatFabHint();
+  chartHasAnyUserAction = false;
+
+  // 不在命盘页不触发
+  if (!isChartPage.value) return;
+  // 用户刚点过猫猫（10分钟内）：不主动弹气泡，只保留“呼吸”
+  if (isChatFabInClickCooldown()) return;
+
+  // ① 首次进入命盘页（新用户）：1.5s 后出场 + 2.5s 气泡
+  const hasShownIntro = safeGetBool(CHAT_FAB_CHART_INTRO_SHOWN_KEY);
+  const hasEverClicked = Boolean(getChatFabLastClickAt());
+  if (!hasShownIntro && !hasEverClicked) {
+    chatFabIntroTimer = window.setTimeout(() => {
+      // 1.5s 后如果用户已经操作过，就不打扰
+      if (!isChartPage.value) return;
+      if (chartHasAnyUserAction) return;
+      if (isChatFabInClickCooldown()) return;
+      nudgeChatFab('pop');
+      showChatFabHint(pickOne(INTRO_HINTS), 2500);
+      safeSetBool(CHAT_FAB_CHART_INTRO_SHOWN_KEY, true);
+      chatFabIntroTimer = null;
+    }, 1500);
+  }
+
+  // ② 停留 > 8s 且没有任何操作：轻微晃一下 + 气泡（只触发一次）
+  chatFabIdleTimer = window.setTimeout(() => {
+    if (!isChartPage.value) return;
+    if (chartHasAnyUserAction) return;
+    if (isChatFabInClickCooldown()) return;
+    nudgeChatFab('wiggle');
+    showChatFabHint(pickOne(IDLE_HINTS), 2500);
+    chatFabIdleTimer = null;
+  }, 8000);
+};
 
 // 聊天弹窗状态
 const chatModalOpen = ref(false);
 const isDesktop = ref(false);
 const logoDialogOpen = ref(false);
+
+// 聊天“后台回复完成提醒”：
+// - 如果用户在等待/回复过程中退出聊天（route 退出或关闭 modal），当流结束后在 ChatFab 右上角点亮微光两点；
+// - 用户重新打开聊天后自动清除。
+const leftChatWhileStreaming = ref(false);
+const isChatUiVisible = computed(() => chatModalOpen.value || route.path === '/chat' || route.path === '/bazi/chat');
 
 // overlay 路由：例如 /chat 作为覆盖层叠在上一页之上
 const backgroundRoute = ref<RouteLocationNormalizedLoaded | null>(null);
@@ -121,6 +309,81 @@ const showChatFab = computed(() => {
   return false;
 });
 
+// 命盘页提示策略：进入时安排“首次/无操作”提示；离开时清理定时器
+watch(
+  () => layoutRoute.value.path,
+  () => {
+    if (FORCE_CHAT_FAB_HINT) return;
+    if (isChartPage.value && showChatFab.value && !chatModalOpen.value) {
+      scheduleChartHints();
+    } else {
+      clearChatFabTimers();
+      hideChatFabHint();
+      chartHasAnyUserAction = false;
+    }
+  },
+  { immediate: true }
+);
+
+watch(chatModalOpen, (open) => {
+  if (FORCE_CHAT_FAB_HINT) return;
+  if (open) {
+    clearChatFabTimers();
+    hideChatFabHint();
+    chartHasAnyUserAction = false;
+    return;
+  }
+
+  if (isChartPage.value && showChatFab.value) {
+    scheduleChartHints();
+  }
+});
+
+watch(
+  () => showChatFab.value && !chatModalOpen.value,
+  (visible) => {
+    if (!FORCE_CHAT_FAB_HINT) return;
+    if (visible) {
+      chatFabHintText.value = FORCE_CHAT_FAB_HINT_TEXT;
+      chatFabHintVisible.value = true;
+    } else {
+      chatFabHintVisible.value = false;
+    }
+  },
+  { immediate: true }
+);
+
+watch(isChatUiVisible, (visible) => {
+  // 只要回到聊天界面，就清除提醒
+  if (visible) {
+    leftChatWhileStreaming.value = false;
+    chatFabSparkleVisible.value = false;
+    return;
+  }
+
+  // 聊天界面不可见 + 仍在流式：标记“后台生成中”
+  if (isStreamingActive.value) {
+    leftChatWhileStreaming.value = true;
+  }
+});
+
+watch(isStreamingActive, (active, prev) => {
+  // 流开始：清除旧提醒
+  if (active && !prev) {
+    chatFabSparkleVisible.value = false;
+    leftChatWhileStreaming.value = false;
+    return;
+  }
+
+  // 流结束：如果用户曾“中途退出聊天”，且当前不在聊天界面，则点亮提醒
+  if (!active && prev) {
+    if (leftChatWhileStreaming.value && !isChatUiVisible.value) {
+      chatFabSparkleVisible.value = true;
+    }
+    leftChatWhileStreaming.value = false;
+  }
+});
+
 // 当前页面类型（用于侧边导航/移动端菜单高亮）
 const currentPage = computed(() => {
   const path = layoutRoute.value.path;
@@ -143,6 +406,12 @@ const canViewReport = computed(() => {
 
 // 处理浮动按钮点击
 const handleChatFabClick = () => {
+  // 记录用户已点击（进入 10 分钟冷却，不再主动打扰）
+  setChatFabLastClickAt(Date.now());
+  if (!FORCE_CHAT_FAB_HINT) hideChatFabHint();
+  chatFabSparkleVisible.value = false;
+  leftChatWhileStreaming.value = false;
+
   if (isDesktop.value) {
     // 桌面端：打开弹窗
     chatModalOpen.value = true;
@@ -283,6 +552,9 @@ watch(
 // 监听滚动，实时更新滚动位置（节流处理）
 let scrollTimer: number | null = null;
 const handleScroll = () => {
+  // 只要用户滚动过，就认为“有操作”
+  markChartUserAction();
+
   if (scrollTimer) {
     clearTimeout(scrollTimer);
   }
@@ -340,6 +612,11 @@ onMounted(() => {
     scrollEl.value.addEventListener('scroll', handleScroll, { passive: true });
   }
 
+  // 命盘页“停留>8s 无操作”判定：pointer/键盘/滚轮等都算操作
+  window.addEventListener('pointerdown', handleAnyUserAction, { passive: true });
+  window.addEventListener('keydown', handleAnyUserAction);
+  window.addEventListener('wheel', handleAnyUserAction, { passive: true });
+
   // 记录 overlay 的背景路由：用于 /chat 退出动画露出上一页
   removeAfterEachHook = router.afterEach((to, from) => {
     if (to.meta?.overlay === true) {
@@ -364,6 +641,9 @@ onMounted(() => {
 // 组件卸载时清理
 onUnmounted(() => {
   window.removeEventListener('resize', updateDesktop);
+  window.removeEventListener('pointerdown', handleAnyUserAction as any);
+  window.removeEventListener('keydown', handleAnyUserAction as any);
+  window.removeEventListener('wheel', handleAnyUserAction as any);
   if (removeAfterEachHook) {
     removeAfterEachHook();
     removeAfterEachHook = null;
@@ -374,6 +654,7 @@ onUnmounted(() => {
   if (scrollTimer) {
     clearTimeout(scrollTimer);
   }
+  clearChatFabTimers();
 });
 </script>
 

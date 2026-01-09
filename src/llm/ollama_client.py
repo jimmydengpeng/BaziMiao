@@ -4,18 +4,15 @@ import json
 import os
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
 from typing import Dict, Iterable, Iterator, Optional
+
+from src.llm.types import ChatChunk, OllamaError
 
 
 DEFAULT_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 DEFAULT_MODEL = os.getenv("OLLAMA_MODEL", "deepseek-r1:8b")
 DEFAULT_TEMPERATURE = float(os.getenv("OLLAMA_TEMPERATURE", "0.7"))
 DEFAULT_TIMEOUT = float(os.getenv("OLLAMA_TIMEOUT", "60"))
-
-
-class OllamaError(RuntimeError):
-    pass
 
 
 def _parse_error_body(body: bytes) -> Optional[str]:
@@ -49,12 +46,6 @@ def _build_chat_payload(
         "stream": stream,
         "options": {"temperature": DEFAULT_TEMPERATURE if temperature is None else temperature},
     }
-
-
-@dataclass
-class ChatChunk:
-    content: str = ""
-    reasoning: str = ""
 
 
 def _iter_chat_chunks(
