@@ -116,7 +116,7 @@
     <div class="relative min-h-0 flex-1">
       <div
         aria-hidden="true"
-        class="pointer-events-none absolute inset-0 bg-gradient-to-b from-[rgba(14,14,21,0.92)] via-[rgba(11,15,33,0.96)] to-[rgba(7,9,17,0.98)]"
+        class="pointer-events-none absolute inset-0 bg-gradient-to-b from-[rgba(14,14,21,0.92)] via-[rgba(12,18,44,0.96)] to-[rgba(6,8,18,0.98)]"
       ></div>
 
       <div
@@ -160,7 +160,7 @@
           <!-- 用户消息：气泡样式 -->
           <div v-if="msg.role === 'user'" class="flex max-w-[75%] flex-col items-end md:max-w-[70%]">
             <div
-              class="relative w-full break-words rounded-2xl rounded-tr-sm bg-gradient-to-br from-[rgba(214,160,96,0.45)] to-[rgba(240,192,122,0.35)] px-4 py-3 backdrop-blur-md border border-[rgba(240,192,122,0.5)]"
+              class="relative w-full break-words rounded-2xl rounded-br-sm bg-gradient-to-br from-[rgba(214,160,96,0.45)] to-[rgba(240,192,122,0.35)] px-4 py-3 backdrop-blur-md border border-[rgba(240,192,122,0.5)]"
             >
               <div class="text-sm leading-relaxed text-[var(--text)]" v-html="renderMessageContent(msg.content)"></div>
             </div>
@@ -170,7 +170,7 @@
           <!-- AI 回复：毛玻璃圆角框包裹内容，点赞按钮在框外 -->
           <div v-else class="w-full">
             <!-- AI 回复内容框：毛玻璃深蓝背景 -->
-            <div class="rounded-2xl border border-[rgba(255,255,255,0.1)] bg-[rgba(20,28,50,0.25)] px-4 py-3 backdrop-blur-sm">
+            <div class="rounded-2xl rounded-bl-sm border border-[rgba(255,255,255,0.1)] bg-[rgba(20,28,50,0.25)] px-4 py-3 backdrop-blur-sm">
               <div class="text-sm leading-relaxed text-[var(--text)]" v-html="renderMessageContent(msg.content)"></div>
             </div>
             <!-- 点赞点踩按钮：在框外，只在非流式状态且有内容时显示 -->
@@ -243,7 +243,7 @@
       </div>
 
       <!-- 悬浮输入面板：毛玻璃 + 全圆角 -->
-      <div class="flex flex-col gap-1.5 rounded-3xl border border-[rgba(255,255,255,0.15)] bg-[rgba(18,20,28,0.35)] px-1.5 py-2 shadow-[0_-8px_16px_rgba(10,10,10,0.55)] backdrop-blur-xl">
+      <div class="flex flex-col gap-1.5 rounded-3xl border border-[rgba(233,201,163,0.2)] bg-[rgba(18,20,28,0.35)] px-1.5 py-2 shadow-[0_-8px_16px_rgba(10,10,10,0.55)] backdrop-blur-xl">
         <!-- 上层：输入区域（点击进入输入状态） -->
         <div class="flex" @click="focusInput">
           <textarea
@@ -318,8 +318,23 @@
             @click="handleSendOrStop"
             :aria-label="isStreamingActive ? '停止' : '发送'"
           >
-            <!-- 发送图标：使用 arrow-up.png -->
-            <img v-if="!isStreamingActive" :src="arrowUpIconUrl" alt="" class="h-4 w-4 object-contain" />
+            <!-- 发送图标：SVG 向上箭头（深色） -->
+            <svg
+              v-if="!isStreamingActive"
+              class="h-5 w-5 text-[#0a0604]"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="3"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 20V4" />
+              <path d="M6 10l6-6 6 6" />
+            </svg>
             <!-- 停止图标：带圆角的矩形 -->
             <svg v-else width="12" height="12" viewBox="0 0 14 14" fill="currentColor" class="text-white">
               <rect x="0" y="0" width="14" height="14" rx="2" ry="2"/>
@@ -491,7 +506,6 @@ import { ref, computed, nextTick, onMounted, onActivated, onUnmounted, watch } f
 import logoNavUrl from "../assets/logo-nav.png";
 import logoAvatarUrl from "../assets/logo-bazi_meow.png";
 import chatNewIconUrl from "../assets/chat_new.png";
-import arrowUpIconUrl from "../assets/arrow-up.png";
 import thumbUpUrl from "../assets/thumb-up.png";
 import thumbDownUrl from "../assets/thumb-down.png";
 import { useUnifiedChatStore } from "../composables/useUnifiedChatStore";

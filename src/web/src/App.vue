@@ -107,12 +107,18 @@ const isHomePage = computed(() => layoutRoute.value.path === '/');
 
 // 是否显示浮动聊天按钮（排除聊天页面和首页）
 const showChatFab = computed(() => {
-  const path = route.path;
-  // 聊天页面不显示
-  if (path === '/chat' || path === '/bazi/chat') return false;
-  // 首页不显示
-  if (path === '/') return false;
-  return true;
+  // 注意：overlay(/chat) 打开时，route.path 是 /chat，但布局背景页是 layoutRoute
+  // 我们希望“浮动对话按钮”只在主要模块出现：命盘解析(/bazi/chart/*)、双人合盘(/compatibility)、命理百科(/encyclopedia)
+  // 其他页面（首页、填写生辰信息、档案管理、个人中心等）不显示
+
+  // 聊天页面本身不显示
+  if (route.path === '/chat' || route.path === '/bazi/chat') return false;
+
+  const path = layoutRoute.value.path;
+  if (path.startsWith('/bazi/chart/')) return true;
+  if (path.startsWith('/compatibility')) return true;
+  if (path.startsWith('/encyclopedia')) return true;
+  return false;
 });
 
 // 当前页面类型（用于侧边导航/移动端菜单高亮）
