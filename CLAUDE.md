@@ -105,6 +105,7 @@ curl -X POST http://127.0.0.1:8000/api/bazi/report \
 ### 代码风格
 - Python 使用 Black 格式化（4 空格缩进）和 Ruff 静态检查
 - 前端使用 TypeScript，尽量添加类型注解
+- 前端样式使用tailwindcss4实现
 - **关键业务逻辑和语法处需添加中文注释**（维护者对前端不熟悉）
 
 ### 核心数据流

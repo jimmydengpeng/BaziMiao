@@ -578,6 +578,14 @@ class BaziPaipanEngine:
                 counts[hidden.element] += 1
         return counts
 
+    def _calculate_five_elements_no_hidden(self, pillars: List[PillarInfo]) -> Dict[str, int]:
+        """仅统计天干和地支，不含藏干"""
+        counts = {"木": 0, "火": 0, "土": 0, "金": 0, "水": 0}
+        for pillar in pillars:
+            counts[pillar.heaven_stem.element] += 1
+            counts[pillar.earth_branch.element] += 1
+        return counts
+
     def _calculate_five_elements_ratio(self, counts: Dict[str, int]) -> Dict[str, float]:
         total = sum(counts.values())
         if total == 0:
@@ -606,7 +614,7 @@ class BaziPaipanEngine:
         )
         first_cycle_year = qiyun_date_solar.year
 
-        for i in range(8):
+        for i in range(12):
             current_gz_index = (current_gz_index + 1) % 60 if is_forward else (current_gz_index - 1 + 60) % 60
             gz = self.SEXAGENARY_CYCLE[current_gz_index]
             stem = gz[0]
@@ -621,6 +629,13 @@ class BaziPaipanEngine:
                     year=first_cycle_year + i * 10,
                 )
             )
+
+        current_year = datetime.now().year
+        for idx, pillar in enumerate(destiny_pillars):
+            next_year = destiny_pillars[idx + 1].year if idx + 1 < len(destiny_pillars) else None
+            if current_year >= pillar.year and (next_year is None or current_year < next_year):
+                pillar.is_current = True
+                break
 
         return DestinyCycleInfo(
             destiny_pillars=destiny_pillars,

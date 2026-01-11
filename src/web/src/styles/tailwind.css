@@ -18,11 +18,15 @@
 
   /* 复用型面板与按钮 */
   .panel-card {
-    @apply rounded-2xl border px-5 py-5;
+    @apply rounded-2xl border px-2 py-2;
     background: var(--surface-card);
     border-color: var(--border);
     box-shadow: var(--shadow-soft);
     backdrop-filter: blur(16px);
+  }
+
+  .panel-tag {
+    @apply rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-2 py-1 text-xs text-[var(--muted)];
   }
 
   .panel-tile {
@@ -297,14 +301,6 @@
     background: rgba(150, 150, 150, 0.15);
     color: var(--muted);
     border: 1px solid rgba(150, 150, 150, 0.3);
-  }
-
-  .ganzi-note {
-    font-size: 12px;
-    line-height: 1.6;
-    padding: 10px;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 8px;
   }
 
   /* Markdown 渲染 */

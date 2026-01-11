@@ -11,7 +11,7 @@ from typing import Any, Dict, Iterator, List, Optional, Union
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 
-from src.api.schemas import ChartRequest, ChatRequest, ReportRequest, PillarSearchRequest, GeneralChatRequest, FeedbackRequest
+from src.api.schemas import ChartRequest, ChatRequest, ReportRequest, PillarSearchRequest, GeneralChatRequest, FeedbackRequest, EnergyAnalysisRequest
 import logging
 
 # 配置日志
@@ -328,6 +328,36 @@ def submit_feedback(payload: FeedbackRequest):
         f"message: {payload.message_id}, feedback: {payload.feedback}"
     )
     return {"ok": True, "message": "反馈已记录"}
+
+
+@app.post("/api/bazi/energy-analysis")
+def analyze_energy(payload: EnergyAnalysisRequest):
+    """
+    五行能量智能分析接口
+    基于四柱八字和藏干信息，让 AI 智能分析命局中五行的强弱
+    """
+    from src.api.energy_prompt import build_energy_analysis_prompt
+
+    try:
+        chart_data = payload.chart
+        prompt_text = build_energy_analysis_prompt(chart_data)
+
+        provider = _resolve_llm_provider()
+        # 不启用思考模式，快速返回结果
+        messages = [{"role": "system", "content": "你是一位专业的八字命理师，请严格按要求的 JSON 格式输出分析结果。"}, {"role": "user", "content": prompt_text}]
+
+        raw_text = chat(messages, provider=provider, enable_thinking=False)
+        result = _extract_json(raw_text)
+
+        if not result or "elements" not in result:
+            # 解析失败，返回错误信息
+            raise HTTPException(status_code=502, detail="AI 返回格式解析失败")
+
+        return result
+    except LLMError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"分析失败: {exc}") from exc
 
 
 def _prepare_report_context(payload: ReportRequest):

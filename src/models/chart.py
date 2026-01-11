@@ -45,6 +45,7 @@ class DestinyPillarInfo(BaseModel):
     heaven_stem: HeavenStemInfo
     earth_branch: EarthBranchInfo
     year: int
+    is_current: bool = Field(default=False, description="是否当前大运")
 
 
 class DestinyCycleInfo(BaseModel):

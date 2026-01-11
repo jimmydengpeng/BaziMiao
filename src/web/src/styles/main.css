@@ -4,6 +4,7 @@
   --panel: #0f0f12;
   --accent: #d6a060;
   --accent-2: #f0c07a;
+  --accent-3: #876d46;
   --accent-red: #c8102e;
   --text: #e8ecf3;
   --muted: #9aa6b2;
@@ -95,7 +96,38 @@ a {
   font-family: var(--font-ui-sans);
 }
 
-/* 兼容旧 class 名称（历史原因：原本只给“深度思考”按钮用） */
+/* 兼容旧 class 名称（历史原因：原本只给"深度思考"按钮用） */
 .deep-thinking-font {
   font-family: var(--font-ui-sans);
+}
+
+/* ========== 图片滤镜 ========== */
+/* 金色滤镜：将灰色图片转为金色调 */
+.filter-gold {
+  filter: sepia(1) saturate(2) hue-rotate(5deg) brightness(0.95);
+}
+
+/* 金色滤镜变体：更亮一些 */
+.filter-gold-light {
+  filter: sepia(1) saturate(2.5) hue-rotate(8deg) brightness(1.05);
+}
+
+/* 金色滤镜变体：更暗沉 */
+.filter-gold-dark {
+  filter: sepia(1) saturate(1.8) hue-rotate(0deg) brightness(0.9);
+}
+
+/* 移除滤镜（还原原色） */
+.filter-none {
+  filter: none;
+}
+
+/* 亮度增强 */
+.filter-brightness {
+  filter: brightness(1.2);
+}
+
+/* 通用：基于 CSS 变量的主题色滤镜（需要配合 style 属性指定颜色） */
+.filter-theme-color {
+  filter: sepia(1) saturate(2) hue-rotate(var(--hue-rotate, 0deg));
 }

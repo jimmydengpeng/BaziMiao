@@ -32,11 +32,11 @@
         ref="hintBubbleRef"
         class="
           absolute bottom-[calc(100%+10px)] z-20 max-w-[min(240px,calc(100vw-48px))] pointer-events-none
-          rounded-2xl border border-[var(--accent-2)] bg-[rgba(240,192,122,0.35)] px-3 py-2
+          rounded-2xl border border-[var(--accent-3)] bg-[rgba(240,192,122,0.35)] px-3 py-2
           text-[13px] leading-5 text-[rgba(255,255,255,0.92)] shadow-[0_16px_34px_rgba(0,0,0,0.35),0_0_8px_rgba(240,192,122,0.3)]
           backdrop-blur-lg
         "
-        :class="fabState.side === 'right' ? 'right-0 rounded-br-[6px]' : 'left-0 rounded-bl-[6px]'"
+        :class="fabState.side === 'right' ? 'right-0 rounded-br-xs' : 'left-0 rounded-bl-xs'"
         role="status"
         aria-live="polite"
       >

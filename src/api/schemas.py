@@ -84,3 +84,8 @@ class FeedbackRequest(BaseModel):
     session_id: str = Field(..., description="会话 ID")
     message_id: str = Field(..., description="消息 ID")
     feedback: Optional[Literal["like", "dislike"]] = Field(None, description="反馈类型，null 表示取消反馈")
+
+
+class EnergyAnalysisRequest(BaseModel):
+    """五行能量智能分析请求"""
+    chart: Dict = Field(..., description="命盘数据")

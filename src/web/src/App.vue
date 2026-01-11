@@ -96,8 +96,8 @@ const FORCE_CHAT_FAB_HINT = false;
 const FORCE_CHAT_FAB_HINT_TEXT = '要不要，我帮你看看？';
 
 // 命盘页提示策略（可按体感微调）
-const CHART_ENTRY_HINT_DELAY_MS = 1000; // 从其他页面进入命盘解析后，5s 后提示
-const CHART_ENTRY_HINT_DURATION_MS = 50000; // 气泡持续显示 3s
+const CHART_ENTRY_HINT_DELAY_MS = 5000; // 从其他页面进入命盘解析后，5s 后提示
+const CHART_ENTRY_HINT_DURATION_MS = 5000; // 气泡持续显示 5s
 
 const chatFabHintText = ref<string | null>(null);
 const chatFabHintVisible = ref(false);

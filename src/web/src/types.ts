@@ -36,6 +36,7 @@ export interface DestinyPillarInfo {
   heaven_stem: HeavenStemInfo;
   earth_branch: EarthBranchInfo;
   year: number;
+  is_current?: boolean;
 }
 
 export interface DestinyCycleInfo {
@@ -200,4 +201,21 @@ export interface MatchedDate {
 export interface PillarSearchResponse {
   matched_dates: MatchedDate[];
   total_count: number;
+}
+
+// 五行能量智能分析结果
+export interface SmartEnergyElement {
+  score: number;
+  description: string;
+}
+
+export interface SmartEnergyResult {
+  elements: {
+    木: SmartEnergyElement;
+    火: SmartEnergyElement;
+    土: SmartEnergyElement;
+    金: SmartEnergyElement;
+    水: SmartEnergyElement;
+  };
+  summary: string;
 }

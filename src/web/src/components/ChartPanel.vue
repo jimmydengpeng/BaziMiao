@@ -3,293 +3,164 @@
     <div v-if="!chart" class="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[var(--panel)] p-5 text-[var(--muted)]">
       生成后会显示命盘信息。
     </div>
-    <div v-else class="flex flex-col gap-4">
+    <div v-else class="flex flex-col gap-2.5 mt-1">
       <!-- 基本信息卡片 -->
       <div class="overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.65)] backdrop-blur-[16px]">
-        <!-- 标题栏：姓名 + 农历生日 + 排盘设置 -->
-        <div class="flex items-center justify-between gap-4 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-5 py-4">
-          <div class="flex items-baseline gap-3 flex-wrap">
-            <span class="text-xl font-bold tracking-wide text-[var(--accent-2)]">{{ chart.name || "命主" }}</span>
-            <span class="text-sm text-[var(--muted)]">{{ lunarBirthText }}</span>
+        <!-- 标题栏：姓名 + 农历生日 + 基础/专业切换 -->
+        <div class="flex items-center justify-between gap-1 border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 pr-2 py-3 pb-2">
+          <div class="flex flex-1 flex-wrap items-center content-start gap-x-3 gap-y-1 min-w-0 text-left">
+            <span class="text-xl font-bold tracking-wide text-(--accent-2) truncate whitespace-nowrap">{{ chart.name || "命主" }}</span>
+            <span class="text-sm text-(--white) whitespace-nowrap">{{ lunarBirthText }}</span>
           </div>
-          <button
-            class="flex items-center gap-1.5 rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-3.5 py-2 text-[13px] text-[var(--muted)] transition-all duration-200 hover:bg-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.2)] hover:text-[var(--text)]"
-            type="button"
-          >
-            排盘设置
-            <span class="text-base font-semibold">›</span>
-          </button>
-        </div>
-
-        <!-- 第一模块：时间地点信息 -->
-        <div class="grid grid-cols-2 gap-3 border-b border-[rgba(255,255,255,0.06)] px-5 py-4">
-          <div class="flex items-center gap-3">
-            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">阳历</span>
-            <span class="flex-1 text-sm text-[var(--text)]">{{ solarText }}</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">真太阳时</span>
-            <span class="flex-1 text-sm text-[var(--text)]">{{ trueSolarText }}</span>
-          </div>
-          <div class="col-span-2 flex items-center gap-3">
-            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">出生地区</span>
-            <span class="flex-1 text-sm text-[var(--text)]">
-              <template v-if="!chart.birth_place || chart.birth_place === '未知地区'">
-                未知区域<span class="ml-0.5 text-[13px] text-[var(--muted)]">（不使用真太阳时）</span>
-              </template>
-              <template v-else>{{ chart.birth_place }}</template>
+          <!-- 基础/专业切换按钮 -->
+          <div class="relative ml-auto inline-flex shrink-0 cursor-pointer items-center rounded-3xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,17,24,0.9)] p-0.5">
+            <span
+              v-for="mode in ['basic', 'pro']"
+              :key="mode"
+              :class="[
+                'relative z-[1] w-[52px] rounded-3xl px-3 py-1.5 text-center text-[12px] font-medium transition-colors duration-200',
+                infoMode === mode ? 'text-white' : 'text-white/65'
+              ]"
+              @click="setInfoMode(mode as 'basic' | 'pro')"
+            >
+              {{ mode === 'basic' ? '基本' : '详细' }}
             </span>
-          </div>
-          <div class="col-span-2 flex items-center gap-3">
-            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">出生节气</span>
-            <span class="flex-1 text-sm text-[var(--text)]">{{ jieqiText }}</span>
-          </div>
-        </div>
-
-        <!-- 第二模块：个人属性信息 -->
-        <div class="grid grid-cols-2 gap-3 border-b border-[rgba(255,255,255,0.06)] px-5 py-4">
-          <div class="flex items-center gap-3">
-            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">性别</span>
-            <span class="flex flex-1 items-center gap-1.5 text-sm text-[var(--text)]">
-              <span>{{ genderText }}</span>
-              <img
-                v-if="chart.gender === 'male'"
-                :src="maleIconUrl"
-                alt="男"
-                class="h-[18px] w-[18px] object-contain"
-              />
-              <img
-                v-else-if="chart.gender === 'female'"
-                :src="femaleIconUrl"
-                alt="女"
-                class="h-[18px] w-[18px] object-contain"
-              />
-              <span class="text-sm font-medium text-[var(--accent-2)]">{{ genderType }}</span>
-            </span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">属相</span>
-            <span class="flex-1 text-sm text-[var(--text)]">{{ chart.zodiac_animal || "未知" }}</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">星座</span>
-            <span class="flex-1 text-sm text-[var(--text)]">{{ chart.zodiac_sign || "未知" }}</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">星宿</span>
-            <span class="flex-1 text-sm text-[var(--text)]">{{ chart.star_mansion || "未知" }}</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">命主五行</span>
-            <span class="flex-1 text-sm text-[var(--text)]">
-              <span :class="elementClass(chart.day_master.element)">
-                {{ chart.day_master_display || dayMasterDisplay }}
-              </span>
-            </span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">天运五行</span>
-            <span class="flex-1 text-sm text-[var(--text)]">{{ chart.fortune_element || "未知" }}</span>
+            <div
+              :class="[
+                'absolute left-0.5 top-0.5 z-0 h-[calc(100%-4px)] w-[52px] rounded-3xl bg-[rgba(176,184,210,0.1)] shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
+                infoMode === 'pro' ? 'translate-x-[52px]' : ''
+              ]"
+            ></div>
           </div>
         </div>
 
-        <!-- 第三模块：命理要素 -->
-        <div class="grid grid-cols-2 gap-3 px-5 py-4">
-          <div class="flex items-center gap-3">
-            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">胎元</span>
-            <span class="flex-1 text-sm text-[var(--text)]">{{ taiYuanText }}</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">胎息</span>
-            <span class="flex-1 text-sm text-[var(--text)]">{{ taiXiText }}</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">身宫</span>
-            <span class="flex-1 text-sm text-[var(--text)]">{{ shenGongText }}</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">命宫</span>
-            <span class="flex-1 text-sm text-[var(--text)]">{{ mingGongText }}</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">人元司令分野</span>
-            <span class="flex-1 text-sm text-[var(--text)]">{{ chart.ren_yuan_si_ling || "未知" }}</span>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="inline-flex min-w-[72px] items-center justify-center rounded-lg border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)] px-3 py-1.5 text-xs font-medium tracking-wide text-[rgba(180,190,210,0.9)]">空亡</span>
-            <span class="flex-1 text-sm text-[var(--text)]">{{ chart.kong_wang || "未知" }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 八字命盘卡片 -->
-      <div class="rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.65)] p-5 backdrop-blur-[16px]">
-        <div class="mb-4 flex items-center justify-between gap-3 border-b border-[rgba(255,255,255,0.08)] pb-3">
-          <div class="text-base font-semibold text-[var(--accent-2)]">八字命盘</div>
-          <span class="rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-2 py-1 text-xs text-[var(--muted)]">四柱八字</span>
-        </div>
-        <div class="mb-4 overflow-hidden rounded-[14px] border border-[rgba(255,255,255,0.08)]">
-          <div class="grid grid-cols-[64px_repeat(4,minmax(0,1fr))] bg-[rgba(255,255,255,0.06)] font-semibold text-[13px]">
-            <div class="px-2 py-3 text-left text-xs text-[var(--muted)]"></div>
-            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-sm">年柱</div>
-            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-sm">月柱</div>
-            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-sm">日柱</div>
-            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-sm">时柱</div>
-          </div>
-          <div class="grid grid-cols-[64px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
-            <div class="px-2 py-3 text-left text-xs text-[var(--muted)]">主星</div>
-            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-xs text-[var(--muted)]">{{ chart.year_pillar.heaven_stem.ten_god }}</div>
-            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-xs text-[var(--muted)]">{{ chart.month_pillar.heaven_stem.ten_god }}</div>
-            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-xs text-[var(--muted)]">{{ chart.day_pillar.heaven_stem.ten_god }}</div>
-            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-xs text-[var(--muted)]">{{ chart.hour_pillar.heaven_stem.ten_god }}</div>
-          </div>
-          <div class="grid grid-cols-[64px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
-            <div class="px-2 py-3 text-left text-xs text-[var(--muted)]">天干</div>
-            <div class="flex items-center justify-center gap-1.5 px-2 py-3 text-center">
-              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.year_pillar.heaven_stem.element)]">
-                {{ chart.year_pillar.heaven_stem.name }}
+        <!-- 基础信息模块（始终显示） -->
+        <div class="flex flex-col">
+          <div :class="infoGridClass" ref="infoGridRef">
+            <div
+              v-for="item in basicInfoItems"
+              :key="item.key"
+              :class="[infoItemClass, item.spanClass]"
+            >
+              <span :class="infoLabelClass">{{ item.label }}</span>
+              <span v-if="item.type === 'gender'" :class="infoValueInlineClass">
+                <span>{{ item.value }}</span>
+                <img
+                  v-if="chart.gender === 'male'"
+                  :src="maleIconUrl"
+                  alt="男"
+                  class="h-3.5 w-3.5 object-contain"
+                />
+                <img
+                  v-else-if="chart.gender === 'female'"
+                  :src="femaleIconUrl"
+                  alt="女"
+                  class="h-3.5 w-3.5 object-contain"
+                />
               </span>
-              <span class="text-sm opacity-80">{{ elementIcon(chart.year_pillar.heaven_stem.element) }}</span>
-            </div>
-            <div class="flex items-center justify-center gap-1.5 px-2 py-3 text-center">
-              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.month_pillar.heaven_stem.element)]">
-                {{ chart.month_pillar.heaven_stem.name }}
+              <span v-else-if="item.type === 'element'" :class="[infoValueClass, item.noWrap ? infoValueNoWrapClass : '']">
+                <span :class="elementClass(item.element || '')">
+                  {{ item.display }}
+                </span>
               </span>
-              <span class="text-sm opacity-80">{{ elementIcon(chart.month_pillar.heaven_stem.element) }}</span>
-            </div>
-            <div class="flex items-center justify-center gap-1.5 px-2 py-3 text-center">
-              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.day_pillar.heaven_stem.element)]">
-                {{ chart.day_pillar.heaven_stem.name }}
+              <span v-else-if="item.type === 'birthPlace'" :class="[infoValueClass, item.noWrap ? infoValueNoWrapClass : '']">
+                <template v-if="item.isUnknown">
+                  未知区域<span class="ml-0.5 text-[11px] text-[var(--muted)]">（不使用真太阳时）</span>
+                </template>
+                <template v-else>{{ item.value }}</template>
               </span>
-              <span class="text-sm opacity-80">{{ elementIcon(chart.day_pillar.heaven_stem.element) }}</span>
-            </div>
-            <div class="flex items-center justify-center gap-1.5 px-2 py-3 text-center">
-              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.hour_pillar.heaven_stem.element)]">
-                {{ chart.hour_pillar.heaven_stem.name }}
-              </span>
-              <span class="text-sm opacity-80">{{ elementIcon(chart.hour_pillar.heaven_stem.element) }}</span>
-            </div>
-          </div>
-          <div class="grid grid-cols-[64px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
-            <div class="px-2 py-3 text-left text-xs text-[var(--muted)]">地支</div>
-            <div class="flex items-center justify-center gap-1.5 px-2 py-3 text-center">
-              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.year_pillar.earth_branch.element)]">
-                {{ chart.year_pillar.earth_branch.name }}
-              </span>
-              <span class="text-sm opacity-80">{{ elementIcon(chart.year_pillar.earth_branch.element) }}</span>
-            </div>
-            <div class="flex items-center justify-center gap-1.5 px-2 py-3 text-center">
-              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.month_pillar.earth_branch.element)]">
-                {{ chart.month_pillar.earth_branch.name }}
-              </span>
-              <span class="text-sm opacity-80">{{ elementIcon(chart.month_pillar.earth_branch.element) }}</span>
-            </div>
-            <div class="flex items-center justify-center gap-1.5 px-2 py-3 text-center">
-              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.day_pillar.earth_branch.element)]">
-                {{ chart.day_pillar.earth_branch.name }}
-              </span>
-              <span class="text-sm opacity-80">{{ elementIcon(chart.day_pillar.earth_branch.element) }}</span>
-            </div>
-            <div class="flex items-center justify-center gap-1.5 px-2 py-3 text-center">
-              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.hour_pillar.earth_branch.element)]">
-                {{ chart.hour_pillar.earth_branch.name }}
-              </span>
-              <span class="text-sm opacity-80">{{ elementIcon(chart.hour_pillar.earth_branch.element) }}</span>
-            </div>
-          </div>
-          <div class="grid grid-cols-[64px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
-            <div class="px-2 py-3 text-left text-xs text-[var(--muted)]">藏干</div>
-            <div class="flex flex-col gap-0.5 px-2 py-3 text-center text-[13px]">
-              <span
-                v-for="stem in chart.year_pillar.earth_branch.hidden_stems"
-                :key="stem.name"
-                :class="elementClass(stem.element)"
-              >
-                {{ stem.name }}
-              </span>
-            </div>
-            <div class="flex flex-col gap-0.5 px-2 py-3 text-center text-[13px]">
-              <span
-                v-for="stem in chart.month_pillar.earth_branch.hidden_stems"
-                :key="stem.name"
-                :class="elementClass(stem.element)"
-              >
-                {{ stem.name }}
-              </span>
-            </div>
-            <div class="flex flex-col gap-0.5 px-2 py-3 text-center text-[13px]">
-              <span
-                v-for="stem in chart.day_pillar.earth_branch.hidden_stems"
-                :key="stem.name"
-                :class="elementClass(stem.element)"
-              >
-                {{ stem.name }}
-              </span>
-            </div>
-            <div class="flex flex-col gap-0.5 px-2 py-3 text-center text-[13px]">
-              <span
-                v-for="stem in chart.hour_pillar.earth_branch.hidden_stems"
-                :key="stem.name"
-                :class="elementClass(stem.element)"
-              >
-                {{ stem.name }}
-              </span>
-            </div>
-          </div>
-          <div class="grid grid-cols-[64px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
-            <div class="px-2 py-3 text-left text-xs text-[var(--muted)]">副星</div>
-            <div class="flex flex-col gap-0.5 px-2 py-3 text-center text-[11px] text-[var(--muted)]">
-              <span v-for="stem in chart.year_pillar.earth_branch.hidden_stems" :key="stem.name">
-                {{ stem.ten_god }}
-              </span>
-            </div>
-            <div class="flex flex-col gap-0.5 px-2 py-3 text-center text-[11px] text-[var(--muted)]">
-              <span v-for="stem in chart.month_pillar.earth_branch.hidden_stems" :key="stem.name">
-                {{ stem.ten_god }}
-              </span>
-            </div>
-            <div class="flex flex-col gap-0.5 px-2 py-3 text-center text-[11px] text-[var(--muted)]">
-              <span v-for="stem in chart.day_pillar.earth_branch.hidden_stems" :key="stem.name">
-                {{ stem.ten_god }}
-              </span>
-            </div>
-            <div class="flex flex-col gap-0.5 px-2 py-3 text-center text-[11px] text-[var(--muted)]">
-              <span v-for="stem in chart.hour_pillar.earth_branch.hidden_stems" :key="stem.name">
-                {{ stem.ten_god }}
-              </span>
+              <span v-else :class="[infoValueClass, item.noWrap ? infoValueNoWrapClass : '']">{{ item.value }}</span>
             </div>
           </div>
         </div>
 
-        <!-- 五行统计摘要 -->
-        <div class="flex flex-wrap justify-center gap-2.5">
-          <div
-            v-for="item in elementCounts"
-            :key="item.label"
-            class="inline-flex items-center gap-1.5 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(15,20,33,0.6)] px-3 py-2 text-[13px] transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(255,255,255,0.2)]"
-          >
-            <span :class="['h-2 w-2 rounded-full', elementClass(item.label)]"></span>
-            <span :class="elementClass(item.label)">{{ item.label }}</span>
-            <span class="text-xs text-[var(--muted)]">{{ item.value }}</span>
+        <!-- 专业信息模块（专业模式下额外显示） -->
+        <div v-show="infoMode === 'pro'" class="flex flex-col">
+          <!-- 分隔线 -->
+          <div class="border-t border-[rgba(255,255,255,0.08)] my-1 mx-4"></div>
+          <div :class="infoGridClass">
+            <div
+              v-for="item in proInfoItems"
+              :key="item.key"
+              :class="[infoItemClass, item.spanClass]"
+            >
+              <span :class="infoLabelClass">{{ item.label }}</span>
+              <span v-if="item.type === 'element'" :class="[infoValueClass, item.noWrap ? infoValueNoWrapClass : '']">
+                <span :class="elementClass(item.element || '')">
+                  {{ item.display }}
+                </span>
+              </span>
+              <span v-else :class="[infoValueClass, item.noWrap ? infoValueNoWrapClass : '']">{{ item.value }}</span>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- 五行能量卡片 -->
-      <div class="flex flex-col gap-3 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.65)] p-5 backdrop-blur-[16px]">
-        <div class="mb-4 flex items-center justify-between gap-3 border-b border-[rgba(255,255,255,0.08)] pb-3">
-          <div class="text-base font-semibold text-[var(--accent-2)]">五行能量</div>
-          <span class="rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-2 py-1 text-xs text-[var(--muted)]">命理分析</span>
-        </div>
-        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <!-- 雷达图 -->
-          <div class="flex flex-col gap-3">
-            <div class="mb-2 flex items-center gap-2 text-[13px]">
-              <strong>五行雷达图</strong>
-              <span class="text-[var(--muted)]">最高占比为满格</span>
+      <div class="panel-card">
+        <PanelHeader title="五行能量">
+          <template #actions>
+            <div class="flex items-center gap-2">
+              <!-- 基础/专业切换按钮 -->
+              <div class="relative inline-flex cursor-pointer items-center rounded-3xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,17,24,0.9)] p-0.5">
+                <span
+                  v-for="mode in energyModes"
+                  :key="mode.value"
+                  :class="[
+                    'relative z-[1] w-[52px] rounded-3xl px-3 py-1.5 text-center text-[12px] font-medium transition-colors duration-200',
+                    energyMode === mode.value ? 'text-white' : 'text-white/65'
+                  ]"
+                  @click="setEnergyMode(mode.value)"
+                >
+                  {{ mode.label }}
+                </span>
+                <div
+                  v-if="energyMode !== 'smart'"
+                  :class="[
+                    'absolute left-0.5 top-0.5 z-0 h-[calc(100%-4px)] w-[52px] rounded-3xl bg-[rgba(176,184,210,0.1)] shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
+                    energyMode === 'pro' ? 'translate-x-[52px]' : ''
+                  ]"
+                ></div>
+              </div>
+
+              <!-- 智能解析按钮 -->
+              <button
+                :class="[
+                  'flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[12px] font-medium transition-all duration-200',
+                  energyMode === 'smart'
+                    ? 'border-[rgba(214,160,96,0.5)] bg-[rgba(214,160,96,0.15)] text-[var(--accent-2)]'
+                    : 'border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] text-white/65 hover:bg-[rgba(255,255,255,0.08)]'
+                ]"
+                @click="setEnergyMode('smart')"
+              >
+                AI智能分析
+                <img
+                  :src="sparkleIconUrl"
+                  :class="[
+                    'h-3 w-3 align-middle',
+                    energyMode === 'smart' ? 'filter-gold' : 'opacity-60'
+                  ]"
+                  alt="智能"
+                />
+              </button>
             </div>
+          </template>
+        </PanelHeader>
+        <div class="grid grid-cols-1 gap-0 lg:grid-cols-2">
+          <!-- 雷达图 -->
+          <div class="flex flex-col gap-1">
             <div class="flex justify-center">
-              <svg class="w-full max-w-[280px] lg:max-w-[320px]" viewBox="0 0 400 400" role="img" aria-label="五行雷达图">
+              <!-- 智能解析加载状态 -->
+              <div v-if="energyMode === 'smart' && smartEnergyLoading" class="flex flex-col items-center justify-center h-[320px] w-[280px] lg:w-[320px]">
+                <div class="relative">
+                  <div class="h-16 w-16 animate-spin rounded-full border-4 border-[rgba(255,255,255,0.1)] border-t-[var(--accent-2)]"></div>
+                  <img :src="sparkleIconUrl" class="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 transform opacity-80" alt="加载中" />
+                </div>
+                <p class="mt-4 text-sm text-[var(--muted)]">AI 正在分析五行能量...</p>
+              </div>
+
+              <!-- 雷达图 SVG -->
+              <svg v-else class="w-full max-w-[280px] lg:max-w-[320px]" viewBox="0 0 400 400" role="img" aria-label="五行雷达图">
                 <g class="radar-grid">
                   <polygon
                     v-for="level in radarLevels"
@@ -305,16 +176,38 @@
                     :y2="axis.y"
                   />
                 </g>
-                <polygon class="radar-shape" :points="radarShapePoints" />
+                <!-- 智能解析模式使用智能雷达图数据 -->
+                <polygon
+                  v-if="energyMode === 'smart'"
+                  class="radar-shape"
+                  :points="smartRadarShapePoints"
+                />
+                <polygon
+                  v-else
+                  class="radar-shape"
+                  :points="radarShapePoints"
+                />
                 <g class="radar-dots">
-                  <circle
-                    v-for="(point, idx) in radarPoints"
-                    :key="`dot-${idx}`"
-                    :cx="point.x"
-                    :cy="point.y"
-                    r="7"
-                    :class="['radar-dot', elementClass(point.element)]"
-                  />
+                  <template v-if="energyMode === 'smart'">
+                    <circle
+                      v-for="(point, idx) in smartRadarPoints"
+                      :key="`dot-${idx}`"
+                      :cx="point.x"
+                      :cy="point.y"
+                      r="7"
+                      :class="['radar-dot', elementClass(point.element)]"
+                    />
+                  </template>
+                  <template v-else>
+                    <circle
+                      v-for="(point, idx) in radarPoints"
+                      :key="`dot-${idx}`"
+                      :cx="point.x"
+                      :cy="point.y"
+                      r="7"
+                      :class="['radar-dot', elementClass(point.element)]"
+                    />
+                  </template>
                 </g>
                 <g class="radar-labels">
                   <text
@@ -333,19 +226,23 @@
           </div>
 
           <!-- 五行占比 -->
-          <div class="flex flex-col gap-2.5 md:gap-3">
-            <div class="mb-1.5 flex items-center gap-2 text-xs md:mb-2 md:text-[13px]">
+          <div class="flex flex-col gap-2 md:gap-3">
+            <div class="mb-1.5 flex items-center gap-2 text-xs md:mb-2 md:text-[13px] px-3">
               <strong>五行占比</strong>
-              <span class="text-[var(--muted)]">基于天干与藏干统计</span>
+              <span class="text-[var(--muted)]">
+                <template v-if="energyMode === 'basic'">基于天干与地支个数统计</template>
+                <template v-else-if="energyMode === 'pro'">基于天干与藏干个数统计</template>
+                <template v-else>智能命盘五行与能量分析</template>
+              </span>
             </div>
-            <div class="flex flex-col gap-2.5 md:gap-3">
-              <div v-for="item in energyItems" :key="item.element" class="flex flex-col gap-1.5">
-                <div class="flex items-center justify-between gap-2 text-xs md:text-[13px]">
-                  <div class="flex items-center gap-1.5 md:gap-2">
+            <div class="flex flex-col gap-2 px-3 md:gap-3">
+              <div v-for="item in energyItems" :key="item.element" class="flex flex-col">
+                <div class="flex items-center gap-1 text-xs md:text-[13px]">
+                  <div class="flex items-center gap-1.5 md:gap-2 shrink-0">
                     <!-- 五行标识圆点：使用对应颜色 -->
                     <span
                       class="h-2.5 w-2.5 shrink-0 rounded-full shadow-[0_0_8px_currentColor]"
-                      :style="{ 
+                      :style="{
                         backgroundColor: elementColorMap[item.element],
                         color: elementColorMap[item.element],
                         boxShadow: `0 0 8px ${elementColorMap[item.element]}40`
@@ -353,103 +250,269 @@
                     ></span>
                     <!-- 五行名称：使用对应颜色 -->
                     <span
-                      class="font-semibold"
+                      class="font-semibold shrink-0"
                       :style="{ color: elementColorMap[item.element] }"
                     >{{ item.element }}</span>
-                    <span class="text-[10px] text-[var(--muted)] md:text-[11px]">{{ item.relation }}</span>
+                    <span class="text-[10px] text-[var(--muted)] md:text-[11px] shrink-0">{{ item.relation }}</span>
+                    <!-- 智能解析显示描述 -->
+                    <span v-if="energyMode === 'smart'" class="text-[10px] text-[var(--muted)] md:text-[11px]">
+                      <span class="mx-1 text-white/40">·</span>
+                    </span>
                   </div>
-                  <div class="flex items-center gap-2 md:gap-2.5">
+                  <!-- 智能解析的解释文本 -->
+                  <span v-if="energyMode === 'smart'" class="text-[10px] text-[var(--muted)] md:text-[11px] truncate">{{ item.description }}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <!-- 百分比条 -->
+                  <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)] md:h-2">
+                    <div
+                      class="h-full rounded-full transition-[width] duration-500"
+                      :style="{
+                        width: `${(item.ratio / (energyMode === 'smart' ? maxSmartScore : maxEnergyRatio)) * 100}%`,
+                        background: `linear-gradient(90deg, ${elementColorMap[item.element]}dd, ${elementColorMap[item.element]})`
+                      }"
+                    ></div>
+                  </div>
+                  <div class="flex items-center gap-1 md:gap-2.5 shrink-0">
                     <!-- 百分比：使用对应颜色 -->
                     <span
                       class="min-w-[42px] text-right text-xs font-semibold md:min-w-[48px] md:text-[13px]"
                       :style="{ color: elementColorMap[item.element] }"
                     >{{ formatPercent(item.ratio) }}</span>
-                    <span class="min-w-[24px] text-[10px] text-[var(--muted)] md:min-w-[28px] md:text-[11px]">{{ item.count }}个</span>
+                    <!-- 普通模式显示个数 -->
+                    <span v-if="energyMode !== 'smart'" class="min-w-[24px] text-right text-[10px] text-[var(--muted)] md:min-w-[28px] md:text-[11px]">{{ item.count }}个</span>
                   </div>
                 </div>
-                <!-- 百分比条：使用对应颜色的渐变 -->
-                <div class="h-1.5 overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)] md:h-2">
-                  <div
-                    class="h-full rounded-full transition-[width] duration-500"
-                    :style="{
-                      width: `${(item.ratio / maxEnergyRatio) * 100}%`,
-                      background: `linear-gradient(90deg, ${elementColorMap[item.element]}dd, ${elementColorMap[item.element]})`
-                    }"
-                  ></div>
-                </div>
               </div>
+            </div>
+            <!-- 智能解析总结 -->
+            <div v-if="energyMode === 'smart' && smartEnergyData?.summary" class="mt-1 px-3">
+              <p class="text-xs text-[var(--muted)] border-t border-[rgba(255,255,255,0.08)] pt-3 py-1">
+                <strong class="text-[var(--text)]">整体分析：</strong>{{ smartEnergyData.summary }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 八字命盘卡片 -->
+      <div class="panel-card">
+        <PanelHeader title="八字命盘"/>
+        <div class="mx-auto w-full max-w-[520px] overflow-hidden rounded-[14px] border border-[rgba(255,255,255,0.08)]">
+          <div class="mx-auto w-full max-w-[520px] grid grid-cols-[40px_repeat(4,minmax(0,1fr))] bg-[rgba(255,255,255,0.06)] font-semibold text-[13px]">
+            <div class="flex items-center justify-center py-3 text-xs text-[var(--muted)]"></div>
+            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-sm">年柱</div>
+            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-sm">月柱</div>
+            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-sm">日柱</div>
+            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-sm">时柱</div>
+          </div>
+          <div class="mx-auto w-full max-w-[520px] grid grid-cols-[40px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
+            <div class="flex items-center justify-center py-3 text-xs text-[var(--muted)]">主星</div>
+            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-xs text-[var(--muted)]">{{ chart.year_pillar.heaven_stem.ten_god }}</div>
+            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-xs text-[var(--muted)]">{{ chart.month_pillar.heaven_stem.ten_god }}</div>
+            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-xs text-[var(--muted)]">{{ chart.day_pillar.heaven_stem.ten_god }}</div>
+            <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-xs text-[var(--muted)]">{{ chart.hour_pillar.heaven_stem.ten_god }}</div>
+          </div>
+          <div class="mx-auto w-full max-w-[520px] grid grid-cols-[40px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
+            <div class="flex items-center justify-center py-3 text-xs text-[var(--muted)]">天干</div>
+            <div class="flex items-center justify-center px-2 py-3 text-center">
+              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.year_pillar.heaven_stem.element)]">
+                {{ chart.year_pillar.heaven_stem.name }}
+              </span>
+              <span class="text-sm opacity-80 ml-0.5">{{ elementIcon(chart.year_pillar.heaven_stem.element) }}</span>
+            </div>
+            <div class="flex items-center justify-center px-2 py-3 text-center">
+              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.month_pillar.heaven_stem.element)]">
+                {{ chart.month_pillar.heaven_stem.name }}
+              </span>
+              <span class="text-sm opacity-80 ml-0.5">{{ elementIcon(chart.month_pillar.heaven_stem.element) }}</span>
+            </div>
+            <div class="flex items-center justify-center px-2 py-3 text-center">
+              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.day_pillar.heaven_stem.element)]">
+                {{ chart.day_pillar.heaven_stem.name }}
+              </span>
+              <span class="text-sm opacity-80 ml-0.5">{{ elementIcon(chart.day_pillar.heaven_stem.element) }}</span>
+            </div>
+            <div class="flex items-center justify-center px-2 py-3 text-center">
+              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.hour_pillar.heaven_stem.element)]">
+                {{ chart.hour_pillar.heaven_stem.name }}
+              </span>
+              <span class="text-sm opacity-80 ml-0.5">{{ elementIcon(chart.hour_pillar.heaven_stem.element) }}</span>
+            </div>
+          </div>
+          <div class="mx-auto w-full max-w-[520px] grid grid-cols-[40px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
+            <div class="flex items-center justify-center py-3 text-xs text-[var(--muted)]">地支</div>
+            <div class="flex items-center justify-center px-2 py-3 text-center">
+              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.year_pillar.earth_branch.element)]">
+                {{ chart.year_pillar.earth_branch.name }}
+              </span>
+              <span class="text-sm opacity-80 ml-0.5">{{ elementIcon(chart.year_pillar.earth_branch.element) }}</span>
+            </div>
+            <div class="flex items-center justify-center px-2 py-3 text-center">
+              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.month_pillar.earth_branch.element)]">
+                {{ chart.month_pillar.earth_branch.name }}
+              </span>
+              <span class="text-sm opacity-80 ml-0.5">{{ elementIcon(chart.month_pillar.earth_branch.element) }}</span>
+            </div>
+            <div class="flex items-center justify-center px-2 py-3 text-center">
+              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.day_pillar.earth_branch.element)]">
+                {{ chart.day_pillar.earth_branch.name }}
+              </span>
+              <span class="text-sm opacity-80 ml-0.5">{{ elementIcon(chart.day_pillar.earth_branch.element) }}</span>
+            </div>
+            <div class="flex items-center justify-center px-2 py-3 text-center">
+              <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.hour_pillar.earth_branch.element)]">
+                {{ chart.hour_pillar.earth_branch.name }}
+              </span>
+              <span class="text-sm opacity-80 ml-0.5">{{ elementIcon(chart.hour_pillar.earth_branch.element) }}</span>
+            </div>
+          </div>
+          <div class="mx-auto w-full max-w-[520px] grid grid-cols-[40px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
+            <div class="flex items-center justify-center py-3 text-xs text-[var(--muted)]">藏干</div>
+            <div class="flex flex-col gap-2 px-2 py-3 text-center text-[13px]">
+              <span
+                v-for="stem in chart.year_pillar.earth_branch.hidden_stems"
+                :key="stem.name"
+              >
+                <span :class="elementClass(stem.element)">{{ stem.name }}</span>
+                <span class="text-[11px] text-[var(--muted)] ml-1">{{ stem.ten_god }}</span>
+              </span>
+            </div>
+            <div class="flex flex-col gap-2 px-2 py-3 text-center text-[13px]">
+              <span
+                v-for="stem in chart.month_pillar.earth_branch.hidden_stems"
+                :key="stem.name"
+              >
+                <span :class="elementClass(stem.element)">{{ stem.name }}</span>
+                <span class="text-[11px] text-[var(--muted)] ml-1">{{ stem.ten_god }}</span>
+              </span>
+            </div>
+            <div class="flex flex-col gap-2 px-2 py-3 text-center text-[13px]">
+              <span
+                v-for="stem in chart.day_pillar.earth_branch.hidden_stems"
+                :key="stem.name"
+              >
+                <span :class="elementClass(stem.element)">{{ stem.name }}</span>
+                <span class="text-[11px] text-[var(--muted)] ml-1">{{ stem.ten_god }}</span>
+              </span>
+            </div>
+            <div class="flex flex-col gap-2 px-2 py-3 text-center text-[13px]">
+              <span
+                v-for="stem in chart.hour_pillar.earth_branch.hidden_stems"
+                :key="stem.name"
+              >
+                <span :class="elementClass(stem.element)">{{ stem.name }}</span>
+                <span class="text-[11px] text-[var(--muted)] ml-1">{{ stem.ten_god }}</span>
+              </span>
             </div>
           </div>
         </div>
       </div>
 
       <!-- 大运卡片 -->
-      <div class="rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.65)] p-5 backdrop-blur-[16px]">
-        <div class="mb-4 flex items-center justify-between gap-3 border-b border-[rgba(255,255,255,0.08)] pb-3">
-          <div class="text-base font-semibold text-[var(--accent-2)]">大运</div>
-          <span v-if="destinyMeta" class="rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-2 py-1 text-xs text-[var(--muted)]">{{ destinyMeta }}</span>
-        </div>
+      <div class="panel-card">
+        <PanelHeader title="大运">
+          <template #title>
+            <div class="flex items-center gap-3">
+              <h3 class="text-base font-semibold text-(--accent-2)">十年大运</h3>
+              <!-- <span v-if="destinyMeta" class="h-3 w-px bg-[rgba(255,255,255,0.2)]"></span> -->
+              <span v-if="destinyMeta" class="text-xs text-[var(--muted)]">{{ destinyMeta }}</span>
+            </div>
+          </template>
+          <template #actions>
+            <div class="relative inline-flex shrink-0 cursor-pointer items-center rounded-3xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,17,24,0.9)] p-0.5">
+              <span
+                v-for="mode in ['virtual', 'actual']"
+                :key="mode"
+                :class="[
+                  'relative z-[1] w-[52px] rounded-3xl px-3 py-1.5 text-center text-[12px] font-medium transition-colors duration-200',
+                  destinyAgeMode === mode ? 'text-white' : 'text-white/65'
+                ]"
+                @click="setDestinyAgeMode(mode as 'virtual' | 'actual')"
+              >
+                {{ mode === 'virtual' ? '虚岁' : '周岁' }}
+              </span>
+              <div
+                :class="[
+                  'absolute left-0.5 top-0.5 z-0 h-[calc(100%-4px)] w-[52px] rounded-3xl bg-[rgba(176,184,210,0.1)] shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
+                  destinyAgeMode === 'actual' ? 'translate-x-[52px]' : ''
+                ]"
+              ></div>
+            </div>
+          </template>
+        </PanelHeader>
         <div v-if="!destinyPillars.length" class="text-[var(--muted)]">暂无大运数据。</div>
-        <div v-else class="grid grid-cols-[repeat(auto-fit,minmax(110px,1fr))] gap-3">
+        <div
+          v-else
+          ref="destinyGridRef"
+          class="grid grid-cols-[repeat(auto-fit,minmax(70px,1fr))] gap-2"
+        >
           <div
-            v-for="pillar in destinyPillarsWithAge"
+            v-for="pillar in destinyPillarsDisplay"
             :key="pillar.year"
-            class="flex flex-col items-center gap-2 rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] p-3.5 text-center transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(214,160,96,0.4)]"
+            :class="[
+              'flex flex-col items-center gap-2 rounded-[14px] border p-3 text-center transition-all duration-200 hover:-translate-y-0.5',
+              pillar.is_current
+                ? 'border-[rgba(214,160,96,0.6)] bg-[rgba(214,160,96,0.12)] shadow-[0_10px_30px_rgba(214,160,96,0.2)]'
+                : 'border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] hover:border-[rgba(214,160,96,0.4)]'
+            ]"
           >
-            <div class="text-xs text-[var(--muted)]">{{ pillar.year }}年 · {{ pillar.age }}岁</div>
-            <div class="flex flex-col gap-1.5">
-              <div class="flex items-center justify-center gap-2">
-                <span :class="['text-[22px] font-bold leading-tight tracking-wide', elementClass(pillar.heaven_stem.element)]">
-                  {{ pillar.heaven_stem.name }}
-                </span>
-                <span class="text-[11px] font-medium text-[var(--accent-2)] opacity-85 whitespace-nowrap">{{ pillar.heaven_stem.ten_god }}</span>
-              </div>
-              <div class="flex items-center justify-center gap-2">
-                <span :class="['text-[22px] font-bold leading-tight tracking-wide', elementClass(pillar.earth_branch.element)]">
-                  {{ pillar.earth_branch.name }}
-                </span>
-                <span class="text-[11px] font-medium text-[var(--accent-2)] opacity-85 whitespace-nowrap">{{ pillar.earth_branch_ten_god }}</span>
-              </div>
+            <div class="flex flex-wrap items-center justify-center gap-1 text-center">
+              <span class="text-[13px] font-medium text-[var(--text)]">{{ pillar.year }}年</span>
+              <span class="text-[11px] text-[var(--muted)]">{{ pillar.age }}岁</span>
+            </div>
+            <div class="flex flex-nowrap items-center justify-center gap-x-[clamp(0px,0.5vw,0.25rem)] text-center">
+              <span :class="['text-[22px] font-bold leading-tight tracking-wide', elementClass(pillar.heaven_stem.element)]">
+                {{ pillar.heaven_stem.name }}
+              </span>
+              <span class="text-[11px] font-medium text-[var(--accent-2)] opacity-85 whitespace-nowrap">{{ pillar.heaven_stem.ten_god }}</span>
+            </div>
+            <div class="flex flex-nowrap items-center justify-center gap-x-[clamp(0px,0.5vw,0.25rem)] text-center">
+              <span :class="['text-[22px] font-bold leading-tight tracking-wide', elementClass(pillar.earth_branch.element)]">
+                {{ pillar.earth_branch.name }}
+              </span>
+              <span class="text-[11px] font-medium text-[var(--accent-2)] opacity-85 whitespace-nowrap">{{ pillar.earth_branch_ten_god }}</span>
             </div>
           </div>
         </div>
       </div>
 
       <!-- 干支关系卡片 -->
-      <div class="flex flex-col gap-4 rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.65)] p-5 backdrop-blur-[16px]">
-        <div class="mb-4 flex items-center justify-between gap-3 border-b border-[rgba(255,255,255,0.08)] pb-3">
-          <div class="text-base font-semibold text-[var(--accent-2)]">干支关系</div>
-          <div
-            class="relative inline-flex cursor-pointer items-center rounded-xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,17,24,0.9)] p-1 transition-colors hover:border-[rgba(255,255,255,0.2)]"
-            @click="toggleGanziMode"
-          >
-            <div class="relative z-[2] flex w-full">
-              <span
-                :class="[
-                  'relative z-[1] flex-1 rounded-lg px-5 py-1.5 text-center text-[13px] font-medium text-white/65 transition-colors duration-200',
-                  !isCurrentMode ? 'text-white' : ''
-                ]"
-              >
-                本命
-              </span>
-              <span
-                :class="[
-                  'relative z-[1] flex-1 rounded-lg px-5 py-1.5 text-center text-[13px] font-medium text-white/65 transition-colors duration-200',
-                  isCurrentMode ? 'text-white' : ''
-                ]"
-              >
-                当前
-              </span>
-            </div>
+      <div class="panel-card">
+        <PanelHeader title="干支关系">
+          <template #actions>
             <div
-              :class="[
-                'absolute left-1 top-1 z-0 h-[calc(100%-8px)] w-[calc(50%-4px)] rounded-lg bg-[rgba(52,59,88,0.65)] shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
-                isCurrentMode ? 'translate-x-full' : ''
-              ]"
-            ></div>
-          </div>
-        </div>
-        
+              class="relative inline-flex shrink-0 cursor-pointer items-center rounded-3xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,17,24,0.9)] p-0.5 transition-colors hover:border-[rgba(255,255,255,0.2)]"
+              @click="toggleGanziMode"
+            >
+              <div class="relative z-[2] flex w-full">
+                <span
+                  :class="[
+                    'relative z-[1] w-[52px] rounded-3xl px-3 py-1.5 text-center text-[12px] font-medium transition-colors duration-200',
+                    !isCurrentMode ? 'text-white' : 'text-white/65'
+                  ]"
+                >
+                  本命
+                </span>
+                <span
+                  :class="[
+                    'relative z-[1] w-[52px] rounded-3xl px-3 py-1.5 text-center text-[12px] font-medium transition-colors duration-200',
+                    isCurrentMode ? 'text-white' : 'text-white/65'
+                  ]"
+                >
+                  流运
+                </span>
+              </div>
+              <div
+                :class="[
+                  'absolute left-0.5 top-0.5 z-0 h-[calc(100%-4px)] w-[52px] rounded-3xl bg-[rgba(176,184,210,0.1)] shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
+                  isCurrentMode ? 'translate-x-[52px]' : ''
+                ]"
+              ></div>
+            </div>
+          </template>
+        </PanelHeader>
+
         <div class="ganzi-diagram">
           <!-- SVG 连线层 + 天干地支显示 + 柱标签（统一在 SVG 中绘制） -->
           <div class="ganzi-svg-container">
@@ -686,37 +749,8 @@
           </template>
         </div>
 
-        <div class="ganzi-note text-xs leading-relaxed text-[var(--muted)]">
-          因八字合化论流派繁多且断法各异，故以上仅展示正化结果；实际应用中需考虑是否反化或合而不化的可能，故以上结果仅供基本参考，具体结论以个体判断为准
-        </div>
-      </div>
-
-      <!-- 试验卡片：用于观察输入时，顶部导航栏是否会被顶出屏幕（尤其是移动端软键盘弹起时） -->
-      <div class="rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.65)] p-5 backdrop-blur-[16px]">
-        <div class="mb-4 flex items-center justify-between gap-3 border-b border-[rgba(255,255,255,0.08)] pb-3">
-          <div class="text-base font-semibold text-[var(--accent-2)]">输入框试验（实验）</div>
-          <button
-            class="flex items-center gap-1.5 rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-3.5 py-2 text-[13px] text-[var(--muted)] transition-all duration-200 hover:bg-[rgba(255,255,255,0.08)] hover:border-[rgba(255,255,255,0.2)] hover:text-[var(--text)]"
-            type="button"
-            @click="focusNavTestInput"
-          >
-            聚焦测试
-            <span class="text-base font-semibold">›</span>
-          </button>
-        </div>
-        <div class="flex flex-col gap-2.5">
-          <div class="text-xs leading-relaxed text-[var(--muted)]">
-            点击输入框并输入内容，观察顶部导航栏是否会被顶出屏幕（手机端更明显）。
-          </div>
-          <input
-            ref="navTestInputEl"
-            v-model="navTestText"
-            placeholder="点这里输入任意内容…"
-            class="w-full rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0d1626] px-3.5 py-3 text-[15px] text-[var(--text)] outline-none transition-colors focus:border-[rgba(255,255,255,0.2)]"
-          />
-          <div class="text-xs text-[var(--muted)]">
-            当前输入：<span class="text-[var(--text)]">{{ navTestText || "（空）" }}</span>
-          </div>
+        <div class="rounded-lg p-2.5 text-xs leading-relaxed text-[var(--muted)]">
+          因八字合化论流派繁多且断法各异，以上结果仅供参考
         </div>
       </div>
     </div>
@@ -724,29 +758,617 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref } from "vue";
-import type { Chart, GanZhiRelation, PillarInfo, HeavenStemInfo, EarthBranchInfo } from "../types";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import type { Chart, GanZhiRelation, PillarInfo, HeavenStemInfo, EarthBranchInfo, SmartEnergyResult } from "../types";
+import PanelHeader from "./PanelHeader.vue";
 // 导入性别图标
 import maleIconUrl from "../assets/gender-male.png";
 import femaleIconUrl from "../assets/gender-female.png";
+// 导入 sparkle 图标
+import sparkleIconUrl from "../assets/sparkles.png";
 
 const props = defineProps<{
   chart: Chart | null;
 }>();
+
+// ========== 基本信息卡片模式切换 ==========
+const infoMode = ref<'basic' | 'pro'>('basic');
+
+const setInfoMode = (mode: 'basic' | 'pro') => {
+  infoMode.value = mode;
+};
+
+const destinyAgeMode = ref<'virtual' | 'actual'>('virtual');
+
+const setDestinyAgeMode = (mode: 'virtual' | 'actual') => {
+  destinyAgeMode.value = mode;
+};
+
+const infoGridClass = [
+  "grid grid-cols-2 lg:grid-cols-3",
+  "grid-flow-row-dense gap-x-1 gap-y-2.5 px-2 py-2.5",
+].join(" ");
+const infoItemClass = "flex items-center gap-2.5 min-w-0";
+const infoLabelClass = [
+  "inline-flex min-w-[42px] items-center justify-center rounded-lg",
+  "border border-[rgba(100,120,160,0.3)] bg-[rgba(60,70,100,0.4)]",
+  "px-2 py-1 text-[12px] font-medium tracking-wide text-[rgba(180,190,210,0.9)]",
+].join(" ");
+const infoValueClass = "flex-1 min-w-0 text-sm text-[var(--text)] break-words whitespace-normal";
+const infoValueNoWrapClass = "whitespace-nowrap overflow-hidden text-ellipsis";
+const infoValueInlineClass = "flex min-w-0 items-center gap-1 text-sm text-[var(--text)]";
+
+type InfoItemType = "text" | "gender" | "birthPlace" | "element";
+
+type InfoItem = {
+  key: string;
+  label: string;
+  type: InfoItemType;
+  value?: string;
+  display?: string;
+  element?: string;
+  isUnknown?: boolean;
+  isSpan?: boolean;
+  spanClass?: string;
+  noWrap?: boolean;
+};
+
+const textMeasure = (() => {
+  if (typeof document === "undefined") {
+    return (_text: string, _font: string) => 0;
+  }
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return (_text: string, _font: string) => 0;
+  }
+  return (text: string, font: string) => {
+    context.font = font;
+    return context.measureText(text).width;
+  };
+})();
+
+const viewportWidth = ref(typeof window !== "undefined" ? window.innerWidth : 0);
+const infoGridRef = ref<HTMLElement | null>(null);
+const containerWidth = ref(0);
+const destinyGridRef = ref<HTMLElement | null>(null);
+const destinyGridWidth = ref(0);
+
+const updateViewportWidth = () => {
+  if (typeof window === "undefined") return;
+  viewportWidth.value = window.innerWidth;
+};
+
+const updateDestinyGridWidth = () => {
+  if (!destinyGridRef.value) return;
+  destinyGridWidth.value = Math.round(destinyGridRef.value.clientWidth);
+};
+
+onMounted(() => {
+  updateViewportWidth();
+  window.addEventListener("resize", updateViewportWidth);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", updateViewportWidth);
+});
+
+onMounted(() => {
+  updateInfoFontFamily();
+  if (typeof document !== "undefined" && "fonts" in document) {
+    document.fonts.ready.then(() => {
+      updateInfoFontFamily();
+    });
+  }
+});
+
+let infoGridObserver: ResizeObserver | null = null;
+let destinyGridObserver: ResizeObserver | null = null;
+
+onMounted(() => {
+  if (typeof ResizeObserver === "undefined") return;
+  infoGridObserver = new ResizeObserver((entries) => {
+    const entry = entries[0];
+    if (!entry) return;
+    containerWidth.value = Math.round(entry.contentRect.width);
+  });
+  if (infoGridRef.value) {
+    infoGridObserver.observe(infoGridRef.value);
+  }
+});
+
+onBeforeUnmount(() => {
+  if (infoGridObserver) {
+    infoGridObserver.disconnect();
+    infoGridObserver = null;
+  }
+});
+
+watch(infoGridRef, (nextEl, prevEl) => {
+  if (!infoGridObserver) return;
+  if (prevEl) {
+    infoGridObserver.unobserve(prevEl);
+  }
+  if (nextEl) {
+    infoGridObserver.observe(nextEl);
+  }
+  if (nextEl) {
+    updateInfoFontFamily();
+  }
+});
+
+onMounted(() => {
+  if (typeof ResizeObserver === "undefined") return;
+  destinyGridObserver = new ResizeObserver(() => {
+    updateDestinyGridWidth();
+  });
+  if (destinyGridRef.value) {
+    destinyGridObserver.observe(destinyGridRef.value);
+    updateDestinyGridWidth();
+  }
+});
+
+onBeforeUnmount(() => {
+  if (destinyGridObserver) {
+    destinyGridObserver.disconnect();
+    destinyGridObserver = null;
+  }
+});
+
+watch(destinyGridRef, (nextEl, prevEl) => {
+  if (!destinyGridObserver) return;
+  if (prevEl) {
+    destinyGridObserver.unobserve(prevEl);
+  }
+  if (nextEl) {
+    destinyGridObserver.observe(nextEl);
+    updateDestinyGridWidth();
+  }
+});
+
+const gridColumnCount = computed(() => {
+  const baseWidth = containerWidth.value || viewportWidth.value;
+  return baseWidth >= 1024 ? 3 : 2;
+});
+
+const columnBaseWidth = computed(() => {
+  const columns = gridColumnCount.value;
+  const containerPadding = 24;
+  const columnGap = 4;
+  const totalColumnGap = columnGap * (columns - 1);
+  const baseWidth = containerWidth.value || viewportWidth.value;
+  return Math.max(0, (baseWidth - containerPadding - totalColumnGap) / columns);
+});
+
+const infoFontFamily = ref("system-ui");
+const valueFont = computed(() => `400 14px ${infoFontFamily.value}`);
+const labelFont = computed(() => `500 12px ${infoFontFamily.value}`);
+const labelMinWidth = 42;
+const labelHorizontalPadding = 16;
+const labelGap = 10;
+
+const getSpanMeta = (label: string, value: string, extraWidth = 0) => {
+  const columns = gridColumnCount.value;
+  const valueWidth = textMeasure(value, valueFont.value) + extraWidth;
+  const labelTextWidth = textMeasure(label, labelFont.value) + labelHorizontalPadding;
+  const labelWidth = Math.max(labelMinWidth, labelTextWidth);
+  const measuredWidth = labelWidth + labelGap + valueWidth;
+  const columnWidth = columnBaseWidth.value;
+  let span = 1;
+
+  if (columns === 2) {
+    if (measuredWidth > columnWidth) span = 2;
+  } else if (columns === 3) {
+    if (measuredWidth > columnWidth * 2) {
+      span = 3;
+    } else if (measuredWidth > columnWidth) {
+      span = 2;
+    }
+  }
+
+  const maxWidth = columnWidth * span;
+  const maxValueWidth = Math.max(0, maxWidth - labelWidth - labelGap);
+  return {
+    isSpan: span > 1,
+    spanClass: span === 2 ? "col-span-2" : span === 3 ? "col-span-3" : "",
+    noWrap: span > 1 && valueWidth <= maxValueWidth,
+  };
+};
+
+const updateInfoFontFamily = () => {
+  if (typeof window === "undefined") return;
+  const target = infoGridRef.value || document.documentElement;
+  const computedStyle = window.getComputedStyle(target);
+  if (computedStyle.fontFamily) {
+    infoFontFamily.value = computedStyle.fontFamily;
+  }
+};
+
+const basicInfoItems = computed<InfoItem[]>(() => {
+  if (!props.chart) return [];
+  const birthPlaceUnknown = !props.chart.birth_place || props.chart.birth_place === "未知地区";
+  const birthPlaceText = birthPlaceUnknown
+    ? "未知区域（不使用真太阳时）"
+    : props.chart.birth_place;
+
+  return [
+    {
+      key: "gender",
+      label: "性别",
+      type: "gender",
+      value: genderText.value,
+      ...getSpanMeta("性别", genderText.value, props.chart.gender ? 18 : 0),
+    },
+    {
+      key: "zodiacAnimal",
+      label: "属相",
+      type: "text",
+      value: props.chart.zodiac_animal || "未知",
+      ...getSpanMeta("属相", props.chart.zodiac_animal || "未知"),
+    },
+    {
+      key: "zodiacSign",
+      label: "星座",
+      type: "text",
+      value: props.chart.zodiac_sign || "未知",
+      ...getSpanMeta("星座", props.chart.zodiac_sign || "未知"),
+    },
+    {
+      key: "starMansion",
+      label: "星宿",
+      type: "text",
+      value: props.chart.star_mansion || "未知",
+      ...getSpanMeta("星宿", props.chart.star_mansion || "未知"),
+    },
+    {
+      key: "solar",
+      label: "阳历",
+      type: "text",
+      value: solarText.value,
+      ...getSpanMeta("阳历", solarText.value),
+    },
+    {
+      key: "trueSolar",
+      label: "真太阳时",
+      type: "text",
+      value: trueSolarText.value,
+      ...getSpanMeta("真太阳时", trueSolarText.value),
+    },
+    {
+      key: "birthPlace",
+      label: "出生地区",
+      type: "birthPlace",
+      value: props.chart.birth_place || "",
+      isUnknown: birthPlaceUnknown,
+      ...getSpanMeta("出生地区", birthPlaceText),
+    },
+    {
+      key: "jieqi",
+      label: "出生节气",
+      type: "text",
+      value: jieqiText.value,
+      ...getSpanMeta("出生节气", jieqiText.value),
+    },
+  ];
+});
+
+const proInfoItems = computed<InfoItem[]>(() => {
+  if (!props.chart) return [];
+
+  return [
+    {
+      key: "dayMaster",
+      label: "命主五行",
+      type: "element",
+      display: props.chart.day_master_display || dayMasterDisplay.value,
+      element: props.chart.day_master.element,
+      ...getSpanMeta("命主五行", props.chart.day_master_display || dayMasterDisplay.value),
+    },
+    {
+      key: "fortuneElement",
+      label: "天运五行",
+      type: "text",
+      value: props.chart.fortune_element || "未知",
+      ...getSpanMeta("天运五行", props.chart.fortune_element || "未知"),
+    },
+    {
+      key: "taiYuan",
+      label: "胎元",
+      type: "text",
+      value: taiYuanText.value,
+      ...getSpanMeta("胎元", taiYuanText.value),
+    },
+    {
+      key: "taiXi",
+      label: "胎息",
+      type: "text",
+      value: taiXiText.value,
+      ...getSpanMeta("胎息", taiXiText.value),
+    },
+    {
+      key: "mingGong",
+      label: "命宫",
+      type: "text",
+      value: mingGongText.value,
+      ...getSpanMeta("命宫", mingGongText.value),
+    },
+    {
+      key: "shenGong",
+      label: "身宫",
+      type: "text",
+      value: shenGongText.value,
+      ...getSpanMeta("身宫", shenGongText.value),
+    },
+    {
+      key: "kongWang",
+      label: "空亡",
+      type: "text",
+      value: props.chart.kong_wang || "未知",
+      ...getSpanMeta("空亡", props.chart.kong_wang || "未知"),
+    },
+    {
+      key: "renYuan",
+      label: "人元司令分野",
+      type: "text",
+      value: props.chart.ren_yuan_si_ling || "未知",
+      ...getSpanMeta("人元司令分野", props.chart.ren_yuan_si_ling || "未知"),
+    },
+  ];
+});
+
+// ========== 五行能量模式切换 ==========
+
+// 能量模式配置
+const energyModes: { value: 'basic' | 'pro'; label: string }[] = [
+  { value: 'basic', label: '简单' },
+  { value: 'pro', label: '进阶' },
+];
+
+// 生成缓存 key（需要在使用前定义）
+const getEnergyCacheKey = (chart: Chart): string => {
+  const dayPillar = chart.day_pillar;
+  return `energy_smart_${dayPillar.heaven_stem.name}${dayPillar.earth_branch.name}`;
+};
+
+// 智能解析数据
+const smartEnergyData = ref<SmartEnergyResult | null>(null);
+const smartEnergyLoading = ref(false);
+const hasSmartEnergy = ref(false); // 追踪是否已有智能分析数据
+
+// 初始化检查是否有缓存
+const initSmartEnergyCache = () => {
+  if (props.chart) {
+    const cacheKey = getEnergyCacheKey(props.chart);
+    const cached = localStorage.getItem(cacheKey);
+    hasSmartEnergy.value = cached !== null;
+
+    // 如果有缓存，直接加载数据
+    if (cached) {
+      smartEnergyData.value = JSON.parse(cached);
+    }
+  }
+};
+
+// 当前能量模式（如果已分析过则默认为智能分析，否则为基础）
+const energyMode = ref<'basic' | 'pro' | 'smart'>('basic');
+
+// 根据缓存状态设置默认模式
+const updateDefaultEnergyMode = () => {
+  if (props.chart && hasSmartEnergy.value) {
+    energyMode.value = 'smart';
+  } else if (energyMode.value === 'smart' && !hasSmartEnergy.value) {
+    // 如果当前是智能分析但没有缓存，切换回基础
+    energyMode.value = 'basic';
+  }
+};
+
+// 切换能量模式
+const setEnergyMode = (mode: 'basic' | 'pro' | 'smart') => {
+  energyMode.value = mode;
+};
+
+// 监听 chart 变化，自动设置默认模式
+watch(() => props.chart, () => {
+  initSmartEnergyCache();
+  updateDefaultEnergyMode();
+}, { immediate: true });
+
+// 获取智能解析数据
+const fetchSmartEnergyData = async () => {
+  if (!props.chart) return;
+
+  const cacheKey = getEnergyCacheKey(props.chart);
+  const cached = localStorage.getItem(cacheKey);
+
+  if (cached) {
+    smartEnergyData.value = JSON.parse(cached);
+    hasSmartEnergy.value = true;
+    return;
+  }
+
+  // 请求 API
+  smartEnergyLoading.value = true;
+  try {
+    const response = await fetch('/api/bazi/energy-analysis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chart: props.chart }),
+    });
+
+    if (!response.ok) {
+      throw new Error('请求失败');
+    }
+
+    const data = await response.json();
+    smartEnergyData.value = data;
+
+    // 缓存结果
+    localStorage.setItem(cacheKey, JSON.stringify(data));
+  } catch (error) {
+    console.error('获取智能解析数据失败:', error);
+    smartEnergyData.value = null;
+  } finally {
+    smartEnergyLoading.value = false;
+  }
+};
+
+// 监听模式变化，智能解析模式下获取数据
+watch(energyMode, (newMode) => {
+  if (newMode === 'smart' && !smartEnergyData.value && !smartEnergyLoading.value) {
+    fetchSmartEnergyData();
+  }
+});
+
+// 根据当前 chart 重新获取智能解析数据（当切换档案时）
+watch(() => props.chart, () => {
+  if (energyMode.value === 'smart' && props.chart) {
+    const cacheKey = getEnergyCacheKey(props.chart);
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      smartEnergyData.value = JSON.parse(cached);
+    } else {
+      smartEnergyData.value = null;
+      fetchSmartEnergyData();
+    }
+  }
+});
+
+// 五行个数统计（不含藏干）- 前端计算
+const fiveElementsCountNoHidden = computed(() => {
+  if (!props.chart) return { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
+
+  const counts = { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
+  const pillars = [
+    props.chart.year_pillar,
+    props.chart.month_pillar,
+    props.chart.day_pillar,
+    props.chart.hour_pillar,
+  ];
+
+  for (const pillar of pillars) {
+    counts[pillar.heaven_stem.element as keyof typeof counts] += 1;
+    counts[pillar.earth_branch.element as keyof typeof counts] += 1;
+  }
+
+  return counts;
+});
+
+// 五行个数统计（含藏干）- 从后端获取
+const fiveElementsCountWithHidden = computed(() => {
+  return props.chart?.five_elements_count ?? {};
+});
+
+// 计算能量比率
+const calculateRatios = (counts: Record<string, number>) => {
+  const total = Object.values(counts).reduce((sum, v) => sum + v, 0);
+  if (total === 0) return { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
+
+  const result: Record<string, number> = {};
+  for (const key of Object.keys(counts)) {
+    result[key] = Math.round((counts[key] / total) * 100 * 10) / 10;
+  }
+  return result;
+};
+
+// 根据当前模式获取能量数据
+const currentEnergyCounts = computed(() => {
+  if (energyMode.value === 'basic') {
+    return fiveElementsCountNoHidden.value;
+  }
+  return fiveElementsCountWithHidden.value;
+});
+
+const currentEnergyRatios = computed(() => {
+  return calculateRatios(currentEnergyCounts.value);
+});
+
+// 智能解析模式的能量数据
+const smartEnergyItems = computed(() => {
+  if (!smartEnergyData.value) {
+    return elementOrder.map((element) => ({
+      element,
+      score: 0,
+      description: '',
+      relation: '未知',
+    }));
+  }
+
+  const dayElement = props.chart?.day_master?.element ?? '';
+  return elementOrder.map((element) => ({
+    element,
+    score: smartEnergyData.value!.elements[element as keyof typeof smartEnergyData.value.elements]?.score ?? 0,
+    description: smartEnergyData.value!.elements[element as keyof typeof smartEnergyData.value.elements]?.description ?? '',
+    relation: elementRelationMap[dayElement]?.[element] ?? '未知',
+  }));
+});
+
+// 最大智能能量分数（用于雷达图归一化）
+const maxSmartScore = computed(() => {
+  const maxScore = Math.max(...smartEnergyItems.value.map((item) => item.score), 0);
+  return maxScore > 0 ? maxScore : 100;
+});
+
+// 智能解析雷达图数据点
+const smartRadarPoints = computed(() =>
+  smartEnergyItems.value.map((item, idx) => {
+    const angle = radarStartAngle + radarAngleStep * idx;
+    const ratio = item.score / maxSmartScore.value;
+    const radius = radarRadius * ratio;
+    return {
+      element: item.element,
+      x: radarCenter + radius * Math.cos(angle),
+      y: radarCenter + radius * Math.sin(angle),
+    };
+  })
+);
+
+// 智能解析雷达图形状点
+const smartRadarShapePoints = computed(() =>
+  smartRadarPoints.value.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(" ")
+);
+
+// 五行能量条目（兼容现有模板）
+const energyItems = computed(() => {
+  if (energyMode.value === 'smart') {
+    // 智能解析模式
+    return smartEnergyItems.value.map((item) => ({
+      element: item.element,
+      count: item.score, // 用 score 替代 count
+      ratio: item.score, // 用 score 替代 ratio
+      description: item.description,
+      relation: item.relation,
+    }));
+  }
+
+  // 普通模式
+  if (!props.chart) {
+    return elementOrder.map((element) => ({
+      element,
+      count: 0,
+      ratio: 0,
+      description: '',
+      relation: '未知',
+    }));
+  }
+
+  const counts = currentEnergyCounts.value as Record<string, number>;
+  const ratios = currentEnergyRatios.value as Record<string, number>;
+  const dayElement = props.chart.day_master?.element ?? '';
+
+  return elementOrder.map((element) => ({
+    element,
+    count: counts[element] ?? 0,
+    ratio: ratios[element] ?? 0,
+    description: '',
+    relation: elementRelationMap[dayElement]?.[element] ?? '未知',
+  }));
+});
 
 // 干支关系模式切换：false=本命(4柱), true=当前(6柱，包含大运和流年)
 const isCurrentMode = ref(false);
 
 const toggleGanziMode = () => {
   isCurrentMode.value = !isCurrentMode.value;
-};
-
-// 输入框试验：用于复现/观察移动端软键盘导致的页面滚动或布局变化
-const navTestText = ref("");
-const navTestInputEl = ref<HTMLInputElement | null>(null);
-const focusNavTestInput = async () => {
-  await nextTick();
-  navTestInputEl.value?.focus();
 };
 
 // 农历数字转中文
@@ -857,36 +1479,6 @@ const elementRelationMap: Record<string, Record<string, string>> = {
   水: { 木: "食伤", 火: "财才", 土: "官杀", 金: "印枭", 水: "比劫" }
 };
 
-// 五行计数
-const elementCounts = computed(() => {
-  if (!props.chart) return [];
-  return elementOrder.map((label) => ({
-    label,
-    value: props.chart?.five_elements_count[label] ?? 0
-  }));
-});
-
-// 五行能量条目
-const energyItems = computed(() => {
-  if (!props.chart) {
-    return elementOrder.map((element) => ({
-      element,
-      count: 0,
-      ratio: 0,
-      relation: "未知"
-    }));
-  }
-  const counts = props.chart.five_elements_count ?? {};
-  const ratios = props.chart.five_elements_ratio ?? {};
-  const dayElement = props.chart.day_master?.element ?? "";
-  return elementOrder.map((element) => ({
-    element,
-    count: counts[element] ?? 0,
-    ratio: ratios[element] ?? 0,
-    relation: elementRelationMap[dayElement]?.[element] ?? "未知"
-  }));
-});
-
 // 最大能量比率（用于归一化）
 const maxEnergyRatio = computed(() => {
   const maxValue = Math.max(...energyItems.value.map((item) => item.ratio), 0);
@@ -948,6 +1540,10 @@ const gridPoints = (level: number) => {
 // 格式化百分比
 const formatPercent = (value: number) => `${(Number.isFinite(value) ? value : 0).toFixed(1)}%`;
 
+const DESTINY_PILLAR_MIN_WIDTH = 72;
+const DESTINY_PILLAR_GAP = 8;
+const DESTINY_PILLAR_MAX = 12;
+
 // 大运数据
 const destinyPillars = computed(() => {
   if (!props.chart) return [];
@@ -964,10 +1560,25 @@ const destinyPillarsWithAge = computed(() => {
   return destinyPillars.value.map((pillar) => ({
     ...pillar,
     // 计算命主在该大运年份的年龄（虚岁）
-    age: pillar.year - birthYear + 1,
+    age: destinyAgeMode.value === "virtual" ? pillar.year - birthYear + 1 : pillar.year - birthYear,
     // 地支的十神取藏干的第一个（本气）的十神
     earth_branch_ten_god: pillar.earth_branch.hidden_stems[0]?.ten_god ?? "未知"
   }));
+});
+
+const destinyGridColumns = computed(() => {
+  if (!destinyGridWidth.value) return 1;
+  const columns = Math.floor(
+    (destinyGridWidth.value + DESTINY_PILLAR_GAP) /
+      (DESTINY_PILLAR_MIN_WIDTH + DESTINY_PILLAR_GAP)
+  );
+  return Math.max(columns, 1);
+});
+
+const destinyPillarsDisplay = computed(() => {
+  const maxRows = viewportWidth.value >= 1024 ? 1 : 2;
+  const maxDisplay = Math.min(DESTINY_PILLAR_MAX, destinyGridColumns.value * maxRows);
+  return destinyPillarsWithAge.value.slice(0, maxDisplay);
 });
 
 // 大运元信息（起运时间等）
