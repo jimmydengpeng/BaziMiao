@@ -1,5 +1,8 @@
 <template>
-  <div class="app-root h-[100dvh] overflow-hidden">
+  <div class="app-root h-[100dvh] overflow-hidden relative">
+    <!-- 云朵装饰背景 -->
+    <CloudDecoration />
+
     <!-- 顶部导航栏（所有页面都显示，聊天全屏页面除外） -->
     <TopNav
       v-if="!isLayoutChatPage"
@@ -34,9 +37,11 @@
     <teleport to="body">
       <!-- 浮动聊天按钮：非聊天页面且弹窗未打开时显示 -->
       <ChatFab
-        v-if="showChatFab && !chatModalOpen"
+        ref="chatFabRef"
+        v-show="showChatFab && !chatModalOpen"
         :hint-text="chatFabHintText"
         :hint-visible="chatFabHintVisible"
+        :hint-typing="true"
         :nudge-key="chatFabNudgeKey"
         :nudge-kind="chatFabNudgeKind"
         :sparkle-visible="chatFabSparkleVisible"
@@ -51,14 +56,12 @@
       />
 
       <!-- 桌面端聊天弹窗 -->
-      <Transition name="chat-modal">
-        <div
-          v-if="chatModalOpen && isDesktop"
-          class="fixed inset-y-4 right-4 z-50 flex w-[420px] max-w-[calc(100vw-32px)] flex-col"
-        >
-          <UnifiedChat mode="modal" @close="closeChatModal" />
-        </div>
-      </Transition>
+      <div
+        v-if="chatModalOpen && isDesktop"
+        class="fixed inset-y-4 right-4 z-50 flex w-[420px] max-w-[calc(100vw-32px)] flex-col"
+      >
+        <UnifiedChat mode="modal" @close="closeChatModal" />
+      </div>
 
       <!-- 移动端全屏聊天（overlay 路由）：渲染在 body 上层，退出时可露出背景页 -->
       <router-view v-if="isOverlayRoute" v-slot="{ Component }">
@@ -72,6 +75,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { useRouter, useRoute, type RouteLocationNormalizedLoaded } from 'vue-router';
 import TopNav from './components/TopNav.vue';
+import CloudDecoration from './components/CloudDecoration.vue';
 import ChatFab from './components/ChatFab.vue';
 import UnifiedChat from './components/UnifiedChat.vue';
 import LogoDialog from './components/LogoDialog.vue';
@@ -84,15 +88,16 @@ const route = useRoute();
 const { isAuthenticated, activeArchiveId, report, chart } = useStore();
 const { isStreamingActive } = useUnifiedChatStore();
 const scrollEl = ref<HTMLElement | null>(null);
+const chatFabRef = ref<InstanceType<typeof ChatFab> | null>(null);
 
 // ========== ChatFab：提示气泡/动效/提醒 ==========
-const CHAT_FAB_LAST_CLICK_AT_KEY = 'chatfab:last_click_at';
-const CHAT_FAB_CHART_INTRO_SHOWN_KEY = 'chatfab:chart_intro_shown:v1';
-const CHAT_FAB_CLICK_COOLDOWN_MS = 10 * 60 * 1000; // 10 分钟
-
 // 调试开关：先强制显示气泡，方便你肉眼确认样式/位置是否正常
-const FORCE_CHAT_FAB_HINT = true;
+const FORCE_CHAT_FAB_HINT = false;
 const FORCE_CHAT_FAB_HINT_TEXT = '要不要，我帮你看看？';
+
+// 命盘页提示策略（可按体感微调）
+const CHART_ENTRY_HINT_DELAY_MS = 1000; // 从其他页面进入命盘解析后，5s 后提示
+const CHART_ENTRY_HINT_DURATION_MS = 50000; // 气泡持续显示 3s
 
 const chatFabHintText = ref<string | null>(null);
 const chatFabHintVisible = ref(false);
@@ -101,54 +106,8 @@ const chatFabNudgeKind = ref<'pop' | 'wiggle'>('pop');
 const chatFabSparkleVisible = ref(false);
 
 let chatFabIntroTimer: number | null = null;
-let chatFabIdleTimer: number | null = null;
 let chatFabHideHintTimer: number | null = null;
-
-// “停留>8秒但没有任何操作”：只要用户在进入命盘页后有过任何交互，就不再触发该提示
-let chartHasAnyUserAction = false;
-
-const safeGetNumber = (key: string) => {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return 0;
-    const num = Number(raw);
-    return Number.isFinite(num) ? num : 0;
-  } catch {
-    return 0;
-  }
-};
-
-const safeSetNumber = (key: string, value: number) => {
-  try {
-    localStorage.setItem(key, String(value));
-  } catch {
-    // ignore
-  }
-};
-
-const safeGetBool = (key: string) => {
-  try {
-    return localStorage.getItem(key) === '1';
-  } catch {
-    return false;
-  }
-};
-
-const safeSetBool = (key: string, value: boolean) => {
-  try {
-    localStorage.setItem(key, value ? '1' : '0');
-  } catch {
-    // ignore
-  }
-};
-
-const getChatFabLastClickAt = () => safeGetNumber(CHAT_FAB_LAST_CLICK_AT_KEY);
-const setChatFabLastClickAt = (ts: number) => safeSetNumber(CHAT_FAB_LAST_CLICK_AT_KEY, ts);
-const isChatFabInClickCooldown = () => {
-  const last = getChatFabLastClickAt();
-  if (!last) return false;
-  return Date.now() - last < CHAT_FAB_CLICK_COOLDOWN_MS;
-};
+let chatFabSparkleTimer: number | null = null;
 
 const hideChatFabHint = () => {
   chatFabHintVisible.value = false;
@@ -176,21 +135,30 @@ const nudgeChatFab = (kind: 'pop' | 'wiggle') => {
 const pickOne = (items: string[]) => items[Math.floor(Math.random() * items.length)];
 
 const INTRO_HINTS = [
-  '要不要，我帮你看看？',
-  '此命，有几处可问',
-  '你可以直接问我',
+  '要不要我帮你看看？',
+  '可以直接问我哦喵~',
   '看不懂的地方，直接问我就好',
   '想知道重点在哪？我来帮你抓',
   '我在这儿，随时可以问',
-];
-
-const IDLE_HINTS = [
-  '有疑惑，可直接问',
-  '命盘之事，我可细说',
-  '这里看不懂也没关系',
-  '想从哪里开始看？我带你',
-  '我可以帮你把重点翻译成人话',
-  '要我给你一个“先看哪里”的建议吗？',
+  // 严肃派
+  '我先帮你抓重点',
+  '先从格局下手？',
+  '要我按时间线讲？',
+  '想先看事业还是感情？',
+  '先讲用神与忌神？',
+  // 娱乐派
+  '喵算上线，开盘！',
+  '这盘有点东西',
+  '来个一句话总结？',
+  '我给你“人话版”',
+  '要不要先听个重点？',
+  // 江湖派
+  '此盘刀光剑影',
+  '你这命，有门道',
+  '且听我一言',
+  '我给你拆招',
+  '江湖规矩：先看财官',
+  '先问一句：你想算啥？',
 ];
 
 const isChartPage = computed(() => layoutRoute.value.path.startsWith('/bazi/chart/'));
@@ -200,64 +168,32 @@ const clearChatFabTimers = () => {
     clearTimeout(chatFabIntroTimer);
     chatFabIntroTimer = null;
   }
-  if (chatFabIdleTimer) {
-    clearTimeout(chatFabIdleTimer);
-    chatFabIdleTimer = null;
-  }
   if (chatFabHideHintTimer) {
     clearTimeout(chatFabHideHintTimer);
     chatFabHideHintTimer = null;
   }
-};
-
-const markChartUserAction = () => {
-  if (!isChartPage.value) return;
-  if (chartHasAnyUserAction) return;
-  chartHasAnyUserAction = true;
-  if (chatFabIdleTimer) {
-    clearTimeout(chatFabIdleTimer);
-    chatFabIdleTimer = null;
+  if (chatFabSparkleTimer) {
+    clearTimeout(chatFabSparkleTimer);
+    chatFabSparkleTimer = null;
   }
 };
-
-const handleAnyUserAction = () => markChartUserAction();
 
 const scheduleChartHints = () => {
   if (FORCE_CHAT_FAB_HINT) return;
   clearChatFabTimers();
   hideChatFabHint();
-  chartHasAnyUserAction = false;
 
   // 不在命盘页不触发
   if (!isChartPage.value) return;
-  // 用户刚点过猫猫（10分钟内）：不主动弹气泡，只保留“呼吸”
-  if (isChatFabInClickCooldown()) return;
 
-  // ① 首次进入命盘页（新用户）：1.5s 后出场 + 2.5s 气泡
-  const hasShownIntro = safeGetBool(CHAT_FAB_CHART_INTRO_SHOWN_KEY);
-  const hasEverClicked = Boolean(getChatFabLastClickAt());
-  if (!hasShownIntro && !hasEverClicked) {
-    chatFabIntroTimer = window.setTimeout(() => {
-      // 1.5s 后如果用户已经操作过，就不打扰
-      if (!isChartPage.value) return;
-      if (chartHasAnyUserAction) return;
-      if (isChatFabInClickCooldown()) return;
-      nudgeChatFab('pop');
-      showChatFabHint(pickOne(INTRO_HINTS), 2500);
-      safeSetBool(CHAT_FAB_CHART_INTRO_SHOWN_KEY, true);
-      chatFabIntroTimer = null;
-    }, 1500);
-  }
-
-  // ② 停留 > 8s 且没有任何操作：轻微晃一下 + 气泡（只触发一次）
-  chatFabIdleTimer = window.setTimeout(() => {
+  // 从其他页面进入命盘解析后：5s 弹出气泡 + 轻微晃动，持续 3s 后消失
+  chatFabIntroTimer = window.setTimeout(() => {
     if (!isChartPage.value) return;
-    if (chartHasAnyUserAction) return;
-    if (isChatFabInClickCooldown()) return;
+    if (chatModalOpen.value) return;
     nudgeChatFab('wiggle');
-    showChatFabHint(pickOne(IDLE_HINTS), 2500);
-    chatFabIdleTimer = null;
-  }, 8000);
+    showChatFabHint(pickOne(INTRO_HINTS), CHART_ENTRY_HINT_DURATION_MS);
+    chatFabIntroTimer = null;
+  }, CHART_ENTRY_HINT_DELAY_MS);
 };
 
 // 聊天弹窗状态
@@ -309,17 +245,25 @@ const showChatFab = computed(() => {
   return false;
 });
 
-// 命盘页提示策略：进入时安排“首次/无操作”提示；离开时清理定时器
+// 命盘页提示策略：从其他页面进入命盘页时安排提示；离开时清理定时器
 watch(
   () => layoutRoute.value.path,
-  () => {
+  (path, prevPath) => {
     if (FORCE_CHAT_FAB_HINT) return;
-    if (isChartPage.value && showChatFab.value && !chatModalOpen.value) {
+
+    const isNowChart = path.startsWith('/bazi/chart/');
+    const wasChart = (prevPath ?? '').startsWith('/bazi/chart/');
+
+    // 只在“从非命盘页进入命盘页”时触发（切 tab 不重复）
+    if (isNowChart && !wasChart && showChatFab.value && !chatModalOpen.value) {
       scheduleChartHints();
-    } else {
+      return;
+    }
+
+    // 离开命盘页：清理
+    if (!isNowChart) {
       clearChatFabTimers();
       hideChatFabHint();
-      chartHasAnyUserAction = false;
     }
   },
   { immediate: true }
@@ -330,12 +274,6 @@ watch(chatModalOpen, (open) => {
   if (open) {
     clearChatFabTimers();
     hideChatFabHint();
-    chartHasAnyUserAction = false;
-    return;
-  }
-
-  if (isChartPage.value && showChatFab.value) {
-    scheduleChartHints();
   }
 });
 
@@ -358,6 +296,10 @@ watch(isChatUiVisible, (visible) => {
   if (visible) {
     leftChatWhileStreaming.value = false;
     chatFabSparkleVisible.value = false;
+    if (chatFabSparkleTimer) {
+      clearTimeout(chatFabSparkleTimer);
+      chatFabSparkleTimer = null;
+    }
     return;
   }
 
@@ -371,14 +313,26 @@ watch(isStreamingActive, (active, prev) => {
   // 流开始：清除旧提醒
   if (active && !prev) {
     chatFabSparkleVisible.value = false;
+    if (chatFabSparkleTimer) {
+      clearTimeout(chatFabSparkleTimer);
+      chatFabSparkleTimer = null;
+    }
     leftChatWhileStreaming.value = false;
     return;
   }
 
-  // 流结束：如果用户曾“中途退出聊天”，且当前不在聊天界面，则点亮提醒
+  // 流结束：如果用户曾"中途退出聊天"，且当前不在聊天界面，则点亮提醒
   if (!active && prev) {
     if (leftChatWhileStreaming.value && !isChatUiVisible.value) {
       chatFabSparkleVisible.value = true;
+      chatFabRef.value?.showCompletionBubble();  // 显示回复完毕气泡
+      
+      // 10秒后自动隐藏光晕
+      if (chatFabSparkleTimer) clearTimeout(chatFabSparkleTimer);
+      chatFabSparkleTimer = window.setTimeout(() => {
+        chatFabSparkleVisible.value = false;
+        chatFabSparkleTimer = null;
+      }, 10000);  // 10秒
     }
     leftChatWhileStreaming.value = false;
   }
@@ -406,10 +360,12 @@ const canViewReport = computed(() => {
 
 // 处理浮动按钮点击
 const handleChatFabClick = () => {
-  // 记录用户已点击（进入 10 分钟冷却，不再主动打扰）
-  setChatFabLastClickAt(Date.now());
   if (!FORCE_CHAT_FAB_HINT) hideChatFabHint();
   chatFabSparkleVisible.value = false;
+  if (chatFabSparkleTimer) {
+    clearTimeout(chatFabSparkleTimer);
+    chatFabSparkleTimer = null;
+  }
   leftChatWhileStreaming.value = false;
 
   if (isDesktop.value) {
@@ -552,9 +508,6 @@ watch(
 // 监听滚动，实时更新滚动位置（节流处理）
 let scrollTimer: number | null = null;
 const handleScroll = () => {
-  // 只要用户滚动过，就认为“有操作”
-  markChartUserAction();
-
   if (scrollTimer) {
     clearTimeout(scrollTimer);
   }
@@ -612,11 +565,6 @@ onMounted(() => {
     scrollEl.value.addEventListener('scroll', handleScroll, { passive: true });
   }
 
-  // 命盘页“停留>8s 无操作”判定：pointer/键盘/滚轮等都算操作
-  window.addEventListener('pointerdown', handleAnyUserAction, { passive: true });
-  window.addEventListener('keydown', handleAnyUserAction);
-  window.addEventListener('wheel', handleAnyUserAction, { passive: true });
-
   // 记录 overlay 的背景路由：用于 /chat 退出动画露出上一页
   removeAfterEachHook = router.afterEach((to, from) => {
     if (to.meta?.overlay === true) {
@@ -641,9 +589,6 @@ onMounted(() => {
 // 组件卸载时清理
 onUnmounted(() => {
   window.removeEventListener('resize', updateDesktop);
-  window.removeEventListener('pointerdown', handleAnyUserAction as any);
-  window.removeEventListener('keydown', handleAnyUserAction as any);
-  window.removeEventListener('wheel', handleAnyUserAction as any);
   if (removeAfterEachHook) {
     removeAfterEachHook();
     removeAfterEachHook = null;
@@ -659,19 +604,5 @@ onUnmounted(() => {
 </script>
 
 <style>
-/* 聊天弹窗动画 */
-.chat-modal-enter-active,
-.chat-modal-leave-active {
-  transition: all 0.3s ease;
-}
-
-.chat-modal-enter-from {
-  opacity: 0;
-  transform: translateX(20px);
-}
-
-.chat-modal-leave-to {
-  opacity: 0;
-  transform: translateX(20px);
-}
+/* 样式已移除 - 不再使用动画效果 */
 </style>

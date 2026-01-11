@@ -15,6 +15,10 @@
   --surface-veil-strong: rgba(255, 255, 255, 0.08);
   --shadow-soft: 0 14px 30px rgba(0, 0, 0, 0.35);
   --shadow-strong: 0 18px 40px rgba(0, 0, 0, 0.45);
+  --font-ui-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "PingFang SC", "Hiragino Sans GB", "Heiti SC", "Microsoft YaHei", "DengXian",
+    "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji",
+    "Segoe UI Symbol", sans-serif;
   font-family: "Noto Serif SC", "PingFang SC", system-ui, -apple-system,
     BlinkMacSystemFont, "Segoe UI", serif;
   color: var(--text);
@@ -52,7 +56,7 @@ html.page-home {
 }
 
 html.page-main {
-  background: url("../assets/bg-cloud.png") center / cover no-repeat fixed, #050505;
+  background: linear-gradient(to bottom, #131829 0%, #151724 50%, #0d0e19 75%, #0a0b15 100%);
 }
 
 /* 滚动条样式 */
@@ -87,5 +91,11 @@ a {
   text-decoration: none;
 }
 
-button {
+.ui-sans-font {
+  font-family: var(--font-ui-sans);
+}
+
+/* 兼容旧 class 名称（历史原因：原本只给“深度思考”按钮用） */
+.deep-thinking-font {
+  font-family: var(--font-ui-sans);
 }

@@ -233,7 +233,7 @@
           <button
             v-for="(question, index) in suggestedQuestions"
             :key="index"
-            class="shrink-0 rounded-full border border-[rgba(214,160,96,0.35)] bg-[rgba(18,20,30,0.7)] px-3 py-1.5 text-xs text-[var(--text)] backdrop-blur-md transition-all duration-200 hover:border-[rgba(214,160,96,0.7)] hover:text-[#f3e4c8] hover:-translate-y-[1px]"
+            class="shrink-0 rounded-full border border-[rgba(255,255,255,0.15)] bg-[rgba(18,20,30,0.7)] px-3 py-1.5 text-xs text-[var(--text)] backdrop-blur-md transition-all duration-200 hover:border-[rgba(214,160,96,0.7)] hover:text-[#f3e4c8] hover:-translate-y-[1px]"
             type="button"
             @click="selectSuggestion(question)"
           >
@@ -243,7 +243,7 @@
       </div>
 
       <!-- 悬浮输入面板：毛玻璃 + 全圆角 -->
-      <div class="flex flex-col gap-1.5 rounded-3xl border border-[rgba(233,201,163,0.2)] bg-[rgba(18,20,28,0.35)] px-1.5 py-2 shadow-[0_-8px_16px_rgba(10,10,10,0.55)] backdrop-blur-xl">
+      <div class="flex flex-col gap-1.5 rounded-3xl border border-[rgba(124,125,131,0.18)] bg-[rgba(22,22,25,0.55)] px-1.5 py-2 shadow-[0_-8px_16px_rgba(10,10,10,0.55)] backdrop-blur-3xl">
         <!-- 上层：输入区域（点击进入输入状态） -->
         <div class="flex" @click="focusInput">
           <textarea
@@ -284,45 +284,45 @@
               @click="toggleSubjectEnabled"
               :aria-pressed="subjectEnabled"
               :disabled="!selectedArchive"
-            >
-              {{ selectedArchive ? selectedArchive.displayName : '未选择命主' }}
-            </button>
+	            >
+	              {{ selectedArchive ? selectedArchive.displayName : '未选择命主' }}
+	            </button>
 
-            <!-- 3. 模型选择（本地 / DeepSeek） -->
-            <button
-              :class="[
-                'shrink-0 rounded-full border px-2.5 py-1 text-sm transition',
-                selectedLlmProvider === 'deepseek'
-                  ? 'border-[rgba(88,150,250,0.55)] bg-[rgba(88,150,250,0.14)] text-[#7fb0ff]'
-                  : 'border-white/10 bg-white/5 text-white/75 hover:bg-white/10'
-              ]"
-              type="button"
-              @click="toggleLlmProvider"
-              aria-label="选择模型"
-            >
-              {{ selectedLlmProvider === 'deepseek' ? 'DeepSeek' : '本地' }}
-            </button>
+	            <!-- 3. 模型选择（本地 / DeepSeek） -->
+	            <button
+	              :class="[
+	                'ui-sans-font shrink-0 rounded-full border px-2.5 py-1 text-sm transition',
+	                selectedLlmProvider === 'deepseek'
+	                  ? 'border-[rgba(88,150,250,0.55)] bg-[rgba(88,150,250,0.14)] text-[#7fb0ff]'
+	                  : 'border-white/10 bg-white/5 text-white/75 hover:bg-white/10'
+	              ]"
+	              type="button"
+	              @click="toggleLlmProvider"
+	              aria-label="选择模型"
+	            >
+	              {{ selectedLlmProvider === 'deepseek' ? 'DeepSeek' : '本地' }}
+	            </button>
 
-            <!-- 4. 深度思考（仅 DeepSeek 可切换；本地默认开启） -->
-            <button
-              :class="[
-                'deep-thinking-font shrink-0 rounded-xl border px-2.5 py-1 text-sm transition',
-                effectiveDeepThinkingEnabled
-                  ? 'border-[rgba(125,213,111,0.55)] bg-[rgba(125,213,111,0.16)] text-[#7dd56f]'
-                  : 'border-white/10 bg-white/5 text-white/75 hover:bg-white/10',
-                selectedLlmProvider === 'local' ? 'cursor-not-allowed opacity-70' : ''
-              ]"
-              type="button"
-              @click="toggleDeepThinking"
-              :aria-pressed="effectiveDeepThinkingEnabled"
-              :disabled="selectedLlmProvider === 'local'"
-            >
-              深度思考
-            </button>
-          </div>
+	            <!-- 4. 深度思考（仅 DeepSeek 可切换；本地默认开启） -->
+	            <button
+	              :class="[
+	                'ui-sans-font shrink-0 rounded-xl border px-2.5 py-1 text-sm transition',
+	                effectiveDeepThinkingEnabled
+	                  ? 'border-[rgba(125,213,111,0.55)] bg-[rgba(125,213,111,0.16)] text-[#7dd56f]'
+	                  : 'border-white/10 bg-white/5 text-white/75 hover:bg-white/10',
+	                selectedLlmProvider === 'local' ? 'cursor-not-allowed opacity-70' : ''
+	              ]"
+	              type="button"
+	              @click="toggleDeepThinking"
+	              :aria-pressed="effectiveDeepThinkingEnabled"
+	              :disabled="selectedLlmProvider === 'local'"
+	            >
+	              深度思考
+	            </button>
+	          </div>
 
-          <!-- 右侧：发送/停止按钮（保持原逻辑） -->
-          <button
+	          <!-- 右侧：发送/停止按钮（保持原逻辑） -->
+	          <button
             :class="[
               'flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200',
               isStreamingActive
@@ -362,11 +362,10 @@
     </div>
 
     <!-- 历史对话面板 -->
-    <Transition name="slide-panel">
-      <div
-        v-if="showHistoryPanel"
-        class="absolute inset-0 z-50 flex flex-col bg-[rgba(12,14,20,0.98)] backdrop-blur-lg"
-      >
+    <div
+      v-if="showHistoryPanel"
+      class="absolute inset-0 z-50 flex flex-col bg-[rgba(12,14,20,0.98)] backdrop-blur-lg"
+    >
         <!-- 历史面板头部 -->
         <header
           :class="[
@@ -431,8 +430,7 @@
             </button>
           </div>
         </div>
-      </div>
-    </Transition>
+    </div>
 
     <!-- 档案选择面板（不离开当前界面） -->
     <teleport to="body">
@@ -579,12 +577,12 @@ const archivePickerOpen = ref(false);
 const archivePickerQuery = ref("");
 // 选中的“命主档案”（只影响聊天上下文，不会改变当前浏览的命盘页面）
 const selectedArchiveId = ref<number | null>(null);
-// 是否把命主信息一起发给后端（命主按钮的选中/未选中状态）
-const subjectEnabled = ref(true);
-// LLM 渠道选择：local(本地 Ollama) / deepseek(云端)
-const selectedLlmProvider = ref<"local" | "deepseek">("local");
-// 深度思考开关：仅 DeepSeek 可切换；本地默认开启
-const deepThinkingEnabledForDeepseek = ref(false);
+	// 是否把命主信息一起发给后端（命主按钮的选中/未选中状态）
+	const subjectEnabled = ref(true);
+	// LLM 渠道选择：local(本地 Ollama) / deepseek(云端)
+	const selectedLlmProvider = ref<"local" | "deepseek">("deepseek");
+	// 深度思考开关：仅 DeepSeek 可切换；本地默认开启
+	const deepThinkingEnabledForDeepseek = ref(false);
 // 是否跟随当前正在查看的档案（activeArchiveId）。用户手动选择后会切到 manual。
 const archiveSelectionMode = ref<"auto" | "manual">("auto");
 const didInitSubjectDefaults = ref(false);
@@ -823,19 +821,30 @@ const sendMessage = async () => {
   pickRandomThinkingText();
   displayedThinkingText.value = currentThinkingText.value.slice(0, 1);
 
-  // 用户主动发送时：默认"贴底"，不要被流式更新打断滚动体验
+  // 用户主动发送时：强制启用自动滚动，确保 AI 回复期间始终贴底
   autoScrollEnabled.value = true;
+
   // 命主信息：只有 subjectEnabled 为 true 时才随消息发送（目前只传姓名 + 出生日期文本，简化后端处理）
   const subject = subjectEnabled.value && selectedArchive.value
     ? { name: selectedArchive.value.displayName, birth: selectedArchive.value.birthLabel }
     : null;
+
   sendMessageInStore(text, {
     subject,
     deepThinking: effectiveDeepThinkingEnabled.value,
     llmProvider: selectedLlmProvider.value,
   });
+
+  // 发送后立即滚动到底部
   await nextTick();
   scrollToBottom();
+
+  // 再次确保滚动到底部（处理 DOM 更新延迟）
+  setTimeout(() => {
+    if (autoScrollEnabled.value) {
+      scrollToBottom();
+    }
+  }, 50);
 };
 
 // 处理发送/停止按钮点击
@@ -1101,22 +1110,6 @@ watch(isThinking, (value) => {
   transform: translateY(-8px) scale(0.95);
 }
 
-/* 历史面板滑入 */
-.slide-panel-enter-active,
-.slide-panel-leave-active {
-  transition: all 0.3s ease;
-}
-
-.slide-panel-enter-from {
-  opacity: 0;
-  transform: translateX(100%);
-}
-
-.slide-panel-leave-to {
-  opacity: 0;
-  transform: translateX(100%);
-}
-
 /* 消息内容样式 */
 :deep(strong) {
   font-weight: 600;
@@ -1131,8 +1124,4 @@ watch(isThinking, (value) => {
   font-size: 13px;
 }
 
-.deep-thinking-font {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
-    Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
-}
 </style>

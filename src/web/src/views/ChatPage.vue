@@ -1,10 +1,10 @@
 <template>
-  <!-- 移动端/PWA 全屏聊天页面 -->
+  <!-- 移动端/PWA 全屏聊天页面：进入无动画，退出向右滑动 -->
   <Transition
     :css="true"
-    enter-active-class="transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] motion-reduce:transition-none"
-    enter-from-class="opacity-0 translate-x-full"
-    enter-to-class="opacity-100 translate-x-0"
+    enter-active-class=""
+    enter-from-class=""
+    enter-to-class=""
     leave-active-class="transition-all duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] motion-reduce:transition-none"
     leave-from-class="opacity-100 translate-x-0"
     leave-to-class="opacity-0 translate-x-full"
@@ -40,7 +40,7 @@ const finalizeExit = () => {
 };
 
 onMounted(() => {
-  // 触发进入动画：避免首次渲染就显示（否则没有 enter 过程）
+  // 立即显示聊天页面（无进入动画）
   nextTick(() => {
     isVisible.value = true;
   });
