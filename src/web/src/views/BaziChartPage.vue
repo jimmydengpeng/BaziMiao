@@ -36,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue';
+import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import SideNav from '../components/SideNav.vue';
 import TabBar from '../components/TabBar.vue';
@@ -101,13 +101,5 @@ const tabItems = computed(() => {
 // 是否可以查看报告
 const canViewReport = computed(() => !!report.value);
 
-// 设置页面样式类
-onMounted(() => {
-  document.documentElement.classList.add('page-main');
-  document.documentElement.classList.remove('page-home');
-});
-
-onUnmounted(() => {
-  document.documentElement.classList.remove('page-main');
-});
+// 页面样式由 App.vue 统一控制，避免路由切换时误删全局类名
 </script>

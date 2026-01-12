@@ -235,6 +235,7 @@ const saveArchive = (formValues: BirthFormValues, chartData: any) => {
     id: archiveCounter.value,
     name,
     displayName,
+    gender: chartData.gender,
     birthLabel,
     pillars,
     chart: chartData
@@ -246,26 +247,41 @@ const saveArchive = (formValues: BirthFormValues, chartData: any) => {
 
 // 从 Chart 数据构建四柱信息（用于档案显示）
 const buildPillarsFromChart = (chartData: any) => {
-  // 如果后端返回了四柱数据，使用后端数据
-  if (chartData.pillars && Array.isArray(chartData.pillars)) {
-    return chartData.pillars.map((p: any) => ({
-      stem: p.stem || '',
-      branch: p.branch || '',
-      stemElement: elementForStem(p.stem || ''),
-      branchElement: elementForBranch(p.branch || '')
-    }));
-  }
+  const yearStem = chartData?.year_pillar?.heaven_stem?.name ?? '';
+  const yearBranch = chartData?.year_pillar?.earth_branch?.name ?? '';
+  const monthStem = chartData?.month_pillar?.heaven_stem?.name ?? '';
+  const monthBranch = chartData?.month_pillar?.earth_branch?.name ?? '';
+  const dayStem = chartData?.day_pillar?.heaven_stem?.name ?? '';
+  const dayBranch = chartData?.day_pillar?.earth_branch?.name ?? '';
+  const hourStem = chartData?.hour_pillar?.heaven_stem?.name ?? '';
+  const hourBranch = chartData?.hour_pillar?.earth_branch?.name ?? '';
 
-  // 否则使用临时占位数据（不应该出现这种情况）
-  const stems = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
-  const branches = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-
-  return Array.from({ length: 4 }, (_, i) => ({
-    stem: stems[i % 10],
-    branch: branches[i % 12],
-    stemElement: elementForStem(stems[i % 10]),
-    branchElement: elementForBranch(branches[i % 12])
-  }));
+  return [
+    {
+      stem: yearStem,
+      branch: yearBranch,
+      stemElement: elementForStem(yearStem),
+      branchElement: elementForBranch(yearBranch)
+    },
+    {
+      stem: monthStem,
+      branch: monthBranch,
+      stemElement: elementForStem(monthStem),
+      branchElement: elementForBranch(monthBranch)
+    },
+    {
+      stem: dayStem,
+      branch: dayBranch,
+      stemElement: elementForStem(dayStem),
+      branchElement: elementForBranch(dayBranch)
+    },
+    {
+      stem: hourStem,
+      branch: hourBranch,
+      stemElement: elementForStem(hourStem),
+      branchElement: elementForBranch(hourBranch)
+    }
+  ];
 };
 
 const elementForStem = (stem: string) => {

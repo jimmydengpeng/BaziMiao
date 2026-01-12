@@ -12,25 +12,38 @@
             <span class="text-xl font-bold tracking-wide text-(--accent-2) truncate whitespace-nowrap">{{ chart.name || "命主" }}</span>
             <span class="text-sm text-(--white) whitespace-nowrap">{{ lunarBirthText }}</span>
           </div>
-          <!-- 基础/专业切换按钮 -->
-          <div class="relative ml-auto inline-flex shrink-0 cursor-pointer items-center rounded-3xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,17,24,0.9)] p-0.5">
-            <span
-              v-for="mode in ['basic', 'pro']"
-              :key="mode"
-              :class="[
-                'relative z-[1] w-[52px] rounded-3xl px-3 py-1.5 text-center text-[12px] font-medium transition-colors duration-200',
-                infoMode === mode ? 'text-white' : 'text-white/65'
-              ]"
-              @click="setInfoMode(mode as 'basic' | 'pro')"
+          <!-- 右侧功能区：切换档案 + 展开/收起详细 -->
+          <div class="ml-auto inline-flex shrink-0 items-center gap-2">
+            <button
+              class="flex h-9 w-9 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(15,17,24,0.9)] text-white/80 transition hover:bg-[rgba(255,255,255,0.08)]"
+              type="button"
+              @click="handleArchivePickerOpen"
+              aria-label="切换档案"
             >
-              {{ mode === 'basic' ? '基本' : '详细' }}
-            </span>
-            <div
-              :class="[
-                'absolute left-0.5 top-0.5 z-0 h-[calc(100%-4px)] w-[52px] rounded-3xl bg-[rgba(176,184,210,0.1)] shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
-                infoMode === 'pro' ? 'translate-x-[52px]' : ''
-              ]"
-            ></div>
+              <img :src="switchArchiveIconUrl" alt="" class="h-4 w-4 object-contain" />
+            </button>
+            <button
+              class="flex h-9 w-9 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(15,17,24,0.9)] text-white/80 transition hover:bg-[rgba(255,255,255,0.08)]"
+              type="button"
+              @click="toggleInfoMode"
+              :aria-expanded="infoMode === 'pro'"
+              :aria-label="infoMode === 'pro' ? '收起详细信息' : '展开详细信息'"
+              :title="infoMode === 'pro' ? '收起详细信息' : '展开详细信息'"
+            >
+              <svg
+                class="h-4 w-4 transition-transform duration-200"
+                :class="infoMode === 'pro' ? 'rotate-180' : ''"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -755,7 +768,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import type { Chart, GanZhiRelation, PillarInfo, HeavenStemInfo, EarthBranchInfo, SmartEnergyResult } from "../types";
 import PanelHeader from "./PanelHeader.vue";
 // 导入性别图标
@@ -763,16 +776,23 @@ import maleIconUrl from "../assets/gender-male.png";
 import femaleIconUrl from "../assets/gender-female.png";
 // 导入 sparkle 图标
 import sparkleIconUrl from "../assets/sparkles.png";
+import switchArchiveIconUrl from "../assets/change-arch.png";
 
 const props = defineProps<{
   chart: Chart | null;
 }>();
 
+const openArchivePicker = inject<() => void>("openArchivePicker", undefined);
+
+const handleArchivePickerOpen = () => {
+  openArchivePicker?.();
+};
+
 // ========== 基本信息卡片模式切换 ==========
 const infoMode = ref<'basic' | 'pro'>('basic');
 
-const setInfoMode = (mode: 'basic' | 'pro') => {
-  infoMode.value = mode;
+const toggleInfoMode = () => {
+  infoMode.value = infoMode.value === "basic" ? "pro" : "basic";
 };
 
 const destinyRangeMode = ref<'60' | '120'>('60');

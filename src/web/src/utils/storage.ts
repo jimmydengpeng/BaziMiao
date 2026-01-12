@@ -28,6 +28,7 @@ export type ArchiveEntry = {
   id: number;
   name: string;
   displayName: string;
+  gender?: string;
   birthLabel: string;
   pillars: ArchivePillar[];
   chart: Chart;

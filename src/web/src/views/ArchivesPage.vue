@@ -1,84 +1,14 @@
 <template>
   <div class="mx-auto max-w-[1600px] px-3 pb-6 md:px-4 md:pb-8 lg:px-6 lg:pb-10">
-    <section class="relative flex flex-col gap-4">
-      <header class="panel-card flex items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <div>
-            <div class="text-base font-semibold text-[var(--accent-2)]">档案列表</div>
-            <div class="text-sm text-[var(--muted)]">已保存 {{ archives.length }} 份命盘档案</div>
-          </div>
-        </div>
-        <div class="flex items-center gap-2.5 flex-wrap">
-          <button
-            class="btn-primary"
-            type="button"
-            @click="goToNewForm"
-          >
-            新建档案
-          </button>
-        </div>
-      </header>
-
-      <div class="flex min-w-0 flex-col gap-3.5">
-        <div class="flex flex-col gap-3.5">
-          <!-- 空状态 -->
-          <div
-            v-if="archives.length === 0"
-            class="panel-card flex flex-col gap-2.5 text-center bg-[rgba(16,12,10,0.7)]"
-          >
-            <h2 class="text-lg font-semibold text-white">还没有档案</h2>
-            <p class="text-sm text-[var(--muted)]">先填写姓名与生日信息，再保存到这里。</p>
-            <button
-              class="btn-primary mx-auto mt-2"
-              type="button"
-              @click="goToNewForm"
-            >
-              去填写
-            </button>
-          </div>
-
-          <!-- 档案列表 -->
-          <button
-            v-for="entry in archives"
-            :key="entry.id"
-            :class="[
-              'panel-card grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-4 px-5 py-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(214,160,96,0.55)] hover:shadow-[0_22px_48px_rgba(0,0,0,0.5)]',
-              entry.id === activeArchiveId
-                ? 'border-[rgba(214,160,96,0.85)] shadow-[0_22px_50px_rgba(0,0,0,0.55),inset_0_0_0_1px_rgba(214,160,96,0.35)]'
-                : ''
-            ]"
-            type="button"
-            @click="openArchive(entry)"
-          >
-            <div class="grid gap-1.5">
-              <div class="text-[22px] font-semibold tracking-wide text-[var(--accent-2)]">{{ entry.displayName }}</div>
-              <div class="text-[13px] text-white/65">{{ entry.birthLabel }}</div>
-            </div>
-            <div class="grid gap-1.5 justify-items-center">
-              <div class="grid auto-cols-[minmax(16px,1fr)] grid-flow-col gap-2.5 text-base font-semibold tracking-widest">
-                <span
-                  v-for="(pillar, idx) in entry.pillars"
-                  :key="`stem-${entry.id}-${idx}`"
-                  :class="['min-w-[18px] text-center', elementClass(pillar.stemElement)]"
-                >
-                  {{ pillar.stem }}
-                </span>
-              </div>
-              <div class="grid auto-cols-[minmax(16px,1fr)] grid-flow-col gap-2.5 text-base font-semibold tracking-widest">
-                <span
-                  v-for="(pillar, idx) in entry.pillars"
-                  :key="`branch-${entry.id}-${idx}`"
-                  :class="['min-w-[18px] text-center', elementClass(pillar.branchElement)]"
-                >
-                  {{ pillar.branch }}
-                </span>
-              </div>
-            </div>
-            <div class="text-2xl text-[var(--accent-2)] opacity-80">›</div>
-          </button>
-        </div>
-      </div>
-    </section>
+    <ArchiveListPanel
+      mode="page"
+      :profiles="archives"
+      :current-id="activeArchiveId"
+      @select="openArchive"
+      @create="goToNewForm"
+      @delete="deleteArchives"
+      @copy="copyArchiveInfo"
+    />
   </div>
 </template>
 
@@ -86,6 +16,7 @@
 import { useRouter } from 'vue-router';
 import { useStore } from '../composables/useStore';
 import type { ArchiveEntry } from '../utils/storage';
+import ArchiveListPanel from '../components/ArchiveListPanel.vue';
 
 const router = useRouter();
 const { archives, activeArchiveId, chart, analysis, report } = useStore();
@@ -108,15 +39,59 @@ const goToNewForm = () => {
   router.push('/bazi/form');
 };
 
-// 五行元素样式类
-const elementClass = (element: string) => {
-  const map: Record<string, string> = {
-    木: 'element-wood',
-    火: 'element-fire',
-    土: 'element-earth',
-    金: 'element-metal',
-    水: 'element-water'
-  };
-  return map[element] ?? 'element-neutral';
+const deleteArchives = (ids: number[]) => {
+  if (ids.length === 0) return;
+  const remaining = archives.value.filter((entry) => !ids.includes(entry.id));
+  archives.value = remaining;
+
+  if (activeArchiveId.value !== null && ids.includes(activeArchiveId.value)) {
+    const next = remaining[0] ?? null;
+    activeArchiveId.value = next ? next.id : null;
+    chart.value = next ? next.chart : null;
+    analysis.value = null;
+    report.value = null;
+  }
+};
+
+const formatGender = (gender?: string | null) => {
+  if (gender === 'male') return '男';
+  if (gender === 'female') return '女';
+  return gender ? '其他' : '未知';
+};
+
+const copyArchiveInfo = async (entry: ArchiveEntry) => {
+  const destiny = entry.chart?.destiny_cycle?.destiny_pillars ?? [];
+  const destinyText = destiny
+    .slice(0, 6)
+    .map((pillar) => `${pillar.heaven_stem.name}${pillar.earth_branch.name}`)
+    .join('、');
+  const pillarsText = entry.pillars
+    .map((pillar) => `${pillar.stem}${pillar.branch}`)
+    .join('、');
+  const text = [
+    `姓名：${entry.displayName || entry.name || '未命名'}`,
+    `性别：${formatGender(entry.chart?.gender ?? null)}`,
+    `四柱：${pillarsText || '未知'}`,
+    `前6个大运：${destinyText || '未知'}`
+  ].join('\n');
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+    window.alert('已复制档案信息到剪切板。');
+  } catch (error) {
+    console.error('复制失败:', error);
+    window.alert('复制失败，请稍后重试。');
+  }
 };
 </script>

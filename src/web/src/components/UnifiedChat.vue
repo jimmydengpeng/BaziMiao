@@ -433,64 +433,14 @@
     </div>
 
     <!-- 档案选择面板（不离开当前界面） -->
-    <teleport to="body">
-      <Transition name="menu-fade">
-        <div v-if="archivePickerOpen" class="fixed inset-0 z-[500]">
-          <div class="absolute inset-0 bg-black/50" @click="closeArchivePicker"></div>
-          <div class="absolute inset-x-0 bottom-0 pb-[env(safe-area-inset-bottom,0px)]">
-            <div class="mx-auto w-full max-w-[720px] rounded-t-2xl border border-white/10 bg-[rgba(18,20,28,0.96)] shadow-[0_-18px_50px_rgba(0,0,0,0.55)] backdrop-blur-xl">
-              <div class="flex items-center justify-between gap-3 px-4 py-3">
-                <div class="min-w-0">
-                  <div class="text-sm font-semibold text-white/90">选择命主档案</div>
-                  <div class="text-[11px] text-white/55">选中后会显示在下方“命主”按钮里</div>
-                </div>
-                <button
-                  class="flex h-9 w-9 items-center justify-center rounded-lg text-white/70 transition hover:bg-white/10 hover:text-white"
-                  type="button"
-                  @click="closeArchivePicker"
-                  aria-label="关闭"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M18 6L6 18M6 6l12 12"/>
-                  </svg>
-                </button>
-              </div>
-
-              <div class="px-4 pb-4">
-                <input
-                  v-model="archivePickerQuery"
-                  type="text"
-                  class="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/85 placeholder-white/35 outline-none focus:border-[rgba(214,160,96,0.55)]"
-                  placeholder="搜索档案名称..."
-                />
-              </div>
-
-              <div class="max-h-[55vh] overflow-y-auto px-2 pb-4">
-                <div v-if="filteredArchives.length === 0" class="px-4 py-8 text-center text-sm text-white/60">
-                  暂无可选档案
-                </div>
-                <button
-                  v-for="entry in filteredArchives"
-                  :key="entry.id"
-                  :class="[
-                    'mx-2 mb-2 flex w-[calc(100%-16px)] items-start justify-between gap-3 rounded-xl border px-4 py-3 text-left transition',
-                    entry.id === selectedArchiveId ? 'border-[rgba(214,160,96,0.55)] bg-[rgba(214,160,96,0.12)]' : 'border-white/10 bg-white/5 hover:bg-white/10'
-                  ]"
-                  type="button"
-                  @click="selectArchiveForChat(entry.id)"
-                >
-                  <div class="min-w-0">
-                    <div class="truncate text-sm font-medium text-white/90">{{ entry.displayName }}</div>
-                    <div class="mt-1 truncate text-xs text-white/55">{{ entry.birthLabel }}</div>
-                  </div>
-                  <div class="shrink-0 pt-0.5 text-[11px] text-white/45">#{{ entry.id }}</div>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </teleport>
+    <ArchivePickerModal
+      v-model="archivePickerOpen"
+      :profiles="archives"
+      :current-id="selectedArchiveId"
+      title="选择命主档案"
+      description="选中后会显示在下方“命主”按钮里"
+      @select="selectArchiveForChat"
+    />
 
     <!-- 轻提示（Toast）：用于“已是新对话”等弱打断提示 -->
     <teleport to="body">
@@ -525,6 +475,8 @@ import thumbUpUrl from "../assets/thumb-up.png";
 import thumbDownUrl from "../assets/thumb-down.png";
 import { useUnifiedChatStore } from "../composables/useUnifiedChatStore";
 import { useStore } from "../composables/useStore";
+import ArchivePickerModal from "./ArchivePickerModal.vue";
+import type { ArchiveEntry } from "../utils/storage";
 
 // Props
 const props = withDefaults(defineProps<{
@@ -574,7 +526,6 @@ const lastScrollTop = ref(0);
 
 // ========== 输入区：命主/档案上下文 ==========
 const archivePickerOpen = ref(false);
-const archivePickerQuery = ref("");
 // 选中的“命主档案”（只影响聊天上下文，不会改变当前浏览的命盘页面）
 const selectedArchiveId = ref<number | null>(null);
 	// 是否把命主信息一起发给后端（命主按钮的选中/未选中状态）
@@ -606,32 +557,14 @@ const selectedArchive = computed(() => {
   return archives.value.find((entry) => entry.id === selectedArchiveId.value) ?? null;
 });
 
-const filteredArchives = computed(() => {
-  const query = archivePickerQuery.value.trim();
-  if (!query) return archives.value;
-  return archives.value.filter((entry) => {
-    const haystack = `${entry.displayName} ${entry.birthLabel} #${entry.id}`.toLowerCase();
-    return haystack.includes(query.toLowerCase());
-  });
-});
-
-const closeArchivePicker = () => {
-  archivePickerOpen.value = false;
-  archivePickerQuery.value = "";
-};
-
 const toggleArchivePicker = () => {
   archivePickerOpen.value = !archivePickerOpen.value;
-  if (!archivePickerOpen.value) {
-    archivePickerQuery.value = "";
-  }
 };
 
-const selectArchiveForChat = (archiveId: number) => {
-  selectedArchiveId.value = archiveId;
+const selectArchiveForChat = (entry: ArchiveEntry) => {
+  selectedArchiveId.value = entry.id;
   archiveSelectionMode.value = "manual";
   subjectEnabled.value = true;
-  closeArchivePicker();
 };
 
 const toggleSubjectEnabled = () => {

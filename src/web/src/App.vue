@@ -13,6 +13,7 @@
       :can-view-report="canViewReport"
       @navigate="handleNavigate"
       @open-logo-dialog="openLogoDialog"
+      @open-archive-picker="openArchivePicker"
       @start="goToForm"
       @go-login="goToLogin"
     />
@@ -55,6 +56,15 @@
         @go-home="goHome"
       />
 
+      <ArchivePickerModal
+        v-model="archivePickerOpen"
+        :profiles="archives"
+        :current-id="activeArchiveId"
+        title="选择命主档案"
+        description="点击档案切换当前命盘"
+        @select="handleArchiveSelect"
+      />
+
       <!-- 桌面端聊天弹窗 -->
       <div
         v-if="chatModalOpen && isDesktop"
@@ -72,20 +82,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick, provide } from 'vue';
 import { useRouter, useRoute, type RouteLocationNormalizedLoaded } from 'vue-router';
 import TopNav from './components/TopNav.vue';
 import CloudDecoration from './components/CloudDecoration.vue';
 import ChatFab from './components/ChatFab.vue';
 import UnifiedChat from './components/UnifiedChat.vue';
 import LogoDialog from './components/LogoDialog.vue';
+import ArchivePickerModal from './components/ArchivePickerModal.vue';
 import { useStore } from './composables/useStore';
 import { useUnifiedChatStore } from './composables/useUnifiedChatStore';
 import { loadBaziViewState, saveBaziViewState } from './utils/storage';
+import type { ArchiveEntry } from './utils/storage';
 
 const router = useRouter();
 const route = useRoute();
-const { isAuthenticated, activeArchiveId, report, chart } = useStore();
+const { isAuthenticated, activeArchiveId, report, chart, archives, analysis } = useStore();
 const { isStreamingActive } = useUnifiedChatStore();
 const scrollEl = ref<HTMLElement | null>(null);
 const chatFabRef = ref<InstanceType<typeof ChatFab> | null>(null);
@@ -200,6 +212,7 @@ const scheduleChartHints = () => {
 const chatModalOpen = ref(false);
 const isDesktop = ref(false);
 const logoDialogOpen = ref(false);
+const archivePickerOpen = ref(false);
 
 // 聊天“后台回复完成提醒”：
 // - 如果用户在等待/回复过程中退出聊天（route 退出或关闭 modal），当流结束后在 ChatFab 右上角点亮微光两点；
@@ -380,6 +393,20 @@ const handleChatFabClick = () => {
 // 关闭聊天弹窗
 const closeChatModal = () => {
   chatModalOpen.value = false;
+};
+
+const openArchivePicker = () => {
+  archivePickerOpen.value = true;
+};
+
+provide('openArchivePicker', openArchivePicker);
+
+const handleArchiveSelect = (entry: ArchiveEntry) => {
+  activeArchiveId.value = entry.id;
+  chart.value = entry.chart;
+  analysis.value = null;
+  report.value = null;
+  router.push(`/bazi/chart/${entry.id}/pillars`);
 };
 
 // 处理模块导航
