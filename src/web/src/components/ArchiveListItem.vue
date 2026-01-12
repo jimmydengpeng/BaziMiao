@@ -4,48 +4,49 @@
     :class="showCheckbox ? 'pr-2' : ''"
   >
     <button
-      class="flex w-full items-center justify-between gap-4 overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.25)] px-3 py-3 text-left backdrop-blur-lg transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(214,160,96,0.55)] hover:shadow-[0_22px_48px_rgba(0,0,0,0.5)]"
+      class="flex w-full items-center justify-between gap-4 overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.25)] px-3 py-2 text-left backdrop-blur-lg transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(214,160,96,0.55)] hover:shadow-[0_22px_48px_rgba(0,0,0,0.5)]"
       :class="[
         isCurrent
-          ? 'border-[rgba(214,160,96,0.85)] shadow-[0_22px_50px_rgba(0,0,0,0.55),inset_0_0_0_1px_rgba(214,160,96,0.35)]'
+          ? 'border-[0.5px] border-[rgba(214,160,96,0.65)] bg-[rgba(164,151,84,0.12)] shadow-[0_22px_50px_rgba(0,0,0,0.15),inset_0_0_0_1px_rgba(214,160,96,0.25)]'
           : '',
         isPending
-          ? 'border-[rgba(88,160,255,0.7)] bg-[rgba(88,160,255,0.12)]'
+          ? 'border-[rgba(53,65,81,0.7)] bg-[rgba(40,45,51,0.3)] shadow-[0_12px_32px_rgba(0,0,0,0.35)]'
           : '',
         showCheckbox && checked ? 'border-[rgba(214,160,96,0.55)] bg-[rgba(214,160,96,0.12)]' : ''
       ]"
       type="button"
       @click="$emit('click')"
     >
-      <div class="min-w-0 space-y-1">
+      <div class="min-w-0 space-y-2">
         <div class="flex items-center gap-2">
-          <div class="truncate text-lg font-semibold text-[var(--accent-2)]">
+          <div class="min-w-0 flex-1 truncate text-md font-semibold text-[var(--accent-2)]">
             {{ entry.displayName }}
-            <span v-if="genderLabel(entry.gender)" class="ml-1 text-sm font-normal text-[var(--muted)]">
-              · {{ genderLabel(entry.gender) }}
+            <span
+              v-if="genderLabel(entry.gender ?? entry.chart?.gender)"
+              class="ml-1 text-sm font-normal text-[var(--muted)]"
+            >
+              {{ genderLabel(entry.gender ?? entry.chart?.gender) }}
             </span>
           </div>
           <span
             v-if="isCurrent"
-            class="rounded-full border border-[rgba(214,160,96,0.4)] bg-[rgba(214,160,96,0.15)] px-2 py-0.5 text-[11px] text-[var(--accent-2)]"
+            class="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-[rgba(214,160,96,0.4)] bg-[rgba(214,160,96,0.15)] px-2 py-0.5 text-[11px] text-[var(--accent-2)]"
           >
+            <img
+              :src="archiveViewIconUrl"
+              alt="当前"
+              class="h-3.5 w-3.5"
+              :style="{ filter: accentIconFilter }"
+            />
             当前
           </span>
-          <button
-            v-if="isPending"
-            class="inline-flex items-center rounded-full border border-[rgba(88,160,255,0.5)] bg-[rgba(88,160,255,0.18)] px-2 py-0.5 text-[11px] font-semibold text-[#8fc0ff] transition hover:bg-[rgba(88,160,255,0.3)]"
-            type="button"
-            @click.stop="$emit('switch')"
-          >
-            切换
-          </button>
         </div>
-        <div class="text-sm text-[var(--muted)]">
+        <div class="text-xs text-[var(--muted)]">
           {{ entry.birthLabel }}
         </div>
       </div>
-      <div class="flex items-center gap-3">
-        <div class="grid gap-1.5 text-sm font-semibold tracking-wider">
+      <div class="relative flex min-w-[140px] items-center justify-end gap-3">
+        <div class="grid gap-1.5 text-sm font-semibold tracking-wider" :class="isActionOpen ? 'hidden' : 'block'">
           <div class="grid auto-cols-[minmax(14px,1fr)] grid-flow-col gap-1.5">
             <span
               v-for="(pillar, idx) in entry.pillars"
@@ -65,7 +66,41 @@
             </span>
           </div>
         </div>
-        <div class="text-2xl text-[var(--accent-2)] opacity-80">›</div>
+        <div class="text-2xl text-[var(--accent-2)]" :class="isPending && !isActionOpen ? 'opacity-80' : 'opacity-0'">
+          <img :src="chevronRightIconUrl" alt="右侧" class="h-4 w-4 opacity-80" />
+        </div>
+        <div
+          class="absolute right-2 top-1/2 z-10 flex -translate-y-1/2 items-center gap-4 transition-opacity duration-200"
+          :class="isActionOpen ? 'opacity-100' : 'pointer-events-none opacity-0'"
+        >
+          <button
+            class="inline-flex items-center justify-center p-1 text-[var(--accent-2)] transition-all duration-200"
+            :class="isActionOpen ? 'translate-x-0 opacity-100' : 'translate-x-3 opacity-0'"
+            :style="{ transitionDelay: '0ms' }"
+            type="button"
+            @click.stop="$emit('copy')"
+          >
+            <img :src="archiveCopyIconUrl" alt="复制八字信息" class="h-4 w-4 opacity-70" />
+          </button>
+          <button
+            class="inline-flex items-center justify-center p-1 text-[var(--accent-2)] transition-all duration-200"
+            :class="isActionOpen ? 'translate-x-0 opacity-100' : 'translate-x-3 opacity-0'"
+            :style="{ transitionDelay: '80ms' }"
+            type="button"
+            @click.stop="$emit('delete')"
+          >
+            <img :src="archiveDeleteIconUrl" alt="删除档案" class="h-4 w-4 opacity-70" />
+          </button>
+          <button
+            class="inline-flex items-center justify-center p-1 text-[var(--accent-2)] transition-all duration-200"
+            :class="isActionOpen ? 'translate-x-0 opacity-100' : 'translate-x-3 opacity-0'"
+            :style="{ transitionDelay: '160ms' }"
+            type="button"
+            @click.stop="$emit('switch')"
+          >
+            <img :src="archiveSwitchIconUrl" alt="切换档案" class="h-4 w-4 opacity-70" />
+          </button>
+        </div>
       </div>
     </button>
     <div v-if="showCheckbox" class="flex items-center justify-center">
@@ -98,11 +133,17 @@
 
 <script setup lang="ts">
 import type { ArchiveEntry } from '../utils/storage';
+import archiveCopyIconUrl from '../assets/archive_copy.png';
+import archiveDeleteIconUrl from '../assets/archive_delete.png';
+import archiveSwitchIconUrl from '../assets/archive_switch.png';
+import archiveViewIconUrl from '../assets/archive_view.png';
+import chevronRightIconUrl from '../assets/chevron-right.png';
 
 defineProps<{
   entry: ArchiveEntry;
   isCurrent?: boolean;
   isPending?: boolean;
+  isActionOpen?: boolean;
   showCheckbox?: boolean;
   checked?: boolean;
 }>();
@@ -111,6 +152,8 @@ defineEmits<{
   (e: 'click'): void;
   (e: 'switch'): void;
   (e: 'toggle'): void;
+  (e: 'copy'): void;
+  (e: 'delete'): void;
 }>();
 
 const elementClass = (element: string) => {
@@ -129,4 +172,7 @@ const genderLabel = (gender?: string) => {
   if (gender === 'female') return '女';
   return '';
 };
+
+const accentIconFilter =
+  'brightness(0) saturate(100%) invert(78%) sepia(24%) saturate(742%) hue-rotate(350deg) brightness(95%) contrast(88%)';
 </script>

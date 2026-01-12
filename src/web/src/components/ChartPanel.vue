@@ -3,7 +3,7 @@
     <div v-if="!chart" class="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[var(--panel)] p-5 text-[var(--muted)]">
       生成后会显示命盘信息。
     </div>
-    <div v-else class="flex flex-col gap-2.5 mt-1">
+    <div v-else class="flex flex-col gap-2 mt-0.5">
       <!-- 基本信息卡片 -->
       <div class="overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.65)] backdrop-blur-[16px]">
         <!-- 标题栏：姓名 + 农历生日 + 基础/专业切换 -->
