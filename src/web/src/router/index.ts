@@ -97,6 +97,18 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '个人中心' }
   },
   {
+    path: '/settings',
+    name: 'Settings',
+    component: () => import('../views/SettingsPage.vue'),
+    meta: { title: '设置' }
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: () => import('../views/AboutPage.vue'),
+    meta: { title: '关于我们' }
+  },
+  {
     // 404 页面
     path: '/:pathMatch(.*)*',
     name: 'NotFound',

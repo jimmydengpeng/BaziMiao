@@ -92,23 +92,24 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-
-const props = defineProps<{
-  isAuthenticated?: boolean;
-}>();
+import { useStore } from "../composables/useStore";
 
 const emit = defineEmits<{
   (e: "login"): void;
 }>();
 
+const { isAuthenticated } = useStore();
 const email = ref("");
 const password = ref("");
 
 const handleSubmit = () => {
+  if (!email.value || !password.value) return;
+  isAuthenticated.value = true;
   emit("login");
 };
 
 const handleGoogle = () => {
+  isAuthenticated.value = true;
   emit("login");
 };
 </script>

@@ -422,20 +422,20 @@
           <template #actions>
             <div class="relative inline-flex shrink-0 cursor-pointer items-center rounded-3xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,17,24,0.9)] p-0.5">
               <span
-                v-for="mode in ['virtual', 'actual']"
+                v-for="mode in ['60', '120']"
                 :key="mode"
                 :class="[
-                  'relative z-[1] w-[52px] rounded-3xl px-3 py-1.5 text-center text-[12px] font-medium transition-colors duration-200',
-                  destinyAgeMode === mode ? 'text-white' : 'text-white/65'
+                  'relative z-[1] w-[52px] rounded-3xl px-2 py-1.5 text-center text-[12px] font-medium transition-colors duration-200',
+                  destinyRangeMode === mode ? 'text-white' : 'text-white/65'
                 ]"
-                @click="setDestinyAgeMode(mode as 'virtual' | 'actual')"
+                @click="setDestinyRangeMode(mode as '60' | '120')"
               >
-                {{ mode === 'virtual' ? '虚岁' : '周岁' }}
+                {{ mode === '60' ? '60年' : '120年' }}
               </span>
               <div
                 :class="[
                   'absolute left-0.5 top-0.5 z-0 h-[calc(100%-4px)] w-[52px] rounded-3xl bg-[rgba(176,184,210,0.1)] shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
-                  destinyAgeMode === 'actual' ? 'translate-x-[52px]' : ''
+                  destinyRangeMode === '120' ? 'translate-x-[52px]' : ''
                 ]"
               ></div>
             </div>
@@ -444,34 +444,31 @@
         <div v-if="!destinyPillars.length" class="text-[var(--muted)]">暂无大运数据。</div>
         <div
           v-else
-          ref="destinyGridRef"
-          class="grid grid-cols-[repeat(auto-fit,minmax(70px,1fr))] gap-2"
+          class="grid grid-cols-6 gap-1"
         >
           <div
-            v-for="pillar in destinyPillarsDisplay"
+            v-for="(pillar, index) in destinyPillarsDisplay"
             :key="pillar.year"
             :class="[
               'flex flex-col items-center gap-2 rounded-[14px] border p-3 text-center transition-all duration-200 hover:-translate-y-0.5',
-              pillar.is_current
-                ? 'border-[rgba(214,160,96,0.6)] bg-[rgba(214,160,96,0.12)] shadow-[0_10px_30px_rgba(214,160,96,0.2)]'
-                : 'border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] hover:border-[rgba(214,160,96,0.4)]'
+              destinyPillarTone(pillar, index)
             ]"
           >
             <div class="flex flex-wrap items-center justify-center gap-1 text-center">
-              <span class="text-[13px] font-medium text-[var(--text)]">{{ pillar.year }}年</span>
+              <span class="text-[13px] font-medium text-[var(--text)]">{{ pillar.year }}</span>
               <span class="text-[11px] text-[var(--muted)]">{{ pillar.age }}岁</span>
             </div>
             <div class="flex flex-nowrap items-center justify-center gap-x-[clamp(0px,0.5vw,0.25rem)] text-center">
               <span :class="['text-[22px] font-bold leading-tight tracking-wide', elementClass(pillar.heaven_stem.element)]">
                 {{ pillar.heaven_stem.name }}
               </span>
-              <span class="text-[11px] font-medium text-[var(--accent-2)] opacity-85 whitespace-nowrap">{{ pillar.heaven_stem.ten_god }}</span>
+              <span class="text-[10px] font-medium text-[var(--accent-2)] opacity-85 whitespace-nowrap">{{ pillar.heaven_stem.ten_god }}</span>
             </div>
             <div class="flex flex-nowrap items-center justify-center gap-x-[clamp(0px,0.5vw,0.25rem)] text-center">
               <span :class="['text-[22px] font-bold leading-tight tracking-wide', elementClass(pillar.earth_branch.element)]">
                 {{ pillar.earth_branch.name }}
               </span>
-              <span class="text-[11px] font-medium text-[var(--accent-2)] opacity-85 whitespace-nowrap">{{ pillar.earth_branch_ten_god }}</span>
+              <span class="text-[10px] font-medium text-[var(--accent-2)] opacity-85 whitespace-nowrap">{{ pillar.earth_branch_ten_god }}</span>
             </div>
           </div>
         </div>
@@ -778,10 +775,10 @@ const setInfoMode = (mode: 'basic' | 'pro') => {
   infoMode.value = mode;
 };
 
-const destinyAgeMode = ref<'virtual' | 'actual'>('virtual');
+const destinyRangeMode = ref<'60' | '120'>('60');
 
-const setDestinyAgeMode = (mode: 'virtual' | 'actual') => {
-  destinyAgeMode.value = mode;
+const setDestinyRangeMode = (mode: '60' | '120') => {
+  destinyRangeMode.value = mode;
 };
 
 const infoGridClass = [
@@ -831,18 +828,12 @@ const textMeasure = (() => {
 const viewportWidth = ref(typeof window !== "undefined" ? window.innerWidth : 0);
 const infoGridRef = ref<HTMLElement | null>(null);
 const containerWidth = ref(0);
-const destinyGridRef = ref<HTMLElement | null>(null);
-const destinyGridWidth = ref(0);
 
 const updateViewportWidth = () => {
   if (typeof window === "undefined") return;
   viewportWidth.value = window.innerWidth;
 };
 
-const updateDestinyGridWidth = () => {
-  if (!destinyGridRef.value) return;
-  destinyGridWidth.value = Math.round(destinyGridRef.value.clientWidth);
-};
 
 onMounted(() => {
   updateViewportWidth();
@@ -863,7 +854,6 @@ onMounted(() => {
 });
 
 let infoGridObserver: ResizeObserver | null = null;
-let destinyGridObserver: ResizeObserver | null = null;
 
 onMounted(() => {
   if (typeof ResizeObserver === "undefined") return;
@@ -894,35 +884,6 @@ watch(infoGridRef, (nextEl, prevEl) => {
   }
   if (nextEl) {
     updateInfoFontFamily();
-  }
-});
-
-onMounted(() => {
-  if (typeof ResizeObserver === "undefined") return;
-  destinyGridObserver = new ResizeObserver(() => {
-    updateDestinyGridWidth();
-  });
-  if (destinyGridRef.value) {
-    destinyGridObserver.observe(destinyGridRef.value);
-    updateDestinyGridWidth();
-  }
-});
-
-onBeforeUnmount(() => {
-  if (destinyGridObserver) {
-    destinyGridObserver.disconnect();
-    destinyGridObserver = null;
-  }
-});
-
-watch(destinyGridRef, (nextEl, prevEl) => {
-  if (!destinyGridObserver) return;
-  if (prevEl) {
-    destinyGridObserver.unobserve(prevEl);
-  }
-  if (nextEl) {
-    destinyGridObserver.observe(nextEl);
-    updateDestinyGridWidth();
   }
 });
 
@@ -1540,8 +1501,6 @@ const gridPoints = (level: number) => {
 // 格式化百分比
 const formatPercent = (value: number) => `${(Number.isFinite(value) ? value : 0).toFixed(1)}%`;
 
-const DESTINY_PILLAR_MIN_WIDTH = 72;
-const DESTINY_PILLAR_GAP = 8;
 const DESTINY_PILLAR_MAX = 12;
 
 // 大运数据
@@ -1560,26 +1519,41 @@ const destinyPillarsWithAge = computed(() => {
   return destinyPillars.value.map((pillar) => ({
     ...pillar,
     // 计算命主在该大运年份的年龄（虚岁）
-    age: destinyAgeMode.value === "virtual" ? pillar.year - birthYear + 1 : pillar.year - birthYear,
+    age: pillar.year - birthYear + 1,
     // 地支的十神取藏干的第一个（本气）的十神
     earth_branch_ten_god: pillar.earth_branch.hidden_stems[0]?.ten_god ?? "未知"
   }));
 });
 
-const destinyGridColumns = computed(() => {
-  if (!destinyGridWidth.value) return 1;
-  const columns = Math.floor(
-    (destinyGridWidth.value + DESTINY_PILLAR_GAP) /
-      (DESTINY_PILLAR_MIN_WIDTH + DESTINY_PILLAR_GAP)
-  );
-  return Math.max(columns, 1);
-});
-
 const destinyPillarsDisplay = computed(() => {
-  const maxRows = viewportWidth.value >= 1024 ? 1 : 2;
-  const maxDisplay = Math.min(DESTINY_PILLAR_MAX, destinyGridColumns.value * maxRows);
+  const maxDisplay = destinyRangeMode.value === "60" ? 6 : DESTINY_PILLAR_MAX;
   return destinyPillarsWithAge.value.slice(0, maxDisplay);
 });
+
+const currentDestinyIndex = computed(() => {
+  return destinyPillarsWithAge.value.findIndex((pillar) => pillar.is_current);
+});
+
+const destinyPillarTone = (pillar: typeof destinyPillarsWithAge.value[number], index: number) => {
+  if (pillar.is_current) {
+    return "border-[rgba(214,160,96,0.25)] bg-[rgba(214,160,96,0.15)] shadow-[0_0px_10px_rgba(214,160,96,0.1)]";
+  }
+
+  const currentIndex = currentDestinyIndex.value;
+  let isPast = false;
+  if (currentIndex >= 0) {
+    isPast = index < currentIndex;
+  } else {
+    const currentYear = new globalThis.Date().getFullYear();
+    isPast = pillar.year < currentYear;
+  }
+
+  if (isPast) {
+    return "border-[rgba(110,120,130,0.18)] bg-[rgba(11,11,11,0.15)] hover:border-[rgba(120,130,150,0.5)]";
+  }
+
+  return "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] hover:border-[rgba(214,160,96,0.4)]";
+};
 
 // 大运元信息（起运时间等）
 const destinyMeta = computed(() => {
