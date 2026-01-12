@@ -41,6 +41,10 @@
         </div>
       </div>
       <div v-if="isDeleteMode" class="flex w-full items-center justify-between gap-3">
+        <button class="btn-ghost gap-1.5 px-3 py-2 text-xs" type="button" @click="exitDeleteMode">
+          <img :src="archiveManageExitIconUrl" alt="退出" class="h-3.5 w-3.5 object-contain" />
+          退出
+        </button>
         <div class="flex items-center gap-2">
           <button
             class="btn-ghost px-3 py-2 text-xs"
@@ -50,16 +54,16 @@
           >
             {{ selectAllLabel }}
           </button>
+          <button
+            class="btn-ghost border px-3 py-2 text-xs"
+            type="button"
+            :disabled="selectedIds.length === 0"
+            :style="{ borderColor: deleteBorderAccent, color: deleteBorderAccent }"
+            @click="confirmDelete"
+          >
+            删除选中档案
+          </button>
         </div>
-        <button
-          class="btn-ghost border px-3 py-2 text-xs"
-          type="button"
-          :disabled="selectedIds.length === 0"
-          :style="{ borderColor: deleteBorderAccent, color: deleteBorderAccent }"
-          @click="confirmDelete"
-        >
-          删除选中档案
-        </button>
       </div>
     </header>
 
@@ -96,7 +100,6 @@
           :entry="entry"
           :is-current="entry.id === currentId"
           :is-pending="entry.id === pendingEntry?.id"
-          :is-action-open="entry.id === actionEntryId"
           :show-checkbox="isDeleteMode"
           :checked="selectedIds.includes(entry.id)"
           @click="handleItemClick(entry)"
@@ -117,6 +120,7 @@ import type { ArchiveEntry } from '../utils/storage';
 import archiveAddIconUrl from '../assets/archive_add.png';
 import archiveSearchIconUrl from '../assets/archive_search.png';
 import archiveManageIconUrl from '../assets/archive_manage.png';
+import archiveManageExitIconUrl from '../assets/archive_manage_exit.png';
 
 const props = defineProps<{
   mode: 'page' | 'modal';
@@ -130,13 +134,13 @@ const emit = defineEmits<{
   (e: 'delete', ids: number[]): void;
   (e: 'copy', entry: ArchiveEntry): void;
   (e: 'request-delete', entry: ArchiveEntry): void;
+  (e: 'request-delete-bulk', ids: number[]): void;
 }>();
 
 const query = ref('');
 const isDeleteMode = ref(false);
 const selectedIds = ref<number[]>([]);
 const pendingEntry = ref<ArchiveEntry | null>(null);
-const actionEntryId = ref<number | null>(null);
 const manageBorderAccent = '#8a4a4a';
 const deleteBorderAccent = '#e36b6b';
 const activeActionClass = 'border-[rgba(214,160,96,0.7)] text-[var(--accent-2)]';
@@ -185,17 +189,15 @@ const handleItemClick = (entry: ArchiveEntry) => {
     return;
   }
   if (pendingEntry.value?.id === entry.id) {
-    actionEntryId.value = actionEntryId.value === entry.id ? null : entry.id;
+    pendingEntry.value = null;
     return;
   }
   pendingEntry.value = entry;
-  actionEntryId.value = null;
 };
 
 const enterDeleteMode = () => {
   isDeleteMode.value = true;
   selectedIds.value = [];
-  actionEntryId.value = null;
 };
 
 const exitDeleteMode = () => {
@@ -205,19 +207,16 @@ const exitDeleteMode = () => {
 
 const confirmDelete = () => {
   if (selectedIds.value.length === 0) return;
-  const confirmed = window.confirm(`确定要删除 ${selectedIds.value.length} 份档案吗？此操作不可恢复。`);
-  if (!confirmed) return;
-  emit('delete', [...selectedIds.value]);
-  exitDeleteMode();
+  emit('request-delete-bulk', [...selectedIds.value]);
 };
 
 const handleSwitch = (entry: ArchiveEntry) => {
-  actionEntryId.value = null;
+  pendingEntry.value = null;
   emit('select', entry);
 };
 
 const handleQuickDelete = (entry: ArchiveEntry) => {
-  actionEntryId.value = null;
+  pendingEntry.value = null;
   emit('request-delete', entry);
 };
 
@@ -233,7 +232,7 @@ const handleDeleteClick = () => {
 const handleCopy = (entry?: ArchiveEntry) => {
   const target = entry ?? pendingEntry.value;
   if (!target) return;
-  actionEntryId.value = null;
+  pendingEntry.value = null;
   emit('copy', target);
 };
 
@@ -258,21 +257,10 @@ watch(
 );
 
 watch(
-  () => props.profiles,
-  (nextProfiles) => {
-    if (actionEntryId.value === null) return;
-    const exists = nextProfiles.some((entry) => entry.id === actionEntryId.value);
-    if (!exists) actionEntryId.value = null;
-  },
-  { deep: true }
-);
-
-watch(
   () => props.currentId,
   () => {
     if (isDeleteMode.value) return;
     pendingEntry.value = null;
-    actionEntryId.value = null;
   }
 );
 </script>

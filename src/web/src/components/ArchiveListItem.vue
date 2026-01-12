@@ -4,7 +4,7 @@
     :class="showCheckbox ? 'pr-2' : ''"
   >
     <button
-      class="flex w-full items-center justify-between gap-4 overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.25)] px-3 py-2 text-left backdrop-blur-lg transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(214,160,96,0.55)] hover:shadow-[0_22px_48px_rgba(0,0,0,0.5)]"
+      class="flex w-full items-center justify-between gap-4 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.55)] px-3 py-2 pr-4 text-left backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(214,160,96,0.55)] hover:shadow-[0_22px_48px_rgba(0,0,0,0.5)]"
       :class="[
         isCurrent
           ? 'border-[0.5px] border-[rgba(214,160,96,0.65)] bg-[rgba(164,151,84,0.12)] shadow-[0_22px_50px_rgba(0,0,0,0.15),inset_0_0_0_1px_rgba(214,160,96,0.25)]'
@@ -46,7 +46,7 @@
         </div>
       </div>
       <div class="relative flex min-w-[140px] items-center justify-end gap-3">
-        <div class="grid gap-1.5 text-sm font-semibold tracking-wider" :class="isActionOpen ? 'hidden' : 'block'">
+        <div class="grid gap-1.5 text-sm font-semibold tracking-wider" :class="isPending ? 'hidden' : 'block'">
           <div class="grid auto-cols-[minmax(14px,1fr)] grid-flow-col gap-1.5">
             <span
               v-for="(pillar, idx) in entry.pillars"
@@ -66,16 +66,13 @@
             </span>
           </div>
         </div>
-        <div class="text-2xl text-[var(--accent-2)]" :class="isPending && !isActionOpen ? 'opacity-80' : 'opacity-0'">
-          <img :src="chevronRightIconUrl" alt="右侧" class="h-4 w-4 opacity-80" />
-        </div>
         <div
           class="absolute right-2 top-1/2 z-10 flex -translate-y-1/2 items-center gap-4 transition-opacity duration-200"
-          :class="isActionOpen ? 'opacity-100' : 'pointer-events-none opacity-0'"
+          :class="isPending ? 'opacity-100' : 'pointer-events-none opacity-0'"
         >
           <button
             class="inline-flex items-center justify-center p-1 text-[var(--accent-2)] transition-all duration-200"
-            :class="isActionOpen ? 'translate-x-0 opacity-100' : 'translate-x-3 opacity-0'"
+            :class="isPending ? 'translate-x-0 opacity-100' : 'translate-x-3 opacity-0'"
             :style="{ transitionDelay: '0ms' }"
             type="button"
             @click.stop="$emit('copy')"
@@ -84,7 +81,7 @@
           </button>
           <button
             class="inline-flex items-center justify-center p-1 text-[var(--accent-2)] transition-all duration-200"
-            :class="isActionOpen ? 'translate-x-0 opacity-100' : 'translate-x-3 opacity-0'"
+            :class="isPending ? 'translate-x-0 opacity-100' : 'translate-x-3 opacity-0'"
             :style="{ transitionDelay: '80ms' }"
             type="button"
             @click.stop="$emit('delete')"
@@ -93,7 +90,7 @@
           </button>
           <button
             class="inline-flex items-center justify-center p-1 text-[var(--accent-2)] transition-all duration-200"
-            :class="isActionOpen ? 'translate-x-0 opacity-100' : 'translate-x-3 opacity-0'"
+            :class="isPending ? 'translate-x-0 opacity-100' : 'translate-x-3 opacity-0'"
             :style="{ transitionDelay: '160ms' }"
             type="button"
             @click.stop="$emit('switch')"
@@ -137,13 +134,11 @@ import archiveCopyIconUrl from '../assets/archive_copy.png';
 import archiveDeleteIconUrl from '../assets/archive_delete.png';
 import archiveSwitchIconUrl from '../assets/archive_switch.png';
 import archiveViewIconUrl from '../assets/archive_view.png';
-import chevronRightIconUrl from '../assets/chevron-right.png';
 
 defineProps<{
   entry: ArchiveEntry;
   isCurrent?: boolean;
   isPending?: boolean;
-  isActionOpen?: boolean;
   showCheckbox?: boolean;
   checked?: boolean;
 }>();

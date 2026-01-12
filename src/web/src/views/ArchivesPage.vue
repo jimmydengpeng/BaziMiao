@@ -8,6 +8,7 @@
       @create="goToNewForm"
       @delete="deleteArchives"
       @request-delete="handleRequestDelete"
+      @request-delete-bulk="handleRequestDeleteBulk"
       @copy="copyArchiveInfo"
     />
     <div
@@ -75,6 +76,45 @@
         </div>
       </div>
     </div>
+    <div
+      v-if="showBulkDeleteModal"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 py-6 backdrop-blur-sm"
+    >
+      <div
+        class="w-full max-w-sm rounded-2xl border bg-[rgba(22,16,18,0.95)] p-5 text-center shadow-[0_30px_80px_rgba(0,0,0,0.55)]"
+        :style="{ borderColor: deleteAccent }"
+      >
+        <div class="mx-auto flex h-12 w-12 items-center justify-center">
+          <img
+            :src="deleteIconUrl"
+            alt="删除档案"
+            class="h-10 w-10"
+            :style="{ filter: deleteIconFilter }"
+          />
+        </div>
+        <h2 class="mt-3 text-lg font-semibold text-white">确认删除</h2>
+        <p class="mt-2 text-sm text-[var(--muted)]">
+          将删除选中的 {{ bulkDeleteCount }} 份档案，且无法恢复。
+        </p>
+        <div class="mt-4 flex gap-3">
+          <button class="btn-ghost flex-1" type="button" @click="closeBulkDeleteModal">
+            取消
+          </button>
+          <button
+            class="btn-primary flex-1 border text-white"
+            type="button"
+            :style="{
+              background: deleteAccent,
+              borderColor: deleteBorderAccent,
+              boxShadow: '0 12px 24px rgba(90, 37, 37, 0.35)'
+            }"
+            @click="confirmBulkDelete"
+          >
+            删除
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -93,7 +133,9 @@ const showCopyModal = ref(false);
 const copyText = ref('');
 const isCopyMode = ref(false);
 const showDeleteModal = ref(false);
+const showBulkDeleteModal = ref(false);
 const deleteTargetEntry = ref<ArchiveEntry | null>(null);
+const bulkDeleteIds = ref<number[]>([]);
 const deleteAccent = '#5a2525';
 const deleteBorderAccent = '#8a4a4a';
 const successIconFilter =
@@ -105,6 +147,7 @@ const deleteTargetLabel = computed(() => {
   if (!entry) return '该档案';
   return entry.displayName || entry.name || `档案 #${entry.id}`;
 });
+const bulkDeleteCount = computed(() => bulkDeleteIds.value.length);
 
 // 打开档案，加载命盘数据并跳转到详情页
 const openArchive = (entry: ArchiveEntry) => {
@@ -152,6 +195,23 @@ const confirmDelete = () => {
   if (!deleteTargetEntry.value) return;
   deleteArchives([deleteTargetEntry.value.id]);
   closeDeleteModal();
+};
+
+const handleRequestDeleteBulk = (ids: number[]) => {
+  if (ids.length === 0) return;
+  bulkDeleteIds.value = ids;
+  showBulkDeleteModal.value = true;
+};
+
+const closeBulkDeleteModal = () => {
+  showBulkDeleteModal.value = false;
+  bulkDeleteIds.value = [];
+};
+
+const confirmBulkDelete = () => {
+  if (bulkDeleteIds.value.length === 0) return;
+  deleteArchives([...bulkDeleteIds.value]);
+  closeBulkDeleteModal();
 };
 
 const formatGender = (gender?: string | null) => {
