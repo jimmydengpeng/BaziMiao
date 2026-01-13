@@ -153,16 +153,24 @@
           <div class="flex flex-col gap-1">
             <div class="flex justify-center">
               <!-- 智能解析加载状态 -->
-              <div v-if="energyMode === 'smart' && smartEnergyLoading" class="flex flex-col items-center justify-center h-[320px] w-[280px] lg:w-[320px]">
+              <div v-if="energyMode === 'smart' && smartEnergyLoading" class="flex flex-col items-center justify-center h-[280px] w-[260px] lg:w-[300px]">
                 <div class="relative">
                   <div class="h-16 w-16 animate-spin rounded-full border-4 border-[rgba(255,255,255,0.1)] border-t-[var(--accent-2)]"></div>
                   <img :src="sparkleIconUrl" class="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 transform opacity-80" alt="加载中" />
                 </div>
-                <p class="mt-4 text-sm text-[var(--muted)]">AI 正在分析五行能量...</p>
+                <p class="mt-4 text-sm text-[var(--muted)]">神机运转，命局五行推演中...</p>
+                <div class="mt-3 w-[200px]">
+                  <div class="h-1.5 overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)]">
+                    <div
+                      class="h-full rounded-full bg-[var(--accent-2)] transition-[width] duration-300"
+                      :style="{ width: `${loadingProgress}%` }"
+                    ></div>
+                  </div>
+                </div>
               </div>
 
               <!-- 雷达图 SVG -->
-              <svg v-else class="w-full max-w-[280px] lg:max-w-[320px]" viewBox="0 0 400 400" role="img" aria-label="五行雷达图">
+              <svg v-else class="w-full max-w-[260px] lg:max-w-[300px]" viewBox="0 0 400 400" role="img" aria-label="五行雷达图">
                 <g class="radar-grid">
                   <polygon
                     v-for="level in radarLevels"
@@ -222,15 +230,11 @@
 
           <!-- 五行占比 -->
           <div class="flex flex-col gap-2 md:gap-3">
-            <div class="mb-1.5 flex items-start gap-2 text-xs md:mb-2 md:text-[13px] px-3">
-              <div class="flex flex-col items-start gap-1">
+            <div class="mb-1.5 flex items-end justify-between gap-2 text-xs md:mb-2 md:text-[13px] px-3">
+              <div class="flex flex-col items-start gap-1 pt-5">
                 <strong>五行占比</strong>
-                <span class="text-[var(--muted)]">
-                  <template v-if="energyMode === 'smart'">智能命盘五行与能量分析</template>
-                  <template v-else>基于天干与藏干个数统计</template>
-                </span>
               </div>
-              <span v-if="energyMode === 'smart'" class="ml-auto flex items-center gap-2">
+              <span v-if="energyMode === 'smart'" class="flex items-center gap-2">
                 <button
                   class="flex items-center gap-1.5 rounded-xl border-1 py-2 border-[rgba(255,255,255,0.16)] bg-[rgba(255,255,255,0.04)] px-3 py-1 text-[12px] font-medium text-white/70 transition-all duration-200 hover:bg-[rgba(255,255,255,0.08)] active:bg-[rgba(255,255,255,0.16)] active:translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
                   :disabled="smartEnergyLoading"
@@ -298,12 +302,100 @@
                 </div>
               </div>
             </div>
-            <!-- 智能解析总结 -->
-            <div v-if="energyMode === 'smart' && smartEnergyData?.summary" class="mt-1 px-3">
-              <p class="text-xs text-[var(--muted)] border-t border-[rgba(255,255,255,0.08)] pt-3 py-1">
-                <strong class="text-[var(--text)]">整体分析：</strong>
-                <span class="summary-markdown" v-html="renderEnergySummary(smartEnergyData.summary)"></span>
-              </p>
+            <!-- 神机秘算三段式内容区 -->
+            <div v-if="energyMode === 'smart'" class="mt-3 px-3">
+              <div class="flex flex-col gap-2 text-xs md:gap-3">
+                <div class="border-[rgba(255,255,255,0.08)] pt-2">
+                  <button
+                    class="flex w-full items-center justify-between text-left text-xs font-semibold text-[var(--text)]"
+                    type="button"
+                    @click="toggleEnergySection('overall')"
+                  >
+                    五行总势
+                    <svg
+                      class="h-4 w-4 text-white/50 transition-transform duration-200"
+                      :class="energySectionOpen.overall ? 'rotate-180' : ''"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+                  <div v-show="energySectionOpen.overall" class="mt-2 text-xs leading-relaxed text-[var(--muted)]">
+                    <span
+                      v-if="smartEnergyOverall"
+                      class="summary-markdown"
+                      v-html="renderEnergySummary(smartEnergyOverall)"
+                    ></span>
+                    <span v-else>暂无秘算提示</span>
+                  </div>
+                </div>
+                <div class="border-[rgba(255,255,255,0.08)] pt-2">
+                  <button
+                    class="flex w-full items-center justify-between text-left text-xs font-semibold text-[var(--text)]"
+                    type="button"
+                    @click="toggleEnergySection('temperament')"
+                  >
+                    性情底色
+                    <svg
+                      class="h-4 w-4 text-white/50 transition-transform duration-200"
+                      :class="energySectionOpen.temperament ? 'rotate-180' : ''"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+                  <div v-show="energySectionOpen.temperament" class="mt-2 text-xs leading-relaxed text-[var(--muted)]">
+                    <span
+                      v-if="smartEnergyTemperament"
+                      class="summary-markdown"
+                      v-html="renderEnergySummary(smartEnergyTemperament)"
+                    ></span>
+                    <span v-else>暂无秘算提示</span>
+                  </div>
+                </div>
+                <div class="border-[rgba(255,255,255,0.08)] pt-2">
+                  <button
+                    class="flex w-full items-center justify-between text-left text-xs font-semibold text-[var(--text)]"
+                    type="button"
+                    @click="toggleEnergySection('health')"
+                  >
+                    身心气机
+                    <svg
+                      class="h-4 w-4 text-white/50 transition-transform duration-200"
+                      :class="energySectionOpen.health ? 'rotate-180' : ''"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+                  <div v-show="energySectionOpen.health" class="mt-2 text-xs leading-relaxed text-[var(--muted)]">
+                    <span
+                      v-if="smartEnergyHealth"
+                      class="summary-markdown"
+                      v-html="renderEnergySummary(smartEnergyHealth)"
+                    ></span>
+                    <span v-else>暂无秘算提示</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1186,6 +1278,13 @@ const initSmartEnergyCache = () => {
 const energyMode = ref<'default' | 'smart'>('default');
 const smartEnergyConfirmOpen = ref(false);
 const bodyOverflowBackup = ref<string | null>(null);
+const energySectionOpen = ref({
+  overall: true,
+  temperament: true,
+  health: true,
+});
+const loadingProgress = ref(0);
+let loadingTimer: number | null = null;
 
 const setEnergyMode = (mode: 'default' | 'smart') => {
   energyMode.value = mode;
@@ -1255,6 +1354,10 @@ const confirmSmartEnergyRefresh = () => {
   refreshSmartEnergy();
 };
 
+const toggleEnergySection = (key: keyof typeof energySectionOpen.value) => {
+  energySectionOpen.value[key] = !energySectionOpen.value[key];
+};
+
 watch(smartEnergyConfirmOpen, (isOpen) => {
   if (isOpen) {
     if (bodyOverflowBackup.value === null) {
@@ -1267,10 +1370,36 @@ watch(smartEnergyConfirmOpen, (isOpen) => {
   }
 });
 
+watch(smartEnergyLoading, (isLoading) => {
+  if (isLoading) {
+    const totalSeconds = Math.floor(Math.random() * 11) + 10;
+    const startedAt = Date.now();
+    loadingProgress.value = 8;
+    if (loadingTimer) {
+      window.clearInterval(loadingTimer);
+    }
+    loadingTimer = window.setInterval(() => {
+      const elapsed = (Date.now() - startedAt) / 1000;
+      const progress = Math.min(95, Math.round((elapsed / totalSeconds) * 100));
+      loadingProgress.value = Math.max(loadingProgress.value, progress);
+    }, 400);
+  } else {
+    loadingProgress.value = 0;
+    if (loadingTimer) {
+      window.clearInterval(loadingTimer);
+      loadingTimer = null;
+    }
+  }
+});
+
 onUnmounted(() => {
   if (bodyOverflowBackup.value !== null) {
     document.body.style.overflow = bodyOverflowBackup.value;
     bodyOverflowBackup.value = null;
+  }
+  if (loadingTimer) {
+    window.clearInterval(loadingTimer);
+    loadingTimer = null;
   }
 });
 
@@ -1346,6 +1475,18 @@ const smartEnergyItems = computed(() => {
 const maxSmartScore = computed(() => {
   const maxScore = Math.max(...smartEnergyItems.value.map((item) => item.score), 0);
   return maxScore > 0 ? maxScore : 100;
+});
+
+const smartEnergyOverall = computed(() => {
+  return smartEnergyData.value?.overall || smartEnergyData.value?.summary || "";
+});
+
+const smartEnergyTemperament = computed(() => {
+  return smartEnergyData.value?.temperament || "";
+});
+
+const smartEnergyHealth = computed(() => {
+  return smartEnergyData.value?.health || "";
 });
 
 // 智能解析雷达图数据点
@@ -1508,7 +1649,7 @@ const mingGongText = computed(() => formatNaYin(props.chart?.ming_gong));
 const elementOrder = ["木", "火", "土", "金", "水"];
 const radarSize = 400;
 const radarCenter = radarSize / 2;
-const radarRadius = 140;
+const radarRadius = 150;
 const radarLevels = [1, 2, 3, 4, 5];
 const radarAngleStep = (Math.PI * 2) / elementOrder.length;
 const radarStartAngle = -Math.PI / 2;

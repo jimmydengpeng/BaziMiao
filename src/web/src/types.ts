@@ -217,5 +217,8 @@ export interface SmartEnergyResult {
     金: SmartEnergyElement;
     水: SmartEnergyElement;
   };
-  summary: string;
+  summary?: string;
+  overall?: string;
+  temperament?: string;
+  health?: string;
 }
