@@ -114,49 +114,37 @@
       <div class="panel-card">
         <PanelHeader title="五行能量">
           <template #actions>
-            <div class="flex items-center gap-2">
-              <!-- 基础/专业切换按钮 -->
-              <div class="relative inline-flex cursor-pointer items-center rounded-3xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,17,24,0.9)] p-0.5">
-                <span
-                  v-for="mode in energyModes"
-                  :key="mode.value"
-                  :class="[
-                    'relative z-[1] w-[52px] rounded-3xl px-3 py-1.5 text-center text-[12px] font-medium transition-colors duration-200',
-                    energyMode === mode.value ? 'text-white' : 'text-white/65'
-                  ]"
-                  @click="setEnergyMode(mode.value)"
-                >
-                  {{ mode.label }}
-                </span>
-                <div
-                  v-if="energyMode !== 'smart'"
-                  :class="[
-                    'absolute left-0.5 top-0.5 z-0 h-[calc(100%-4px)] w-[52px] rounded-3xl bg-[rgba(176,184,210,0.1)] shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
-                    energyMode === 'pro' ? 'translate-x-[52px]' : ''
-                  ]"
-                ></div>
-              </div>
-
-              <!-- 智能解析按钮 -->
-              <button
+            <div class="relative inline-flex shrink-0 cursor-pointer items-center rounded-3xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,17,24,0.9)] p-0.5">
+              <span
                 :class="[
-                  'flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[12px] font-medium transition-all duration-200',
-                  energyMode === 'smart'
-                    ? 'border-[rgba(214,160,96,0.5)] bg-[rgba(214,160,96,0.15)] text-[var(--accent-2)]'
-                    : 'border-[rgba(255,255,255,0.1)] bg-[rgba(255,255,255,0.04)] text-white/65 hover:bg-[rgba(255,255,255,0.08)]'
+                  'relative z-[1] w-[80px] rounded-3xl px-2 py-1.5 text-center text-[12px] font-medium transition-colors duration-200',
+                  energyMode === 'default' ? 'text-white' : 'text-white/65'
+                ]"
+                @click="setEnergyMode('default')"
+              >
+                干支个数
+              </span>
+              <span
+                :class="[
+                  'relative z-[1] flex w-[80px] items-center justify-center gap-1 rounded-3xl px-2 py-1.5 text-[12px] font-medium transition-colors duration-200',
+                  energyMode === 'smart' ? 'text-[var(--accent-2)]' : 'text-white/65'
                 ]"
                 @click="setEnergyMode('smart')"
               >
-                AI智能分析
-                <img
-                  :src="sparkleIconUrl"
-                  :class="[
-                    'h-3 w-3 align-middle',
-                    energyMode === 'smart' ? 'filter-gold' : 'opacity-60'
-                  ]"
-                  alt="智能"
-                />
-              </button>
+                神机秘算
+                <span
+                  class="icon-mask h-3 w-3 align-middle"
+                  :style="{ maskImage: `url(${thinkingDoubleIconUrl})`, WebkitMaskImage: `url(${thinkingDoubleIconUrl})` }"
+                  aria-hidden="true"
+                ></span>
+              </span>
+              <div
+                :class="[
+                  'absolute left-0.5 top-0.5 z-0 h-[calc(100%-4px)] w-[80px] rounded-3xl shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
+                  energyMode === 'smart' ? 'bg-[rgba(214,160,96,0.18)]' : 'bg-[rgba(176,184,210,0.1)]',
+                  energyMode === 'smart' ? 'translate-x-[80px]' : ''
+                ]"
+              ></div>
             </div>
           </template>
         </PanelHeader>
@@ -190,38 +178,31 @@
                     :y2="axis.y"
                   />
                 </g>
-                <!-- 智能解析模式使用智能雷达图数据 -->
-                <polygon
-                  v-if="energyMode === 'smart'"
-                  class="radar-shape"
-                  :points="smartRadarShapePoints"
-                />
+                <!-- 智能解析模式叠加显示默认与AI雷达图 -->
+                <template v-if="energyMode === 'smart'">
+                  <polygon
+                    class="radar-shape-muted"
+                    :points="radarShapePoints"
+                  />
+                  <polygon
+                    class="radar-shape"
+                    :points="smartRadarShapePoints"
+                  />
+                </template>
                 <polygon
                   v-else
-                  class="radar-shape"
+                  class="radar-shape-muted"
                   :points="radarShapePoints"
                 />
                 <g class="radar-dots">
-                  <template v-if="energyMode === 'smart'">
-                    <circle
-                      v-for="(point, idx) in smartRadarPoints"
-                      :key="`dot-${idx}`"
-                      :cx="point.x"
-                      :cy="point.y"
-                      r="7"
-                      :class="['radar-dot', elementClass(point.element)]"
-                    />
-                  </template>
-                  <template v-else>
-                    <circle
-                      v-for="(point, idx) in radarPoints"
-                      :key="`dot-${idx}`"
-                      :cx="point.x"
-                      :cy="point.y"
-                      r="7"
-                      :class="['radar-dot', elementClass(point.element)]"
-                    />
-                  </template>
+                  <circle
+                    v-for="(point, idx) in energyMode === 'smart' ? smartRadarPoints : radarPoints"
+                    :key="`dot-${idx}`"
+                    :cx="point.x"
+                    :cy="point.y"
+                    r="7"
+                    :class="['radar-dot', elementClass(point.element)]"
+                  />
                 </g>
                 <g class="radar-labels">
                   <text
@@ -241,12 +222,27 @@
 
           <!-- 五行占比 -->
           <div class="flex flex-col gap-2 md:gap-3">
-            <div class="mb-1.5 flex items-center gap-2 text-xs md:mb-2 md:text-[13px] px-3">
-              <strong>五行占比</strong>
-              <span class="text-[var(--muted)]">
-                <template v-if="energyMode === 'basic'">基于天干与地支个数统计</template>
-                <template v-else-if="energyMode === 'pro'">基于天干与藏干个数统计</template>
-                <template v-else>智能命盘五行与能量分析</template>
+            <div class="mb-1.5 flex items-start gap-2 text-xs md:mb-2 md:text-[13px] px-3">
+              <div class="flex flex-col items-start gap-1">
+                <strong>五行占比</strong>
+                <span class="text-[var(--muted)]">
+                  <template v-if="energyMode === 'smart'">智能命盘五行与能量分析</template>
+                  <template v-else>基于天干与藏干个数统计</template>
+                </span>
+              </div>
+              <span v-if="energyMode === 'smart'" class="ml-auto flex items-center gap-2">
+                <button
+                  class="flex items-center gap-1.5 rounded-xl border-1 py-2 border-[rgba(255,255,255,0.16)] bg-[rgba(255,255,255,0.04)] px-3 py-1 text-[12px] font-medium text-white/70 transition-all duration-200 hover:bg-[rgba(255,255,255,0.08)] active:bg-[rgba(255,255,255,0.16)] active:translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
+                  :disabled="smartEnergyLoading"
+                  @click="openSmartEnergyConfirm"
+                >
+                  再行秘算
+                  <span
+                    class="icon-mask h-3 w-3 align-middle"
+                    :style="{ maskImage: `url(${thinkingDoubleIconUrl})`, WebkitMaskImage: `url(${thinkingDoubleIconUrl})` }"
+                    aria-hidden="true"
+                  ></span>
+                </button>
               </span>
             </div>
             <div class="flex flex-col gap-2 px-3 md:gap-3">
@@ -270,11 +266,14 @@
                     <span class="text-[10px] text-[var(--muted)] md:text-[11px] shrink-0">{{ item.relation }}</span>
                     <!-- 智能解析显示描述 -->
                     <span v-if="energyMode === 'smart'" class="text-[10px] text-[var(--muted)] md:text-[11px]">
-                      <span class="mx-1 text-white/40">·</span>
+                      <span class="text-white/40">「</span>
                     </span>
                   </div>
                   <!-- 智能解析的解释文本 -->
-                  <span v-if="energyMode === 'smart'" class="text-[10px] text-[var(--muted)] md:text-[11px] truncate">{{ item.description }}</span>
+                  <span v-if="energyMode === 'smart'" class="text-[10px] text-[var(--muted)] md:text-[11px] truncate">
+                    {{ item.description }}
+                    <span class="text-white/40">」</span>
+                  </span>
                 </div>
                 <div class="flex items-center gap-2">
                   <!-- 百分比条 -->
@@ -302,12 +301,72 @@
             <!-- 智能解析总结 -->
             <div v-if="energyMode === 'smart' && smartEnergyData?.summary" class="mt-1 px-3">
               <p class="text-xs text-[var(--muted)] border-t border-[rgba(255,255,255,0.08)] pt-3 py-1">
-                <strong class="text-[var(--text)]">整体分析：</strong>{{ smartEnergyData.summary }}
+                <strong class="text-[var(--text)]">整体分析：</strong>
+                <span class="summary-markdown" v-html="renderEnergySummary(smartEnergyData.summary)"></span>
               </p>
             </div>
           </div>
         </div>
       </div>
+
+      <teleport to="body">
+        <Transition name="fade">
+          <div
+            v-if="smartEnergyConfirmOpen"
+            class="fixed inset-0 z-[70] flex items-center justify-center px-4"
+            :style="{ paddingTop: `calc(env(safe-area-inset-top, 0px) + 12px)`, paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + 12px)` }"
+            role="dialog"
+            aria-modal="true"
+            aria-label="确认重新解析"
+          >
+            <button
+              class="absolute inset-0 cursor-default bg-black/60"
+              type="button"
+              aria-label="关闭"
+              @click="closeSmartEnergyConfirm"
+            />
+            <div class="relative w-full max-w-[360px] overflow-hidden rounded-2xl border border-white/10 bg-[rgba(18,22,33,0.92)] shadow-[0_20px_55px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+              <div class="px-4 pt-4">
+                <div class="flex items-center gap-2 text-base font-semibold text-white">
+                  确认再行秘算？
+                </div>
+                <p class="mt-2 text-sm leading-relaxed text-white/70">
+                  再行秘算将消耗 <span class="text-[var(--accent-2)]">10 </span>灵力，是否继续？
+                </p>
+                <p
+                  class="mt-4 text-xs leading-[1.75] text-white/50 tracking-wide
+                        border-l border-white/15 pl-4 italic">
+                  命局之象，自有多重映照。<br />
+                  再行秘算，非改前言之断。<br />
+                  <span class="opacity-80">
+                    不更命盘之本，<br />
+                    仅换推演之镜，<br />
+                    复算五行能量，<br />
+                    以见其别样侧影与变化。
+                  </span>
+                </p>
+              </div>
+              <div class="flex items-center justify-end gap-4 px-4 pb-4 pt-3">
+                <button
+                  class="inline-flex items-center justify-center rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
+                  type="button"
+                  @click="closeSmartEnergyConfirm"
+                >
+                  取消
+                </button>
+                <button
+                  class="inline-flex items-center justify-center rounded-lg bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] px-4 py-2 text-sm font-semibold text-[#0a0604] shadow-[0_8px_22px_rgba(214,160,96,0.28)] transition hover:-translate-y-[1px] hover:shadow-[0_12px_26px_rgba(214,160,96,0.35)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
+                  type="button"
+                  :disabled="smartEnergyLoading"
+                  @click="confirmSmartEnergyRefresh"
+                >
+                  确认
+                </button>
+              </div>
+            </div>
+          </div>
+        </Transition>
+      </teleport>
 
       <!-- 八字命盘卡片 -->
       <div class="panel-card">
@@ -769,7 +828,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, inject, onBeforeUnmount, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Chart, GanZhiRelation, PillarInfo, HeavenStemInfo, EarthBranchInfo, SmartEnergyResult } from "../types";
 import PanelHeader from "./PanelHeader.vue";
 // 导入性别图标
@@ -777,6 +836,7 @@ import maleIconUrl from "../assets/gender-male.png";
 import femaleIconUrl from "../assets/gender-female.png";
 // 导入 sparkle 图标
 import sparkleIconUrl from "../assets/sparkles.png";
+import thinkingDoubleIconUrl from "../assets/svg/thinking-double-full.svg";
 import switchArchiveIconUrl from "../assets/change-arch.png";
 
 const props = defineProps<{
@@ -1100,12 +1160,6 @@ const proInfoItems = computed<InfoItem[]>(() => {
 
 // ========== 五行能量模式切换 ==========
 
-// 能量模式配置
-const energyModes: { value: 'basic' | 'pro'; label: string }[] = [
-  { value: 'basic', label: '简单' },
-  { value: 'pro', label: '进阶' },
-];
-
 // 生成缓存 key（需要在使用前定义）
 const getEnergyCacheKey = (chart: Chart): string => {
   const dayPillar = chart.day_pillar;
@@ -1115,14 +1169,11 @@ const getEnergyCacheKey = (chart: Chart): string => {
 // 智能解析数据
 const smartEnergyData = ref<SmartEnergyResult | null>(null);
 const smartEnergyLoading = ref(false);
-const hasSmartEnergy = ref(false); // 追踪是否已有智能分析数据
-
 // 初始化检查是否有缓存
 const initSmartEnergyCache = () => {
   if (props.chart) {
     const cacheKey = getEnergyCacheKey(props.chart);
     const cached = localStorage.getItem(cacheKey);
-    hasSmartEnergy.value = cached !== null;
 
     // 如果有缓存，直接加载数据
     if (cached) {
@@ -1131,28 +1182,18 @@ const initSmartEnergyCache = () => {
   }
 };
 
-// 当前能量模式（如果已分析过则默认为智能分析，否则为基础）
-const energyMode = ref<'basic' | 'pro' | 'smart'>('basic');
+// 当前能量模式（默认模式 or 神机秘算）
+const energyMode = ref<'default' | 'smart'>('default');
+const smartEnergyConfirmOpen = ref(false);
+const bodyOverflowBackup = ref<string | null>(null);
 
-// 根据缓存状态设置默认模式
-const updateDefaultEnergyMode = () => {
-  if (props.chart && hasSmartEnergy.value) {
-    energyMode.value = 'smart';
-  } else if (energyMode.value === 'smart' && !hasSmartEnergy.value) {
-    // 如果当前是智能分析但没有缓存，切换回基础
-    energyMode.value = 'basic';
-  }
-};
-
-// 切换能量模式
-const setEnergyMode = (mode: 'basic' | 'pro' | 'smart') => {
+const setEnergyMode = (mode: 'default' | 'smart') => {
   energyMode.value = mode;
 };
 
 // 监听 chart 变化，自动设置默认模式
 watch(() => props.chart, () => {
   initSmartEnergyCache();
-  updateDefaultEnergyMode();
 }, { immediate: true });
 
 // 获取智能解析数据
@@ -1164,7 +1205,6 @@ const fetchSmartEnergyData = async () => {
 
   if (cached) {
     smartEnergyData.value = JSON.parse(cached);
-    hasSmartEnergy.value = true;
     return;
   }
 
@@ -1194,6 +1234,46 @@ const fetchSmartEnergyData = async () => {
   }
 };
 
+const refreshSmartEnergy = () => {
+  if (!props.chart) return;
+  const cacheKey = getEnergyCacheKey(props.chart);
+  localStorage.removeItem(cacheKey);
+  smartEnergyData.value = null;
+  fetchSmartEnergyData();
+};
+
+const openSmartEnergyConfirm = () => {
+  smartEnergyConfirmOpen.value = true;
+};
+
+const closeSmartEnergyConfirm = () => {
+  smartEnergyConfirmOpen.value = false;
+};
+
+const confirmSmartEnergyRefresh = () => {
+  closeSmartEnergyConfirm();
+  refreshSmartEnergy();
+};
+
+watch(smartEnergyConfirmOpen, (isOpen) => {
+  if (isOpen) {
+    if (bodyOverflowBackup.value === null) {
+      bodyOverflowBackup.value = document.body.style.overflow || "";
+    }
+    document.body.style.overflow = "hidden";
+  } else if (bodyOverflowBackup.value !== null) {
+    document.body.style.overflow = bodyOverflowBackup.value;
+    bodyOverflowBackup.value = null;
+  }
+});
+
+onUnmounted(() => {
+  if (bodyOverflowBackup.value !== null) {
+    document.body.style.overflow = bodyOverflowBackup.value;
+    bodyOverflowBackup.value = null;
+  }
+});
+
 // 监听模式变化，智能解析模式下获取数据
 watch(energyMode, (newMode) => {
   if (newMode === 'smart' && !smartEnergyData.value && !smartEnergyLoading.value) {
@@ -1216,25 +1296,6 @@ watch(() => props.chart, () => {
 });
 
 // 五行个数统计（不含藏干）- 前端计算
-const fiveElementsCountNoHidden = computed(() => {
-  if (!props.chart) return { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
-
-  const counts = { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
-  const pillars = [
-    props.chart.year_pillar,
-    props.chart.month_pillar,
-    props.chart.day_pillar,
-    props.chart.hour_pillar,
-  ];
-
-  for (const pillar of pillars) {
-    counts[pillar.heaven_stem.element as keyof typeof counts] += 1;
-    counts[pillar.earth_branch.element as keyof typeof counts] += 1;
-  }
-
-  return counts;
-});
-
 // 五行个数统计（含藏干）- 从后端获取
 const fiveElementsCountWithHidden = computed(() => {
   return props.chart?.five_elements_count ?? {};
@@ -1252,16 +1313,13 @@ const calculateRatios = (counts: Record<string, number>) => {
   return result;
 };
 
-// 根据当前模式获取能量数据
-const currentEnergyCounts = computed(() => {
-  if (energyMode.value === 'basic') {
-    return fiveElementsCountNoHidden.value;
-  }
-  return fiveElementsCountWithHidden.value;
+// 默认模式的能量数据（原进阶）
+const defaultEnergyCounts = computed(() => {
+  return fiveElementsCountWithHidden.value as Record<string, number>;
 });
 
-const currentEnergyRatios = computed(() => {
-  return calculateRatios(currentEnergyCounts.value);
+const defaultEnergyRatios = computed(() => {
+  return calculateRatios(defaultEnergyCounts.value);
 });
 
 // 智能解析模式的能量数据
@@ -1309,20 +1367,8 @@ const smartRadarShapePoints = computed(() =>
   smartRadarPoints.value.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(" ")
 );
 
-// 五行能量条目（兼容现有模板）
-const energyItems = computed(() => {
-  if (energyMode.value === 'smart') {
-    // 智能解析模式
-    return smartEnergyItems.value.map((item) => ({
-      element: item.element,
-      count: item.score, // 用 score 替代 count
-      ratio: item.score, // 用 score 替代 ratio
-      description: item.description,
-      relation: item.relation,
-    }));
-  }
-
-  // 普通模式
+// 默认模式的五行能量条目
+const defaultEnergyItems = computed(() => {
   if (!props.chart) {
     return elementOrder.map((element) => ({
       element,
@@ -1333,8 +1379,8 @@ const energyItems = computed(() => {
     }));
   }
 
-  const counts = currentEnergyCounts.value as Record<string, number>;
-  const ratios = currentEnergyRatios.value as Record<string, number>;
+  const counts = defaultEnergyCounts.value as Record<string, number>;
+  const ratios = defaultEnergyRatios.value as Record<string, number>;
   const dayElement = props.chart.day_master?.element ?? '';
 
   return elementOrder.map((element) => ({
@@ -1344,6 +1390,21 @@ const energyItems = computed(() => {
     description: '',
     relation: elementRelationMap[dayElement]?.[element] ?? '未知',
   }));
+});
+
+// 五行能量条目（兼容现有模板）
+const energyItems = computed(() => {
+  if (energyMode.value === 'smart') {
+    return smartEnergyItems.value.map((item) => ({
+      element: item.element,
+      count: item.score, // 用 score 替代 count
+      ratio: item.score, // 用 score 替代 ratio
+      description: item.description,
+      relation: item.relation,
+    }));
+  }
+
+  return defaultEnergyItems.value;
 });
 
 // 干支关系模式切换：false=本命(4柱), true=当前(6柱，包含大运和流年)
@@ -1461,9 +1522,9 @@ const elementRelationMap: Record<string, Record<string, string>> = {
   水: { 木: "食伤", 火: "财才", 土: "官杀", 金: "印枭", 水: "比劫" }
 };
 
-// 最大能量比率（用于归一化）
+// 默认模式最大能量比率（用于归一化）
 const maxEnergyRatio = computed(() => {
-  const maxValue = Math.max(...energyItems.value.map((item) => item.ratio), 0);
+  const maxValue = Math.max(...defaultEnergyItems.value.map((item) => item.ratio), 0);
   return maxValue > 0 ? maxValue : 1;
 });
 
@@ -1488,7 +1549,7 @@ const radarAxes = computed(() =>
 
 // 雷达图数据点坐标
 const radarPoints = computed(() =>
-  energyItems.value.map((item, idx) => {
+  defaultEnergyItems.value.map((item, idx) => {
     const angle = radarStartAngle + radarAngleStep * idx;
     const ratio = item.ratio / maxEnergyRatio.value;
     const radius = radarRadius * ratio;
@@ -1521,6 +1582,14 @@ const gridPoints = (level: number) => {
 
 // 格式化百分比
 const formatPercent = (value: number) => `${(Number.isFinite(value) ? value : 0).toFixed(1)}%`;
+
+const renderEnergySummary = (content: string) => {
+  return content
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/`(.+?)`/g, "<code>$1</code>")
+    .replace(/\n/g, "<br>");
+};
 
 const DESTINY_PILLAR_MAX = 12;
 

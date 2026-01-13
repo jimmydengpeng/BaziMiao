@@ -44,27 +44,31 @@ def build_energy_analysis_prompt(chart: Dict[str, Any]) -> str:
             if element in hidden_elements:
                 hidden_elements[element] += 1
 
-    prompt = f"""你是一位专业的八字命理师，请分析以下命局的五行能量分布。
+    element_counts = chart.get("five_elements_count", {}) or {}
+    prompt = f"""你是一名精通子平八字命理的分析助手。
 
-【命主信息】
+你的任务不是重新排盘，而是在已有的四柱与五行统计结果基础上，给出更符合命理直觉的五行能量强弱修正。
+请尽量使用提供的数据结构（四柱干支、藏干、五行统计），不要引入其他命理体系或额外概念。
+
+【命盘基础信息】
 日主: {day_master_name}（{day_master_element}，{day_master.get('yinyang', '')}）
 
-【四柱八字】
+【四柱八字与藏干】
 {chr(10).join(pillar_info)}
 
-【藏干五行统计】
+【五行数量统计（天干+地支+藏干）】
+木: {element_counts.get('木', 0)}个, 火: {element_counts.get('火', 0)}个, 土: {element_counts.get('土', 0)}个, 金: {element_counts.get('金', 0)}个, 水: {element_counts.get('水', 0)}个
+
+【藏干五行统计（辅助参考）】
 木: {hidden_elements['木']}个, 火: {hidden_elements['火']}个, 土: {hidden_elements['土']}个, 金: {hidden_elements['金']}个, 水: {hidden_elements['水']}个
 
-【分析要求】
-1. 综合考虑天干、地支、本气、余气、中气，分析日主的强弱
-2. 评估每个五行的能量强度（0-100分），考虑：
-   - 直接出现的数量
-   - 月令的影响力
-   - 五行之间的生克关系
-   - 合冲刑穿等作用关系
-3. 为每个五行给出能量分数和简短描述（10字以内）
+【分析原则】
+1. 不否定统计中已出现的五行，不引入全新五行。
+2. 修正体现“数量 ≠ 实际能量”，以小幅微调为主，避免极端变化。
+3. 结合日主、月令、五行生克、藏干权重与整体平衡性，给出合理强弱判断。
+4. 不需要判断季节强弱、是否成格、命局状态等额外结论。
 
-【输出格式】
+【输出要求】
 请严格按照以下 JSON 格式输出（不要添加任何其他内容）:
 ```json
 {{
@@ -75,14 +79,14 @@ def build_energy_analysis_prompt(chart: Dict[str, Any]) -> str:
     "金": {{ "score": 分数, "description": "简短描述" }},
     "水": {{ "score": 分数, "description": "简短描述" }}
   }},
-  "summary": "整体命局五行特点的简要总结（20字以内）"
+  "summary": "整体命局五行特点的总结，字数略多一些，便于前端展示（约40-80字，允许使用 Markdown 的 **加粗** 或 *强调* 标记）"
 }}
 ```
 
-注意：
-- 分数范围 0-100，反映该五行在命局中的能量强度
-- 描述要简洁有力，体现五行特点
-- 分析要客观中肯，符合命理学的传统理论
+说明：
+- 分数范围 0-100，反映该五行在命局中的相对能量强度
+- 每个五行的描述要简洁有力(2到3句，每句4到5个字，总共15字以内，不要生成句话，每句短语用中文逗号"，"隔开)，体现五行特点
+- 整体 summary 要更完整一些，突出五行格局与平衡特点，可对关键词做适度强调
 """
 
     return prompt

@@ -136,6 +136,12 @@
     stroke-width: 2;
   }
 
+  .radar-shape-muted {
+    fill: rgba(255, 255, 255, 0.08);
+    stroke: rgba(255, 255, 255, 0.35);
+    stroke-width: 2;
+  }
+
   .radar-dot {
     fill: currentColor;
     stroke: rgba(0, 0, 0, 0.7);
@@ -338,6 +344,24 @@
   .markdown-body h4 {
     margin: 10px 0 8px;
     font-size: 12px;
+  }
+
+  .summary-markdown strong,
+  .summary-markdown em {
+    color: var(--accent-2);
+    font-weight: 600;
+    font-style: normal;
+  }
+
+  .icon-mask {
+    display: inline-block;
+    background-color: currentColor;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    -webkit-mask-size: contain;
   }
 
   /* 响应式调整 */
