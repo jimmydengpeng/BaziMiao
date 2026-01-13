@@ -60,6 +60,12 @@ const routes: RouteRecordRaw[] = [
     ]
   },
   {
+    path: '/bazi/archives/:id/edit',
+    name: 'ArchiveEdit',
+    component: () => import('../views/ArchiveEditPage.vue'),
+    meta: { title: '编辑档案' }
+  },
+  {
     path: '/bazi/archives',
     name: 'Archives',
     component: () => import('../views/ArchivesPage.vue'),

@@ -100,13 +100,15 @@
           :entry="entry"
           :is-current="entry.id === currentId"
           :is-pending="entry.id === pendingEntry?.id"
+          :show-actions="pendingEntry?.id === entry.id ? pendingActions : false"
           :show-checkbox="isDeleteMode"
           :checked="selectedIds.includes(entry.id)"
           @click="handleItemClick(entry)"
-          @switch="handleSwitch(entry)"
+          @more="handleMoreClick(entry)"
           @delete="handleQuickDelete(entry)"
           @toggle="toggleSelect(entry.id)"
           @copy="handleCopy(entry)"
+          @edit="handleEdit(entry)"
         />
       </div>
     </div>
@@ -126,6 +128,7 @@ const props = defineProps<{
   mode: 'page' | 'modal';
   profiles: ArchiveEntry[];
   currentId: number | null;
+  pendingId?: number | null;
 }>();
 
 const emit = defineEmits<{
@@ -133,6 +136,7 @@ const emit = defineEmits<{
   (e: 'create'): void;
   (e: 'delete', ids: number[]): void;
   (e: 'copy', entry: ArchiveEntry): void;
+  (e: 'edit', entry: ArchiveEntry): void;
   (e: 'request-delete', entry: ArchiveEntry): void;
   (e: 'request-delete-bulk', ids: number[]): void;
 }>();
@@ -141,6 +145,7 @@ const query = ref('');
 const isDeleteMode = ref(false);
 const selectedIds = ref<number[]>([]);
 const pendingEntry = ref<ArchiveEntry | null>(null);
+const pendingActions = ref(false);
 const manageBorderAccent = '#8a4a4a';
 const deleteBorderAccent = '#e36b6b';
 const activeActionClass = 'border-[rgba(214,160,96,0.7)] text-[var(--accent-2)]';
@@ -184,15 +189,9 @@ const handleItemClick = (entry: ArchiveEntry) => {
     toggleSelect(entry.id);
     return;
   }
-  if (props.mode === 'modal') {
-    emit('select', entry);
-    return;
-  }
-  if (pendingEntry.value?.id === entry.id) {
-    pendingEntry.value = null;
-    return;
-  }
-  pendingEntry.value = entry;
+  pendingEntry.value = null;
+  pendingActions.value = false;
+  emit('select', entry);
 };
 
 const enterDeleteMode = () => {
@@ -210,20 +209,40 @@ const confirmDelete = () => {
   emit('request-delete-bulk', [...selectedIds.value]);
 };
 
-const handleSwitch = (entry: ArchiveEntry) => {
-  pendingEntry.value = null;
-  emit('select', entry);
+const handleMoreClick = (entry: ArchiveEntry) => {
+  if (isDeleteMode.value) return;
+  if (pendingEntry.value?.id === entry.id) {
+    if (pendingActions.value) {
+      pendingEntry.value = null;
+      pendingActions.value = false;
+      return;
+    }
+    pendingActions.value = true;
+    return;
+  }
+  pendingEntry.value = entry;
+  pendingActions.value = true;
 };
 
 const handleQuickDelete = (entry: ArchiveEntry) => {
   pendingEntry.value = null;
+  pendingActions.value = false;
   emit('request-delete', entry);
+};
+
+const handleEdit = (entry?: ArchiveEntry) => {
+  const target = entry ?? pendingEntry.value;
+  if (!target) return;
+  pendingEntry.value = null;
+  pendingActions.value = false;
+  emit('edit', target);
 };
 
 const handleDeleteClick = () => {
   if (!isDeleteMode.value) {
     enterDeleteMode();
     pendingEntry.value = null;
+    pendingActions.value = false;
     return;
   }
   exitDeleteMode();
@@ -233,6 +252,7 @@ const handleCopy = (entry?: ArchiveEntry) => {
   const target = entry ?? pendingEntry.value;
   if (!target) return;
   pendingEntry.value = null;
+  pendingActions.value = false;
   emit('copy', target);
 };
 
@@ -252,6 +272,9 @@ watch(
     if (!pendingEntry.value) return;
     const next = nextProfiles.find((entry) => entry.id === pendingEntry.value?.id) ?? null;
     pendingEntry.value = next;
+    if (!next) {
+      pendingActions.value = false;
+    }
   },
   { deep: true }
 );
@@ -261,6 +284,19 @@ watch(
   () => {
     if (isDeleteMode.value) return;
     pendingEntry.value = null;
+    pendingActions.value = false;
   }
+);
+
+watch(
+  () => props.pendingId,
+  (nextId) => {
+    if (!nextId || isDeleteMode.value) return;
+    const target = props.profiles.find((entry) => entry.id === nextId) ?? null;
+    if (!target) return;
+    pendingEntry.value = target;
+    pendingActions.value = false;
+  },
+  { immediate: true }
 );
 </script>

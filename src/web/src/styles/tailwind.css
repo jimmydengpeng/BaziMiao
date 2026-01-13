@@ -392,42 +392,6 @@
     }
   }
 
-  /* TopNav 高度基础值 */
-  .top-nav {
-    min-height: 3rem;
-  }
-
-  @media (min-width: 768px) {
-    .top-nav {
-      min-height: 3.5rem;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .top-nav {
-      min-height: 4rem;
-    }
-  }
-
-  /* TopNav safe-area 高度 */
-  @supports (padding-top: env(safe-area-inset-top)) {
-    .top-nav {
-      padding-top: env(safe-area-inset-top, 0px);
-      min-height: calc(env(safe-area-inset-top, 0px) + 3rem);
-    }
-
-    @media (min-width: 768px) {
-      .top-nav {
-        min-height: calc(env(safe-area-inset-top, 0px) + 3.5rem);
-      }
-    }
-
-    @media (min-width: 1024px) {
-      .top-nav {
-        min-height: calc(env(safe-area-inset-top, 0px) + 4rem);
-      }
-    }
-  }
 }
 
 @layer utilities {

@@ -4,10 +4,10 @@
     :class="showCheckbox ? 'pr-2' : ''"
   >
     <button
-      class="flex w-full items-center justify-between gap-4 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.55)] px-3 py-2 pr-4 text-left backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(214,160,96,0.55)] hover:shadow-[0_22px_48px_rgba(0,0,0,0.5)]"
+      class="flex w-full items-center justify-between gap-4 overflow-hidden rounded-xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.55)] px-3 py-2 pr-2 text-left backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(214,160,96,0.55)] hover:shadow-[0_22px_48px_rgba(0,0,0,0.5)]"
       :class="[
         isCurrent
-          ? 'border-[0.5px] border-[rgba(214,160,96,0.65)] bg-[rgba(164,151,84,0.12)] shadow-[0_22px_50px_rgba(0,0,0,0.15),inset_0_0_0_1px_rgba(214,160,96,0.25)]'
+          ? 'border-[0.5px] border-[rgba(214,160,96,0.65)] shadow-[0_22px_50px_rgba(0,0,0,0.15),inset_0_0_0_1px_rgba(214,160,96,0.25)]'
           : '',
         isPending
           ? 'border-[rgba(53,65,81,0.7)] bg-[rgba(40,45,51,0.3)] shadow-[0_12px_32px_rgba(0,0,0,0.35)]'
@@ -41,12 +41,15 @@
             当前
           </span>
         </div>
-        <div class="text-xs text-[var(--muted)]">
+        <div class="min-w-0 truncate whitespace-nowrap text-xs text-[var(--muted)]">
           {{ entry.birthLabel }}
         </div>
       </div>
-      <div class="relative flex min-w-[140px] items-center justify-end gap-3">
-        <div class="grid gap-1.5 text-sm font-semibold tracking-wider" :class="isPending ? 'hidden' : 'block'">
+      <div class="relative flex min-w-[140px] items-center justify-end gap-2">
+        <div
+          class="grid gap-1.5 text-sm font-semibold tracking-wider transition-opacity duration-200"
+          :class="shouldShowActions ? 'pointer-events-none opacity-0' : 'opacity-100'"
+        >
           <div class="grid auto-cols-[minmax(14px,1fr)] grid-flow-col gap-1.5">
             <span
               v-for="(pillar, idx) in entry.pillars"
@@ -66,13 +69,26 @@
             </span>
           </div>
         </div>
+        <button
+          class="inline-flex h-7 w-4 items-center justify-center text-[var(--accent-2)] transition-all duration-200"
+          :class="shouldShowActions ? 'opacity-100' : 'opacity-60 hover:opacity-90'"
+          type="button"
+          @click.stop="$emit('more')"
+        >
+          <img
+            :src="archiveMoreIconUrl"
+            alt="更多"
+            class="h-4 w-4 opacity-80 transition-all duration-200"
+            :class="shouldShowActions ? 'brightness-110' : ''"
+          />
+        </button>
         <div
-          class="absolute right-2 top-1/2 z-10 flex -translate-y-1/2 items-center gap-4 transition-opacity duration-200"
-          :class="isPending ? 'opacity-100' : 'pointer-events-none opacity-0'"
+          class="absolute right-8 top-1/2 z-10 flex -translate-y-1/2 items-center gap-4 transition-opacity duration-200"
+          :class="shouldShowActions ? 'opacity-100' : 'pointer-events-none opacity-0'"
         >
           <button
             class="inline-flex items-center justify-center p-1 text-[var(--accent-2)] transition-all duration-200"
-            :class="isPending ? 'translate-x-0 opacity-100' : 'translate-x-3 opacity-0'"
+            :class="shouldShowActions ? 'translate-x-0 opacity-100' : 'translate-x-3 opacity-0'"
             :style="{ transitionDelay: '0ms' }"
             type="button"
             @click.stop="$emit('copy')"
@@ -81,21 +97,21 @@
           </button>
           <button
             class="inline-flex items-center justify-center p-1 text-[var(--accent-2)] transition-all duration-200"
-            :class="isPending ? 'translate-x-0 opacity-100' : 'translate-x-3 opacity-0'"
+            :class="shouldShowActions ? 'translate-x-0 opacity-100' : 'translate-x-3 opacity-0'"
             :style="{ transitionDelay: '80ms' }"
+            type="button"
+            @click.stop="$emit('edit')"
+          >
+            <img :src="archiveEditIconUrl" alt="编辑档案" class="h-4 w-4 opacity-70" />
+          </button>
+          <button
+            class="inline-flex items-center justify-center p-1 text-[var(--accent-2)] transition-all duration-200"
+            :class="shouldShowActions ? 'translate-x-0 opacity-100' : 'translate-x-3 opacity-0'"
+            :style="{ transitionDelay: '160ms' }"
             type="button"
             @click.stop="$emit('delete')"
           >
             <img :src="archiveDeleteIconUrl" alt="删除档案" class="h-4 w-4 opacity-70" />
-          </button>
-          <button
-            class="inline-flex items-center justify-center p-1 text-[var(--accent-2)] transition-all duration-200"
-            :class="isPending ? 'translate-x-0 opacity-100' : 'translate-x-3 opacity-0'"
-            :style="{ transitionDelay: '160ms' }"
-            type="button"
-            @click.stop="$emit('switch')"
-          >
-            <img :src="archiveSwitchIconUrl" alt="切换档案" class="h-4 w-4 opacity-70" />
           </button>
         </div>
       </div>
@@ -129,25 +145,29 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { ArchiveEntry } from '../utils/storage';
 import archiveCopyIconUrl from '../assets/archive_copy.png';
 import archiveDeleteIconUrl from '../assets/archive_delete.png';
-import archiveSwitchIconUrl from '../assets/archive_switch.png';
+import archiveEditIconUrl from '../assets/archive_edit.png';
+import archiveMoreIconUrl from '../assets/archive_more.png';
 import archiveViewIconUrl from '../assets/archive_view.png';
 
-defineProps<{
+const props = defineProps<{
   entry: ArchiveEntry;
   isCurrent?: boolean;
   isPending?: boolean;
   showCheckbox?: boolean;
   checked?: boolean;
+  showActions?: boolean;
 }>();
 
 defineEmits<{
   (e: 'click'): void;
-  (e: 'switch'): void;
+  (e: 'more'): void;
   (e: 'toggle'): void;
   (e: 'copy'): void;
+  (e: 'edit'): void;
   (e: 'delete'): void;
 }>();
 
@@ -170,4 +190,6 @@ const genderLabel = (gender?: string) => {
 
 const accentIconFilter =
   'brightness(0) saturate(100%) invert(78%) sepia(24%) saturate(742%) hue-rotate(350deg) brightness(95%) contrast(88%)';
+
+const shouldShowActions = computed(() => !!props.isPending && props.showActions !== false);
 </script>

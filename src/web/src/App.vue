@@ -362,6 +362,7 @@ const currentPage = computed(() => {
   if (path.includes('/archives')) return 'archive';
   if (path.includes('/chat')) return 'master-chat';
   if (path.includes('/form')) return 'form';
+  if (path.includes('/about')) return 'about';
   if (path === '/') return 'home';
   return 'chart';
 });

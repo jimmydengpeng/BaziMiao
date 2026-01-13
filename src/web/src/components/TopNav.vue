@@ -1,13 +1,16 @@
 <template>
+  <div
+    class="[--safe-top:0px] [--safe-top:env(safe-area-inset-top,0px)] [--nav-height:45px] md:[--nav-height:3.5rem] lg:[--nav-height:4rem]"
+  >
   <!-- 顶部导航栏 - 毛玻璃效果，固定覆盖层 -->
   <!-- 三档响应式：手机(<768px) h-12 px-3, 平板(768-1023px) h-14 px-4, 桌面(≥1024px) h-16 px-6 -->
   <!-- iOS 添加到主屏幕后，通过 safe-area-inset-top 让导航栏延伸到状态栏区域 -->
   <!-- touch-none: 阻止触摸事件参与 body 的滚动行为链，确保惯性滚动时点击也能立即响应 -->
   <header
-    class="top-nav fixed left-0 right-0 top-0 z-50 flex flex-col backdrop-blur-xl px-3 md:px-4 lg:px-6 touch-none border-b border-[rgba(255,255,255,0.08)]"
+    class="fixed left-0 right-0 top-0 z-50 flex flex-col backdrop-blur-xl px-3 md:px-4 lg:px-6 touch-none border-b border-[rgba(255,255,255,0.08)] pt-[var(--safe-top)] min-h-[calc(var(--safe-top)+var(--nav-height))]"
     :class="[navBgClass]"
   >
-    <div class="relative flex w-full items-center justify-between">
+    <div class="relative flex w-full items-center pt-1 justify-between">
       <!-- 左侧区域：Logo -->
       <div class="flex items-center gap-2 md:gap-3">
         <!-- Logo（点击弹出对话框） -->
@@ -35,7 +38,7 @@
       <!-- 移动端：当前模块标题（非首页时显示，可点击展开模块列表） -->
       <button
         v-if="!isHome"
-        class="absolute left-1/2 -translate-x-1/2 md:hidden inline-flex items-center gap-1.5 text-base font-semibold text-white transition-opacity hover:opacity-80"
+        class="absolute left-1/2 -translate-x-1/2 md:hidden inline-flex items-center gap-1.5 text-lg font-semibold text-white transition-opacity hover:opacity-80"
         type="button"
         @click="toggleModuleMenu"
         aria-haspopup="true"
@@ -63,25 +66,25 @@
       <!-- 平板和桌面端：主模块导航菜单（命理报告 / 双人合盘等） -->
       <nav class="hidden flex-1 items-center justify-center gap-1 overflow-x-auto md:flex">
         <button
-          v-for="item in navItems"
+          v-for="item in desktopNavItems"
           :key="item.key"
           :class="[
             'relative rounded-lg py-1.5 font-medium transition',
             // 字体大小：平板 text-sm, 桌面 text-[15px]
             'text-sm md:px-3 md:py-2 lg:text-[15px] lg:px-4',
-            isNavActive(item.key)
+            isNavActive(item)
               ? 'text-[var(--accent-2)]'
               : 'text-white/70 hover:bg-white/5 hover:text-white',
             !isAuthenticated && item.requiresAuth ? 'opacity-70' : ''
           ]"
           type="button"
           :disabled="!isAuthenticated && item.requiresAuth"
-          @click="handleModuleClick(item)"
+          @click="handleNavClick(item)"
         >
           {{ item.label }}
           <!-- 激活指示器 -->
           <span
-            v-if="isNavActive(item.key)"
+            v-if="isNavActive(item)"
             class="absolute bottom-0 left-1/2 h-0.5 w-6 -translate-x-1/2 rounded-full bg-[var(--accent)]"
           ></span>
         </button>
@@ -112,7 +115,7 @@
       <template v-else>
         <button
           v-if="activeModule === 'bazi' && currentPage !== 'chart'"
-          class="flex h-9 w-9 items-center justify-center rounded-lg text-white/80 transition hover:bg-white/10 md:h-10 md:w-10"
+          class="hidden h-9 w-9 items-center justify-center rounded-lg text-white/80 transition hover:bg-white/10 md:flex md:h-10 md:w-10"
           type="button"
           @click="handleArchiveClick"
           aria-label="切换档案"
@@ -137,7 +140,7 @@
             <circle cx="12" cy="8" r="4" />
             <path d="M4 20c0-4 4-6 8-6s8 2 8 6" />
           </svg>
-          <span class="hidden lg:inline">我的</span>
+          <span class="hidden lg:inline">{{ NAV_LABELS.profile }}</span>
         </button>
         <button
           v-else
@@ -201,12 +204,12 @@
           <div class="grid gap-2">
             <div class="flex flex-wrap justify-center gap-3">
               <button
-                v-for="item in navItems"
+                v-for="item in primaryNavItems"
                 :key="item.key"
                 :class="[
                   'flex w-[96px] flex-col items-center gap-2 rounded-xl px-1.5 py-2.5 text-center transition',
                   'text-xs font-medium',
-                  isNavActive(item.key)
+                  isNavActive(item)
                     ? 'bg-[rgba(214,160,96,0.18)] text-[var(--accent-2)] border border-[rgba(214,160,96,0.35)]'
                     : 'text-white/85 hover:bg-white/10 border border-transparent',
                   !isAuthenticated && item.requiresAuth ? 'opacity-70' : ''
@@ -217,7 +220,7 @@
               >
                 <span
                   class="flex h-12 w-12 items-center justify-center rounded-xl bg-white/5"
-                  :class="isNavActive(item.key) ? 'bg-[rgba(214,160,96,0.2)]' : ''"
+                  :class="isNavActive(item) ? 'bg-[rgba(214,160,96,0.2)]' : ''"
                 >
                   <img :src="item.icon" :alt="item.label" class="h-8 w-8 object-contain" />
                 </span>
@@ -255,50 +258,43 @@
       class="hamburger-menu-panel fixed left-0 right-0 z-50 overflow-y-auto border-b border-[rgba(255,255,255,0.08)] backdrop-blur-xl lg:hidden touch-none"
       :class="[navBgClass]"
     >
-      <div class="flex flex-col gap-2 p-4">
+      <div class="flex flex-col gap-2 px-4 py-2">
         <button
           class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-white/85 transition hover:bg-white/10"
           type="button"
           @click="handleMenuAction('archives')"
         >
           <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-white/5">
-            <img :src="archiveListIconUrl" alt="档案列表" class="h-5 w-5 object-contain" />
+            <img :src="archiveListIconUrl" :alt="NAV_LABELS.archives" class="h-5 w-5 object-contain" />
           </span>
-          <span class="font-medium">档案列表</span>
+          <span class="font-medium">{{ NAV_LABELS.archives }}</span>
         </button>
+        <div class="h-px w-full bg-white/5"></div>
         <button
           class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-white/85 transition hover:bg-white/10"
           type="button"
           @click="handleMenuAction('profile')"
         >
           <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-white/5">
-            <img :src="profileMenuIconUrl" alt="个人中心" class="h-5 w-5 object-contain" />
+            <img :src="profileMenuIconUrl" :alt="NAV_LABELS.profile" class="h-5 w-5 object-contain" />
           </span>
-          <span class="font-medium">个人中心</span>
+          <span class="font-medium">{{ NAV_LABELS.profile }}</span>
         </button>
-        <button
-          class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-white/85 transition hover:bg-white/10"
-          type="button"
-          @click="handleMenuAction('settings')"
-        >
-          <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-white/5">
-            <img :src="settingsIconUrl" alt="设置" class="h-5 w-5 object-contain" />
-          </span>
-          <span class="font-medium">设置</span>
-        </button>
+        <div class="h-px w-full bg-white/5"></div>
         <button
           class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm text-white/85 transition hover:bg-white/10"
           type="button"
           @click="handleMenuAction('about')"
         >
           <span class="flex h-9 w-9 items-center justify-center rounded-lg bg-white/5">
-            <img :src="aboutIconUrl" alt="关于我们" class="h-5 w-5 object-contain" />
+            <img :src="aboutIconUrl" :alt="NAV_LABELS.about" class="h-5 w-5 object-contain" />
           </span>
-          <span class="font-medium">关于我们</span>
+          <span class="font-medium">{{ NAV_LABELS.about }}</span>
         </button>
       </div>
     </div>
   </Transition>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -311,7 +307,6 @@ import encyclopediaIconUrl from '../assets/module-encyclopedia.png';
 import archiveListIconUrl from '../assets/menu-archive.png';
 import switchArchiveIconUrl from '../assets/change-arch.png';
 import profileMenuIconUrl from '../assets/menu-user.png';
-import settingsIconUrl from '../assets/menu-setting-fill.png';
 import aboutIconUrl from '../assets/menu-about.png';
 
 const router = useRouter();
@@ -321,7 +316,7 @@ const props = defineProps<{
   activeModule: 'bazi' | 'compatibility' | 'profile' | 'master' | 'encyclopedia';
   isHome?: boolean; // 是否在 home 页面
   isAuthenticated?: boolean; // 登录态
-  currentPage?: 'chart' | 'report' | 'detail' | 'verification' | 'archive' | 'master-chat' | 'form' | 'home'; // 当前页面
+  currentPage?: 'chart' | 'report' | 'detail' | 'verification' | 'archive' | 'master-chat' | 'form' | 'home' | 'about'; // 当前页面
   canViewReport?: boolean; // 是否可以查看报告
 }>();
 
@@ -379,12 +374,31 @@ const unlockBackgroundScroll = () => {
   isScrollLockedByMenu = false;
 };
 
-// 导航项配置（MVP 阶段移除登录限制，所有功能游客可用）
-const navItems = [
-  { key: 'bazi' as const, label: '命盘解析', requiresAuth: false, icon: baziChartIconUrl },
-  { key: 'compatibility' as const, label: '双人合盘', requiresAuth: false, icon: compatibilityIconUrl },
-  { key: 'encyclopedia' as const, label: '命理百科', requiresAuth: false, icon: encyclopediaIconUrl }
+// 导航项配置
+const NAV_LABELS = {
+  bazi: '神机命盘',
+  compatibility: '双人合盘',
+  encyclopedia: '命理百科',
+  archives: '命盘档案',
+  profile: '我的',
+  about: '关于我们',
+  home: '首页',
+  newArchive: '新建档案',
+  master: '神喵大师'
+} as const;
+
+const primaryNavItems = [
+  { key: 'bazi' as const, label: NAV_LABELS.bazi, requiresAuth: false, icon: baziChartIconUrl, type: 'module' as const },
+  { key: 'compatibility' as const, label: NAV_LABELS.compatibility, requiresAuth: false, icon: compatibilityIconUrl, type: 'module' as const },
+  { key: 'encyclopedia' as const, label: NAV_LABELS.encyclopedia, requiresAuth: false, icon: encyclopediaIconUrl, type: 'module' as const }
 ];
+
+const secondaryDesktopItems = [
+  { key: 'archives' as const, label: NAV_LABELS.archives, requiresAuth: false, type: 'route' as const, path: '/bazi/archives' },
+  { key: 'about' as const, label: NAV_LABELS.about, requiresAuth: false, type: 'route' as const, path: '/about' }
+];
+
+const desktopNavItems = [...primaryNavItems, ...secondaryDesktopItems];
 
 
 // 是否在 landing 页面（用于品牌名显示）
@@ -394,8 +408,23 @@ const navBgClass = computed(() =>
 );
 
 // 仅非 home 时显示激活态
-const isNavActive = (key: 'bazi' | 'compatibility' | 'encyclopedia') =>
-  !props.isHome && props.activeModule === key;
+const isNavActive = (item: (typeof desktopNavItems)[number]) => {
+  if (props.isHome) return false;
+  if (item.type === 'module') {
+    if (item.key === 'bazi') {
+      return (
+        props.activeModule === 'bazi' &&
+        props.currentPage !== 'archive' &&
+        props.currentPage !== 'form'
+      );
+    }
+    return props.activeModule === item.key;
+  }
+  if (item.key === 'archives') {
+    return props.currentPage === 'archive' || props.currentPage === 'form';
+  }
+  return props.currentPage === 'about';
+};
 
 
 // 切换模块导航菜单（移动端中间标题按钮使用）
@@ -432,12 +461,16 @@ const handleLogoClick = () => {
 };
 
 // 处理模块导航点击（桌面端）
-const handleModuleClick = (item: (typeof navItems)[number]) => {
-  emit('navigate', item.key);
+const handleNavClick = (item: (typeof desktopNavItems)[number]) => {
+  if (item.type === 'module') {
+    emit('navigate', item.key);
+    return;
+  }
+  router.push(item.path);
 };
 
 // 处理模块导航点击（移动端）
-const handleModuleClickMobile = (item: (typeof navItems)[number]) => {
+const handleModuleClickMobile = (item: (typeof primaryNavItems)[number]) => {
   closeModuleMenu();
   closeHamburgerMenu();
   emit('navigate', item.key);
@@ -450,7 +483,7 @@ const handleArchiveClick = () => {
   emit('openArchivePicker');
 };
 
-const handleMenuAction = (action: 'archives' | 'profile' | 'settings' | 'about') => {
+const handleMenuAction = (action: 'archives' | 'profile' | 'about') => {
   closeModuleMenu();
   closeHamburgerMenu();
   switch (action) {
@@ -459,9 +492,6 @@ const handleMenuAction = (action: 'archives' | 'profile' | 'settings' | 'about')
       break;
     case 'profile':
       router.push('/profile');
-      break;
-    case 'settings':
-      router.push('/settings');
       break;
     case 'about':
       router.push('/about');
@@ -485,39 +515,39 @@ onUnmounted(() => {
 });
 
 // 当前模块标题（移动端显示）
+const primaryModuleKeys = new Set(['bazi', 'compatibility', 'encyclopedia']);
+
 const currentModuleLabel = computed(() => {
   // 如果是 home 页面，显示"首页"
   if (props.isHome) {
-    return '首页';
-  }
-  if (props.currentPage === 'archive') {
-    return '档案列表';
+    return NAV_LABELS.home;
   }
   if (props.currentPage === 'form') {
-    return '新建档案';
+    return NAV_LABELS.newArchive;
   }
-  const labels: { [key: string]: string } = {
-    bazi: '命盘解析',
-    compatibility: '双人合盘',
-    profile: '我的',
-    master: '神喵大师',
-    encyclopedia: '命理百科'
-  };
-  return labels[props.activeModule] || '神机喵算';
+  if (props.currentPage === 'archive') {
+    return NAV_LABELS.archives;
+  }
+  if (props.currentPage === 'about') {
+    return NAV_LABELS.about;
+  }
+  if (props.activeModule === 'profile') {
+    return NAV_LABELS.profile;
+  }
+  if (props.activeModule === 'master') {
+    return NAV_LABELS.master;
+  }
+  if (primaryModuleKeys.has(props.activeModule)) {
+    return NAV_LABELS[props.activeModule];
+  }
+  return NAV_LABELS.bazi;
 });
 
 </script>
 
 <style scoped>
 .hamburger-menu-panel {
-  top: calc(env(safe-area-inset-top, 0px) + 3rem);
-  max-height: calc(100vh - (env(safe-area-inset-top, 0px) + 3rem));
-}
-
-@media (min-width: 768px) {
-  .hamburger-menu-panel {
-    top: calc(env(safe-area-inset-top, 0px) + 3.5rem);
-    max-height: calc(100vh - (env(safe-area-inset-top, 0px) + 3.5rem));
-  }
+  top: calc(var(--safe-top) + var(--nav-height));
+  max-height: calc(100vh - (var(--safe-top) + var(--nav-height)));
 }
 </style>

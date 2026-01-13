@@ -8,22 +8,23 @@
       <div class="overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.65)] backdrop-blur-[16px]">
         <!-- 标题栏：姓名 + 农历生日 + 基础/专业切换 -->
         <div class="flex items-center justify-between gap-1 border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 pr-2 py-3 pb-2">
-          <div class="flex flex-1 flex-wrap items-center content-start gap-x-3 gap-y-1 min-w-0 text-left">
-            <span class="text-xl font-bold tracking-wide text-(--accent-2) truncate whitespace-nowrap">{{ chart.name || "命主" }}</span>
+          <div class="flex flex-1 flex-wrap items-baseline gap-x-3 gap-y-1 min-w-0 text-left">
+            <span class="text-lg font-bold tracking-wide text-(--accent-2) truncate whitespace-nowrap">{{ chart.name || "命主" }}</span>
             <span class="text-sm text-(--white) whitespace-nowrap">{{ lunarBirthText }}</span>
           </div>
           <!-- 右侧功能区：切换档案 + 展开/收起详细 -->
           <div class="ml-auto inline-flex shrink-0 items-center gap-2">
             <button
-              class="flex h-9 w-9 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(15,17,24,0.9)] text-white/80 transition hover:bg-[rgba(255,255,255,0.08)]"
+              v-if="infoMode === 'pro'"
+              class="group flex h-8 w-8 items-center justify-center rounded-lg bg-transparent text-white/50 transition hover:text-white/70"
               type="button"
               @click="handleArchivePickerOpen"
               aria-label="切换档案"
             >
-              <img :src="switchArchiveIconUrl" alt="" class="h-4 w-4 object-contain" />
+              <img :src="switchArchiveIconUrl" alt="" class="h-4 w-4 object-contain opacity-60 transition group-hover:opacity-80" />
             </button>
             <button
-              class="flex h-9 w-9 items-center justify-center rounded-lg border border-[rgba(255,255,255,0.1)] bg-[rgba(15,17,24,0.9)] text-white/80 transition hover:bg-[rgba(255,255,255,0.08)]"
+              class="flex h-8 w-8 items-center justify-center rounded-lg bg-transparent text-white/50 transition hover:text-white/70"
               type="button"
               @click="toggleInfoMode"
               :aria-expanded="infoMode === 'pro'"

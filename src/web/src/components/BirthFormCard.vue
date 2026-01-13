@@ -261,10 +261,10 @@
               loading ? 'cursor-wait' : ''
             ]"
             :disabled="loading"
-            @click="handleSubmit"
-          >
-            {{ loading ? "排盘中..." : "一键排盘" }}
-          </button>
+          @click="handleSubmit"
+        >
+          {{ loading ? submitLoadingLabel : submitLabel }}
+        </button>
           <span v-if="error" class="text-sm text-[var(--muted)]">{{ error }}</span>
         </div>
       </div>
@@ -301,13 +301,16 @@ const props = defineProps<{
   subtitle?: string;
   helper?: string;
   showIntro?: boolean;
+  initialValues?: BirthFormValues;
+  submitLabel?: string;
+  submitLoadingLabel?: string;
 }>();
 
 const emit = defineEmits<{
   (e: "submit", value: BirthFormValues): void;
 }>();
 
-const form = ref<BirthFormValues>({
+const createDefaultFormValues = (): BirthFormValues => ({
   name: "",
   gender: "male",
   calendar: "solar",
@@ -319,6 +322,18 @@ const form = ref<BirthFormValues>({
   isLeapMonth: false,
   birthPlace: getDefaultRegion()
 });
+
+const buildFormValues = (values?: BirthFormValues): BirthFormValues => {
+  const defaults = createDefaultFormValues();
+  if (!values) return defaults;
+  return {
+    ...defaults,
+    ...values,
+    birthPlace: values.birthPlace ? { ...values.birthPlace } : defaults.birthPlace
+  };
+};
+
+const form = ref<BirthFormValues>(buildFormValues(props.initialValues));
 
 const pickerOpen = ref(false);
 const showRegionPicker = ref(false);
@@ -425,4 +440,14 @@ const title = computed(() => props.title || "填写生辰");
 const subtitle = computed(() => props.subtitle || "仅用于排盘，不会长期存储");
 const helper = computed(() => props.helper || "支持公历/农历切换，点击出生时间唤起选择器。");
 const showIntro = computed(() => props.showIntro !== false);
+const submitLabel = computed(() => props.submitLabel || "一键排盘");
+const submitLoadingLabel = computed(() => props.submitLoadingLabel || "排盘中...");
+
+watch(
+  () => props.initialValues,
+  (nextValues) => {
+    if (!nextValues) return;
+    form.value = buildFormValues(nextValues);
+  }
+);
 </script>

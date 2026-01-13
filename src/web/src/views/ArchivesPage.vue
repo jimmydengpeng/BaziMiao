@@ -4,12 +4,14 @@
       mode="page"
       :profiles="archives"
       :current-id="activeArchiveId"
+      :pending-id="pendingEntryId"
       @select="openArchive"
       @create="goToNewForm"
       @delete="deleteArchives"
       @request-delete="handleRequestDelete"
       @request-delete-bulk="handleRequestDeleteBulk"
       @copy="copyArchiveInfo"
+      @edit="handleEditArchive"
     />
     <div
       v-if="showCopyModal"
@@ -120,7 +122,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useStore } from '../composables/useStore';
 import type { ArchiveEntry } from '../utils/storage';
 import ArchiveListPanel from '../components/ArchiveListPanel.vue';
@@ -128,6 +130,7 @@ import successIconUrl from '../assets/success.png';
 import deleteIconUrl from '../assets/archive_delete.png';
 
 const router = useRouter();
+const route = useRoute();
 const { archives, activeArchiveId, chart, analysis, report } = useStore();
 const showCopyModal = ref(false);
 const copyText = ref('');
@@ -148,6 +151,12 @@ const deleteTargetLabel = computed(() => {
   return entry.displayName || entry.name || `档案 #${entry.id}`;
 });
 const bulkDeleteCount = computed(() => bulkDeleteIds.value.length);
+const pendingEntryId = computed(() => {
+  const raw = route.query.pendingId;
+  if (typeof raw !== 'string') return null;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+});
 
 // 打开档案，加载命盘数据并跳转到详情页
 const openArchive = (entry: ArchiveEntry) => {
@@ -165,6 +174,13 @@ const openArchive = (entry: ArchiveEntry) => {
 // 跳转到新建表单
 const goToNewForm = () => {
   router.push('/bazi/form');
+};
+
+const handleEditArchive = (entry: ArchiveEntry) => {
+  router.push({
+    path: `/bazi/archives/${entry.id}/edit`,
+    query: { pendingId: entry.id.toString() }
+  });
 };
 
 const deleteArchives = (ids: number[]) => {

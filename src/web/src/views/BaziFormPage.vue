@@ -117,8 +117,8 @@ import BirthFormCard from '../components/BirthFormCard.vue';
 import { useStore } from '../composables/useStore';
 import type { BirthFormValues } from '../types/forms';
 import type { ChartResponse } from '../types';
-import { lunarMonthLabels } from '../types/forms';
 import type { ArchiveEntry } from '../utils/storage';
+import { buildBirthLabel, buildChartRequestBody, buildPillarsFromChart } from '../utils/archive';
 
 const router = useRouter();
 const { chart, analysis, report, archives, archiveCounter, activeArchiveId } = useStore();
@@ -143,25 +143,7 @@ const handleSubmit = async (payload: BirthFormValues) => {
 
   try {
     // 构建请求体，包含出生地点信息
-    const requestBody: Record<string, unknown> = {
-      name: payload.name,
-      gender: payload.gender,
-      year: payload.year,
-      month: payload.month,
-      day: payload.day,
-      hour: payload.hour,
-      minute: payload.minute,
-      calendar: payload.calendar,
-      is_leap_month: payload.isLeapMonth,
-      tz_offset_hours: 0,
-      birth_place: payload.birthPlace.fullName
-    };
-
-    // 如果选择了具体地区，传递经纬度
-    if (payload.birthPlace.province) {
-      requestBody.longitude = payload.birthPlace.lng;
-      requestBody.latitude = payload.birthPlace.lat;
-    }
+    const requestBody = buildChartRequestBody(payload);
 
     const chartRes = await fetch('/api/bazi/chart', {
       method: 'POST',
@@ -214,21 +196,7 @@ const saveArchive = (formValues: BirthFormValues, chartData: any) => {
   const displayName = name || `命主${archiveCounter.value + 1}`;
   archiveCounter.value += 1;
 
-  const year = formValues.year;
-  const month = formValues.month;
-  const day = formValues.day;
-  const hour = formValues.hour;
-  const minute = formValues.minute;
-  const minuteLabel = minute.toString().padStart(2, '0');
-  const hourLabel = hour.toString().padStart(2, '0');
-
-  const birthLabel =
-    formValues.calendar === 'lunar'
-      ? `农历${year}年${formValues.isLeapMonth ? '闰' : ''}${
-          lunarMonthLabels[month - 1]
-        }${day}日 ${hourLabel}:${minuteLabel}`
-      : `阳历${year}年${month}月${day}日 ${hourLabel}:${minuteLabel}`;
-
+  const birthLabel = buildBirthLabel(formValues);
   const pillars = buildPillarsFromChart(chartData);
 
   const entry = {
@@ -246,59 +214,4 @@ const saveArchive = (formValues: BirthFormValues, chartData: any) => {
 };
 
 // 从 Chart 数据构建四柱信息（用于档案显示）
-const buildPillarsFromChart = (chartData: any) => {
-  const yearStem = chartData?.year_pillar?.heaven_stem?.name ?? '';
-  const yearBranch = chartData?.year_pillar?.earth_branch?.name ?? '';
-  const monthStem = chartData?.month_pillar?.heaven_stem?.name ?? '';
-  const monthBranch = chartData?.month_pillar?.earth_branch?.name ?? '';
-  const dayStem = chartData?.day_pillar?.heaven_stem?.name ?? '';
-  const dayBranch = chartData?.day_pillar?.earth_branch?.name ?? '';
-  const hourStem = chartData?.hour_pillar?.heaven_stem?.name ?? '';
-  const hourBranch = chartData?.hour_pillar?.earth_branch?.name ?? '';
-
-  return [
-    {
-      stem: yearStem,
-      branch: yearBranch,
-      stemElement: elementForStem(yearStem),
-      branchElement: elementForBranch(yearBranch)
-    },
-    {
-      stem: monthStem,
-      branch: monthBranch,
-      stemElement: elementForStem(monthStem),
-      branchElement: elementForBranch(monthBranch)
-    },
-    {
-      stem: dayStem,
-      branch: dayBranch,
-      stemElement: elementForStem(dayStem),
-      branchElement: elementForBranch(dayBranch)
-    },
-    {
-      stem: hourStem,
-      branch: hourBranch,
-      stemElement: elementForStem(hourStem),
-      branchElement: elementForBranch(hourBranch)
-    }
-  ];
-};
-
-const elementForStem = (stem: string) => {
-  const map: Record<string, string> = {
-    甲: '木', 乙: '木', 丙: '火', 丁: '火',
-    戊: '土', 己: '土', 庚: '金', 辛: '金',
-    壬: '水', 癸: '水'
-  };
-  return map[stem] ?? '';
-};
-
-const elementForBranch = (branch: string) => {
-  const map: Record<string, string> = {
-    子: '水', 丑: '土', 寅: '木', 卯: '木',
-    辰: '土', 巳: '火', 午: '火', 未: '土',
-    申: '金', 酉: '金', 戌: '土', 亥: '水'
-  };
-  return map[branch] ?? '';
-};
 </script>
