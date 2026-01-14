@@ -308,6 +308,7 @@ import archiveListIconUrl from '../assets/menu-archive.png';
 import switchArchiveIconUrl from '../assets/change-arch.png';
 import profileMenuIconUrl from '../assets/menu-user.png';
 import aboutIconUrl from '../assets/menu-about.png';
+import { lockBackgroundScroll } from '../utils/scroll-lock';
 
 const router = useRouter();
 
@@ -333,46 +334,7 @@ const emit = defineEmits<{
 const isModuleMenuOpen = ref(false); // 中间标题按钮的模块导航菜单
 const isHamburgerMenuOpen = ref(false); // 右侧汉堡按钮的完整菜单
 
-let scrollContainer: HTMLElement | null = null;
-let previousOverflowY = "";
-let previousBodyOverflow = "";
-let previousHtmlOverflow = "";
-let previousBodyOverscrollY = "";
-let previousHtmlOverscrollY = "";
-let isScrollLockedByMenu = false;
-
-const lockBackgroundScroll = () => {
-  if (isScrollLockedByMenu) return;
-  scrollContainer = document.querySelector(".app-scroll") as HTMLElement | null;
-  if (scrollContainer) {
-    previousOverflowY = scrollContainer.style.overflowY;
-    scrollContainer.style.overflowY = "hidden";
-  }
-
-  previousBodyOverflow = document.body.style.overflow;
-  previousHtmlOverflow = document.documentElement.style.overflow;
-  previousBodyOverscrollY = document.body.style.overscrollBehaviorY;
-  previousHtmlOverscrollY = document.documentElement.style.overscrollBehaviorY;
-  document.body.style.overflow = "hidden";
-  document.documentElement.style.overflow = "hidden";
-  document.body.style.overscrollBehaviorY = "none";
-  document.documentElement.style.overscrollBehaviorY = "none";
-  isScrollLockedByMenu = true;
-};
-
-const unlockBackgroundScroll = () => {
-  if (!isScrollLockedByMenu) return;
-  if (scrollContainer) {
-    scrollContainer.style.overflowY = previousOverflowY;
-    scrollContainer = null;
-  }
-
-  document.body.style.overflow = previousBodyOverflow;
-  document.documentElement.style.overflow = previousHtmlOverflow;
-  document.body.style.overscrollBehaviorY = previousBodyOverscrollY;
-  document.documentElement.style.overscrollBehaviorY = previousHtmlOverscrollY;
-  isScrollLockedByMenu = false;
-};
+let releaseMenuScrollLock: (() => void) | null = null;
 
 // 导航项配置
 const NAV_LABELS = {
@@ -503,15 +465,21 @@ watch(
   () => isModuleMenuOpen.value || isHamburgerMenuOpen.value,
   (isOpen) => {
     if (isOpen) {
-      lockBackgroundScroll();
-    } else {
-      unlockBackgroundScroll();
+      if (!releaseMenuScrollLock) {
+        releaseMenuScrollLock = lockBackgroundScroll();
+      }
+    } else if (releaseMenuScrollLock) {
+      releaseMenuScrollLock();
+      releaseMenuScrollLock = null;
     }
   }
 );
 
 onUnmounted(() => {
-  unlockBackgroundScroll();
+  if (releaseMenuScrollLock) {
+    releaseMenuScrollLock();
+    releaseMenuScrollLock = null;
+  }
 });
 
 // 当前模块标题（移动端显示）

@@ -105,6 +105,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onUnmounted } from "vue";
 import { chinaRegions, getDefaultRegion, type Province, type City, type SelectedRegion } from "../data/china-regions";
+import { lockBackgroundScroll } from "../utils/scroll-lock";
 
 const props = defineProps<{
   modelValue: SelectedRegion;
@@ -141,41 +142,8 @@ const previewText = computed(() => {
 // 是否可以确认（至少选择了城市/区域）
 const canConfirm = computed(() => !!selectedCity.value);
 
-// 打开模态时锁定底层（app-scroll）滚动，避免生辰输入页面还能滑动
-let scrollContainer: HTMLElement | null = null;
-let previousOverflowY = "";
-let previousBodyOverflow = "";
-let previousHtmlOverflow = "";
-let previousBodyOverscrollY = "";
-let previousHtmlOverscrollY = "";
-
-const lockBackgroundScroll = () => {
-  scrollContainer = document.querySelector(".app-scroll") as HTMLElement | null;
-  if (!scrollContainer) return;
-  previousOverflowY = scrollContainer.style.overflowY;
-  scrollContainer.style.overflowY = "hidden";
-
-  // iOS 上即使 overlay 内部可滚动，触发“回弹/滚动链”时仍可能带动底层页面。
-  // 这里额外锁住 body/html，避免出现“滑动时底下的生辰页面在动”的错觉。
-  previousBodyOverflow = document.body.style.overflow;
-  previousHtmlOverflow = document.documentElement.style.overflow;
-  previousBodyOverscrollY = document.body.style.overscrollBehaviorY;
-  previousHtmlOverscrollY = document.documentElement.style.overscrollBehaviorY;
-  document.body.style.overflow = "hidden";
-  document.documentElement.style.overflow = "hidden";
-  document.body.style.overscrollBehaviorY = "none";
-  document.documentElement.style.overscrollBehaviorY = "none";
-};
-const unlockBackgroundScroll = () => {
-  if (!scrollContainer) return;
-  scrollContainer.style.overflowY = previousOverflowY;
-  scrollContainer = null;
-
-  document.body.style.overflow = previousBodyOverflow;
-  document.documentElement.style.overflow = previousHtmlOverflow;
-  document.body.style.overscrollBehaviorY = previousBodyOverscrollY;
-  document.documentElement.style.overscrollBehaviorY = previousHtmlOverscrollY;
-};
+// 打开模态时锁定底层滚动（app-scroll + body/html），避免滑动穿透
+let releaseScrollLock: (() => void) | null = null;
 
 // 初始化选中状态
 const initSelection = () => {
@@ -239,10 +207,13 @@ watch(
 );
 
 onMounted(() => {
-  lockBackgroundScroll();
+  releaseScrollLock = lockBackgroundScroll();
 });
 
 onUnmounted(() => {
-  unlockBackgroundScroll();
+  if (releaseScrollLock) {
+    releaseScrollLock();
+    releaseScrollLock = null;
+  }
 });
 </script>
