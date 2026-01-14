@@ -251,7 +251,7 @@
             </div>
             <div class="flex flex-col gap-2 px-3 md:gap-3">
               <div v-for="item in energyItems" :key="item.element" class="flex flex-col">
-                <div class="flex items-center gap-1 text-xs md:text-[13px]">
+                <div class="flex flex-wrap items-start gap-x-2 gap-y-1 text-xs md:text-[13px]">
                   <div class="flex items-center gap-1.5 md:gap-2 shrink-0">
                     <!-- 五行标识圆点：使用对应颜色 -->
                     <span
@@ -268,16 +268,13 @@
                       :style="{ color: elementColorMap[item.element] }"
                     >{{ item.element }}</span>
                     <span class="text-[10px] text-[var(--muted)] md:text-[11px] shrink-0">{{ item.relation }}</span>
-                    <!-- 智能解析显示描述 -->
-                    <span v-if="energyMode === 'smart'" class="text-[10px] text-[var(--muted)] md:text-[11px]">
-                      <span class="text-white/40">「</span>
-                    </span>
                   </div>
                   <!-- 智能解析的解释文本 -->
-                  <span v-if="energyMode === 'smart'" class="text-[10px] text-[var(--muted)] md:text-[11px] truncate">
-                    {{ item.description }}
+                  <div v-if="energyMode === 'smart'" class="flex min-w-0 items-start text-[10px] text-[var(--muted)] md:text-[11px] leading-snug break-words">
+                    <span class="text-white/40">「</span>
+                    <span class="min-w-0">{{ item.description }}</span>
                     <span class="text-white/40">」</span>
-                  </span>
+                  </div>
                 </div>
                 <div class="flex items-center gap-2">
                   <!-- 百分比条 -->
