@@ -402,7 +402,7 @@
         <Transition name="fade">
           <div
             v-if="smartEnergyConfirmOpen"
-            class="fixed inset-0 z-[70] flex items-center justify-center px-4"
+            class="fixed inset-0 z-[70] flex items-center justify-center px-4 overscroll-contain"
             :style="{ paddingTop: `calc(env(safe-area-inset-top, 0px) + 12px)`, paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + 12px)` }"
             role="dialog"
             aria-modal="true"
@@ -460,23 +460,23 @@
       <!-- 八字命盘卡片 -->
       <div class="panel-card">
         <PanelHeader title="八字命盘"/>
-        <div class="mx-auto w-full max-w-[520px] overflow-hidden rounded-[14px] border border-[rgba(255,255,255,0.08)]">
-          <div class="mx-auto w-full max-w-[520px] grid grid-cols-[40px_repeat(4,minmax(0,1fr))] bg-[rgba(255,255,255,0.06)] font-semibold text-[13px]">
+        <div class="mx-auto w-full max-w-[720px] overflow-hidden rounded-[14px] border-0 border-[rgba(255,255,255,0.08)]">
+          <div class="mx-auto w-full grid grid-cols-[40px_repeat(4,minmax(0,1fr))] bg-[rgba(255,255,255,0.06)] font-semibold text-[13px]">
             <div class="flex items-center justify-center py-3 text-xs text-[var(--muted)]"></div>
             <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-sm">年柱</div>
             <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-sm">月柱</div>
             <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-sm">日柱</div>
             <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-sm">时柱</div>
           </div>
-          <div class="mx-auto w-full max-w-[520px] grid grid-cols-[40px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
-            <div class="flex items-center justify-center py-3 text-xs text-[var(--muted)]">主星</div>
+          <div class="mx-auto w-full grid grid-cols-[40px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
+            <div class="flex items-center justify-center pl-3 py-3 text-xs text-[var(--muted)]">主星</div>
             <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-xs text-[var(--muted)]">{{ chart.year_pillar.heaven_stem.ten_god }}</div>
             <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-xs text-[var(--muted)]">{{ chart.month_pillar.heaven_stem.ten_god }}</div>
             <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-xs text-[var(--muted)]">{{ chart.day_pillar.heaven_stem.ten_god }}</div>
             <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-xs text-[var(--muted)]">{{ chart.hour_pillar.heaven_stem.ten_god }}</div>
           </div>
-          <div class="mx-auto w-full max-w-[520px] grid grid-cols-[40px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
-            <div class="flex items-center justify-center py-3 text-xs text-[var(--muted)]">天干</div>
+          <div class="mx-auto w-full grid grid-cols-[40px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
+            <div class="flex items-center justify-center pl-3 py-3 text-xs text-[var(--muted)]">天干</div>
             <div class="flex items-center justify-center px-2 py-3 text-center">
               <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.year_pillar.heaven_stem.element)]">
                 {{ chart.year_pillar.heaven_stem.name }}
@@ -502,8 +502,8 @@
               <span class="text-sm opacity-80 ml-0.5">{{ elementIcon(chart.hour_pillar.heaven_stem.element) }}</span>
             </div>
           </div>
-          <div class="mx-auto w-full max-w-[520px] grid grid-cols-[40px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
-            <div class="flex items-center justify-center py-3 text-xs text-[var(--muted)]">地支</div>
+          <div class="mx-auto w-full grid grid-cols-[40px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
+            <div class="flex items-center justify-center pl-3  py-3 text-xs text-[var(--muted)]">地支</div>
             <div class="flex items-center justify-center px-2 py-3 text-center">
               <span :class="['text-[26px] font-bold tracking-wide', elementClass(chart.year_pillar.earth_branch.element)]">
                 {{ chart.year_pillar.earth_branch.name }}
@@ -529,8 +529,8 @@
               <span class="text-sm opacity-80 ml-0.5">{{ elementIcon(chart.hour_pillar.earth_branch.element) }}</span>
             </div>
           </div>
-          <div class="mx-auto w-full max-w-[520px] grid grid-cols-[40px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
-            <div class="flex items-center justify-center py-3 text-xs text-[var(--muted)]">藏干</div>
+          <div class="mx-auto w-full grid grid-cols-[40px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
+            <div class="flex items-center justify-center pl-3  py-3 text-xs text-[var(--muted)]">藏干</div>
             <div class="flex flex-col gap-2 px-2 py-3 text-center text-[13px]">
               <span
                 v-for="stem in chart.year_pillar.earth_branch.hidden_stems"
@@ -920,6 +920,7 @@
 import { computed, inject, onBeforeUnmount, onMounted, onUnmounted, ref, watch } from "vue";
 import type { Chart, GanZhiRelation, PillarInfo, HeavenStemInfo, EarthBranchInfo, SmartEnergyResult } from "../types";
 import PanelHeader from "./PanelHeader.vue";
+import { lockBackgroundScroll } from "../utils/scroll-lock";
 // 导入性别图标
 import maleIconUrl from "../assets/gender-male.png";
 import femaleIconUrl from "../assets/gender-female.png";
@@ -1274,7 +1275,7 @@ const initSmartEnergyCache = () => {
 // 当前能量模式（默认模式 or 神机秘算）
 const energyMode = ref<'default' | 'smart'>('default');
 const smartEnergyConfirmOpen = ref(false);
-const bodyOverflowBackup = ref<string | null>(null);
+let releaseConfirmScrollLock: (() => void) | null = null;
 const energySectionOpen = ref({
   overall: true,
   temperament: true,
@@ -1414,13 +1415,12 @@ const toggleEnergySection = (key: keyof typeof energySectionOpen.value) => {
 
 watch(smartEnergyConfirmOpen, (isOpen) => {
   if (isOpen) {
-    if (bodyOverflowBackup.value === null) {
-      bodyOverflowBackup.value = document.body.style.overflow || "";
+    if (!releaseConfirmScrollLock) {
+      releaseConfirmScrollLock = lockBackgroundScroll();
     }
-    document.body.style.overflow = "hidden";
-  } else if (bodyOverflowBackup.value !== null) {
-    document.body.style.overflow = bodyOverflowBackup.value;
-    bodyOverflowBackup.value = null;
+  } else if (releaseConfirmScrollLock) {
+    releaseConfirmScrollLock();
+    releaseConfirmScrollLock = null;
   }
 });
 
@@ -1450,9 +1450,9 @@ watch(smartEnergyLoading, (isLoading) => {
 });
 
 onUnmounted(() => {
-  if (bodyOverflowBackup.value !== null) {
-    document.body.style.overflow = bodyOverflowBackup.value;
-    bodyOverflowBackup.value = null;
+  if (releaseConfirmScrollLock) {
+    releaseConfirmScrollLock();
+    releaseConfirmScrollLock = null;
   }
   if (loadingTimer) {
     window.clearInterval(loadingTimer);
