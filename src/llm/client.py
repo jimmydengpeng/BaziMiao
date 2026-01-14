@@ -5,6 +5,7 @@ from typing import Any, Dict, Iterable, Iterator, Optional
 
 from src.llm.openai_client import (
     chat as openai_chat,
+    chat_with_usage as openai_chat_with_usage,
     stream_chat as openai_stream_chat,
     stream_chat_with_reasoning as openai_stream_chat_with_reasoning,
 )
@@ -106,3 +107,30 @@ def stream_chat_with_reasoning(
     if timeout is not None:
         kwargs["timeout"] = timeout
     yield from ollama_stream_chat_with_reasoning(messages, **kwargs)
+
+
+def chat_with_usage(
+    messages: Iterable[Dict[str, str]],
+    *,
+    provider: Optional[str] = None,
+    model: Optional[str] = None,
+    temperature: Optional[float] = None,
+    enable_thinking: Optional[bool] = None,
+    response_format: Optional[Dict[str, Any]] = None,
+    timeout: Optional[float] = None,
+) -> tuple[str, Optional[Dict[str, Any]]]:
+    resolved = _resolve_provider(provider or DEFAULT_PROVIDER)
+    if resolved == "openai":
+        kwargs = {
+            "model": model,
+            "temperature": temperature,
+            "enable_thinking": enable_thinking,
+            "response_format": response_format,
+        }
+        if timeout is not None:
+            kwargs["timeout"] = timeout
+        return openai_chat_with_usage(messages, **kwargs)
+    kwargs = {"model": model, "temperature": temperature}
+    if timeout is not None:
+        kwargs["timeout"] = timeout
+    return ollama_chat(messages, **kwargs), None

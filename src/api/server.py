@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime
@@ -11,19 +12,38 @@ from typing import Any, Dict, Iterator, List, Optional, Union
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 
-from src.api.schemas import ChartRequest, ChatRequest, ReportRequest, PillarSearchRequest, GeneralChatRequest, FeedbackRequest, EnergyAnalysisRequest
 import logging
 
-# 配置日志
-feedback_logger = logging.getLogger("feedback")
-feedback_logger.setLevel(logging.INFO)
+from src.api.schemas import (
+    ChartRequest,
+    ChatRequest,
+    ReportRequest,
+    PillarSearchRequest,
+    GeneralChatRequest,
+    FeedbackRequest,
+    EnergyAnalysisRequest,
+)
 from src.engine.bazi_engine import BaziPaipanEngine
 from src.knowledge.base import retrieve_knowledge
-from src.llm import LLMError, chat, stream_chat_with_reasoning
+from src.llm import LLMError, chat, chat_with_usage, stream_chat_with_reasoning
 from src.models.chart import Chart
 from src.api.energy_prompt import build_energy_analysis_schema
 from src.prompt.report_prompt import build_report_prompt
 from src.rules.analysis import evaluate_chart
+
+root_logger = logging.getLogger()
+if not root_logger.handlers:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    )
+
+# 配置日志
+feedback_logger = logging.getLogger("feedback")
+feedback_logger.setLevel(logging.INFO)
+energy_logger = logging.getLogger("energy_analysis")
+energy_logger.setLevel(logging.INFO)
+energy_logger.propagate = True
 
 app = FastAPI(title="神机喵算 / BaziMiao API", version="0.1.0")
 engine = BaziPaipanEngine()
@@ -66,8 +86,6 @@ def _resolve_llm_model(feature: str, provider: str) -> Optional[str]:
     env_value = (os.getenv(env_key) or "").strip()
     if env_value:
         return env_value
-    if feature == "energy" and provider == "openai":
-        return "qwen-plus-2025-12-01"
     return None
 
 
@@ -91,6 +109,22 @@ def _resolve_llm_timeout(feature: str) -> Optional[float]:
         return float(env_value)
     except ValueError:
         return None
+
+
+def _resolve_feature_enable_thinking(
+    feature: str, provider: str, requested: Optional[bool] = None
+) -> bool:
+    if provider == "local":
+        return True
+    if requested is not None:
+        return bool(requested)
+    env_key = f"LLM_MODEL_{feature.upper()}_ENABLE_THINKING"
+    env_value = (os.getenv(env_key) or "").strip()
+    if env_value:
+        return env_value.lower() in {"1", "true", "yes", "y", "on"}
+    if feature == "energy":
+        return False
+    return _resolve_enable_thinking(provider)
 
 
 def _build_solar_datetime(payload: Union[ChartRequest, ReportRequest]) -> datetime:
@@ -138,12 +172,13 @@ def generate_report(payload: ReportRequest):
         model = _resolve_llm_model("report", provider)
         temperature = _resolve_llm_temperature("report")
         timeout = _resolve_llm_timeout("report")
+        enable_thinking = _resolve_feature_enable_thinking("report", provider)
         raw_text = chat(
             messages,
             provider=provider,
             model=model,
             temperature=temperature,
-            enable_thinking=_resolve_enable_thinking(provider),
+            enable_thinking=enable_thinking,
             timeout=timeout,
         )
     except LLMError as exc:
@@ -164,10 +199,10 @@ def generate_report_stream(payload: ReportRequest):
     chart, analysis, knowledge, prompt = _prepare_report_context(payload)
     messages = _build_llm_messages(prompt)
     provider = _resolve_llm_provider()
-    enable_thinking = _resolve_enable_thinking(provider)
     model = _resolve_llm_model("report", provider)
     temperature = _resolve_llm_temperature("report")
     timeout = _resolve_llm_timeout("report")
+    enable_thinking = _resolve_feature_enable_thinking("report", provider)
 
     def _event_stream() -> Iterator[str]:
         meta = {
@@ -223,12 +258,13 @@ def chat_with_chart(payload: ChatRequest):
         model = _resolve_llm_model("chat", provider)
         temperature = _resolve_llm_temperature("chat")
         timeout = _resolve_llm_timeout("chat")
+        enable_thinking = _resolve_feature_enable_thinking("chat", provider)
         raw_text = chat(
             _build_llm_messages(prompt),
             provider=provider,
             model=model,
             temperature=temperature,
-            enable_thinking=_resolve_enable_thinking(provider),
+            enable_thinking=enable_thinking,
             timeout=timeout,
         )
     except LLMError as exc:
@@ -243,10 +279,10 @@ def chat_with_chart_stream(payload: ChatRequest):
     prompt = _build_chat_prompt(payload)
     messages = _build_llm_messages(prompt)
     provider = _resolve_llm_provider()
-    enable_thinking = _resolve_enable_thinking(provider)
     model = _resolve_llm_model("chat", provider)
     temperature = _resolve_llm_temperature("chat")
     timeout = _resolve_llm_timeout("chat")
+    enable_thinking = _resolve_feature_enable_thinking("chat", provider)
 
     def _event_stream() -> Iterator[str]:
         chunks: List[str] = []
@@ -294,10 +330,10 @@ def general_chat_stream(payload: GeneralChatRequest):
     )
     system_prompt = payload.system_prompt or default_system
     provider = _resolve_llm_provider(payload.llm_provider)
-    enable_thinking = _resolve_enable_thinking(provider, payload.deep_think)
     model = _resolve_llm_model("chat", provider)
     temperature = _resolve_llm_temperature("chat")
     timeout = _resolve_llm_timeout("chat")
+    enable_thinking = _resolve_feature_enable_thinking("chat", provider, payload.deep_think)
 
     # 可选：命主上下文（前端只传姓名 + 出生日期文本，后端用提示词方式注入，避免改动更大结构）
     if payload.subject_enabled and payload.subject_name:
@@ -431,6 +467,7 @@ def analyze_energy(payload: EnergyAnalysisRequest):
         model = _resolve_llm_model("energy", provider)
         temperature = _resolve_llm_temperature("energy")
         timeout = _resolve_llm_timeout("energy")
+        enable_thinking = _resolve_feature_enable_thinking("energy", provider)
         response_format = {
             "type": "json_schema",
             "json_schema": {
@@ -439,7 +476,6 @@ def analyze_energy(payload: EnergyAnalysisRequest):
                 "strict": True,
             },
         }
-        # 不启用思考模式，快速返回结果
         system_message = (
             "你是一位专业的八字命理师，"
             "请严格按要求的 JSON 格式输出分析结果。"
@@ -449,14 +485,37 @@ def analyze_energy(payload: EnergyAnalysisRequest):
             {"role": "user", "content": prompt_text},
         ]
 
-        raw_text = chat(
+        start_time = time.perf_counter()
+        energy_logger.info(
+            "energy_analysis llm_request provider=%s model=%s enable_thinking=%s temperature=%s timeout=%s",
+            provider,
+            model or "default",
+            enable_thinking,
+            temperature,
+            timeout,
+        )
+        raw_text, usage = chat_with_usage(
             messages,
             provider=provider,
             model=model,
             temperature=temperature,
-            enable_thinking=False,
+            enable_thinking=enable_thinking,
             response_format=response_format,
             timeout=timeout,
+        )
+        elapsed_ms = int((time.perf_counter() - start_time) * 1000)
+        energy_logger.info(
+            "energy_analysis llm_call provider=%s model=%s enable_thinking=%s temperature=%s timeout=%s "
+            "elapsed_ms=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s",
+            provider,
+            model or "default",
+            enable_thinking,
+            temperature,
+            timeout,
+            elapsed_ms,
+            usage.get("prompt_tokens") if isinstance(usage, dict) else None,
+            usage.get("completion_tokens") if isinstance(usage, dict) else None,
+            usage.get("total_tokens") if isinstance(usage, dict) else None,
         )
         result = _extract_json(raw_text)
 
@@ -466,8 +525,20 @@ def analyze_energy(payload: EnergyAnalysisRequest):
 
         return result
     except LLMError as exc:
+        elapsed_ms = int((time.perf_counter() - start_time) * 1000) if "start_time" in locals() else None
+        energy_logger.error(
+            "energy_analysis llm_error elapsed_ms=%s message=%s",
+            elapsed_ms,
+            str(exc),
+        )
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception as exc:
+        elapsed_ms = int((time.perf_counter() - start_time) * 1000) if "start_time" in locals() else None
+        energy_logger.error(
+            "energy_analysis error elapsed_ms=%s message=%s",
+            elapsed_ms,
+            str(exc),
+        )
         raise HTTPException(status_code=400, detail=f"分析失败: {exc}") from exc
 
 

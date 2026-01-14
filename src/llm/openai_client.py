@@ -158,6 +158,59 @@ def _iter_chat_chunks(
         raise OpenAICompatibleError(message) from exc
 
 
+def _request_chat_completion(
+    messages: Iterable[Dict[str, str]],
+    *,
+    api_key: str,
+    base_url: str,
+    model: Optional[str],
+    temperature: Optional[float],
+    enable_thinking: Optional[bool],
+    response_format: Optional[Dict[str, Any]],
+    timeout: float,
+) -> Dict[str, Any]:
+    payload = _build_chat_payload(
+        messages,
+        stream=False,
+        model=model,
+        temperature=temperature,
+        enable_thinking=enable_thinking,
+        response_format=response_format,
+    )
+    data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    endpoint = f"{_normalize_base_url(base_url)}/chat/completions"
+    request = urllib.request.Request(
+        endpoint,
+        data=data,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+            "Accept": "application/json",
+        },
+    )
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+    try:
+        with opener.open(request, timeout=timeout) as response:
+            raw = response.read().decode("utf-8", errors="ignore").strip()
+    except urllib.error.HTTPError as exc:
+        detail = _parse_error_body(exc.read())
+        message = f"OpenAI 兼容云端调用失败: HTTP {exc.code} {exc.reason}"
+        if detail:
+            message = f"{message} - {detail}"
+        message = f"{message} (base_url={base_url}, model={model or DEFAULT_MODEL})"
+        raise OpenAICompatibleError(message) from exc
+    except (urllib.error.URLError, TimeoutError) as exc:
+        message = f"OpenAI 兼容云端调用失败: {exc} (base_url={base_url}, model={model or DEFAULT_MODEL})"
+        raise OpenAICompatibleError(message) from exc
+
+    try:
+        data = json.loads(raw) if raw else {}
+    except json.JSONDecodeError as exc:
+        raise OpenAICompatibleError("OpenAI 兼容云端返回非 JSON 数据") from exc
+    return data if isinstance(data, dict) else {}
+
+
 def stream_chat_with_reasoning(
     messages: Iterable[Dict[str, str]],
     *,
@@ -234,3 +287,42 @@ def chat(
             timeout=timeout,
         )
     )
+
+
+def chat_with_usage(
+    messages: Iterable[Dict[str, str]],
+    *,
+    api_key: Optional[str] = None,
+    base_url: str = DEFAULT_BASE_URL,
+    model: Optional[str] = None,
+    temperature: Optional[float] = None,
+    enable_thinking: Optional[bool] = None,
+    response_format: Optional[Dict[str, Any]] = None,
+    timeout: float = DEFAULT_TIMEOUT,
+) -> tuple[str, Optional[Dict[str, Any]]]:
+    resolved_key = api_key or os.getenv("OPENAI_COMPAT_API_KEY", "").strip()
+    if not resolved_key:
+        resolved_key = os.getenv("DASHSCOPE_API_KEY", "").strip()
+    if not resolved_key:
+        raise OpenAICompatibleError("缺少 OPENAI_COMPAT_API_KEY，无法调用 OpenAI 兼容云端模型")
+
+    data = _request_chat_completion(
+        messages,
+        api_key=resolved_key,
+        base_url=base_url,
+        model=model,
+        temperature=temperature,
+        enable_thinking=enable_thinking,
+        response_format=response_format,
+        timeout=timeout,
+    )
+    choices = data.get("choices")
+    if not isinstance(choices, list) or not choices:
+        return "", data.get("usage") if isinstance(data.get("usage"), dict) else None
+    first = choices[0] if isinstance(choices[0], dict) else {}
+    message = first.get("message")
+    content = ""
+    if isinstance(message, dict):
+        content = message.get("content") if isinstance(message.get("content"), str) else ""
+    usage = data.get("usage") if isinstance(data.get("usage"), dict) else None
+    return content, usage
