@@ -158,7 +158,7 @@
                   <div class="h-16 w-16 animate-spin rounded-full border-4 border-[rgba(255,255,255,0.1)] border-t-[var(--accent-2)]"></div>
                   <img :src="sparkleIconUrl" class="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 transform opacity-80" alt="加载中" />
                 </div>
-                <p class="mt-4 text-sm text-[var(--muted)]">神机运转，命局五行推演中...</p>
+                <p class="mt-4 text-sm text-[var(--muted)]">{{ loadingMessage }}</p>
                 <div class="mt-3 w-[200px]">
                   <div class="h-1.5 overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)]">
                     <div
@@ -1283,7 +1283,62 @@ const energySectionOpen = ref({
   temperament: true,
   health: true,
 });
+const ENERGY_ESTIMATE_KEY = "energy_estimate_ms";
+const INITIAL_ENERGY_ESTIMATE_MS = 10000;
+const ENERGY_ESTIMATE_ALPHA = 0.2;
+const ENERGY_ESTIMATE_MIN_MS = 4000;
+const ENERGY_ESTIMATE_MAX_MS = 60000;
+
+const clampEnergyEstimate = (value: number) => Math.min(
+  ENERGY_ESTIMATE_MAX_MS,
+  Math.max(ENERGY_ESTIMATE_MIN_MS, value),
+);
+
+const loadEnergyEstimateMs = () => {
+  const raw = localStorage.getItem(ENERGY_ESTIMATE_KEY);
+  const parsed = raw ? Number.parseFloat(raw) : Number.NaN;
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return INITIAL_ENERGY_ESTIMATE_MS;
+  }
+  return clampEnergyEstimate(parsed);
+};
+
+const saveEnergyEstimateMs = (value: number) => {
+  localStorage.setItem(ENERGY_ESTIMATE_KEY, String(Math.round(value)));
+};
+
+const LOADING_MESSAGES = [
+  "神机运转，命局五行推演中...",
+  "五行气机已起，正在校衡强弱...",
+  "炉火纯青，正在凝练五行分数...",
+  "收束气象，准备呈现结果...",
+];
+
 const loadingProgress = ref(0);
+const energyEstimateMs = ref(loadEnergyEstimateMs());
+const updateEnergyEstimateMs = (elapsedMs: number) => {
+  if (!Number.isFinite(elapsedMs) || elapsedMs <= 0) return;
+  const current = energyEstimateMs.value;
+  const next = clampEnergyEstimate(current * (1 - ENERGY_ESTIMATE_ALPHA) + elapsedMs * ENERGY_ESTIMATE_ALPHA);
+  energyEstimateMs.value = next;
+  saveEnergyEstimateMs(next);
+};
+const LOADING_START_PROGRESS = 8;
+const LOADING_MAX_PROGRESS = 95;
+const LOADING_TICK_MS = 400;
+const getLoadingProgress = (elapsedMs: number, estimateMs: number) => {
+  const normalized = elapsedMs / Math.max(estimateMs, 1);
+  const eased = 1 - Math.exp(-normalized * 2.2);
+  return Math.round(eased * 100);
+};
+const loadingMessage = computed(() => {
+  if (!smartEnergyLoading.value) return "";
+  const progress = loadingProgress.value;
+  if (progress < 35) return LOADING_MESSAGES[0];
+  if (progress < 60) return LOADING_MESSAGES[1];
+  if (progress < 80) return LOADING_MESSAGES[2];
+  return LOADING_MESSAGES[3];
+});
 let loadingTimer: number | null = null;
 
 const setEnergyMode = (mode: 'default' | 'smart') => {
@@ -1308,6 +1363,7 @@ const fetchSmartEnergyData = async () => {
   }
 
   // 请求 API
+  const requestStartedAt = Date.now();
   smartEnergyLoading.value = true;
   try {
     const response = await fetch('/api/bazi/energy-analysis', {
@@ -1329,6 +1385,7 @@ const fetchSmartEnergyData = async () => {
     console.error('获取智能解析数据失败:', error);
     smartEnergyData.value = null;
   } finally {
+    updateEnergyEstimateMs(Date.now() - requestStartedAt);
     smartEnergyLoading.value = false;
   }
 };
@@ -1372,17 +1429,20 @@ watch(smartEnergyConfirmOpen, (isOpen) => {
 
 watch(smartEnergyLoading, (isLoading) => {
   if (isLoading) {
-    const totalSeconds = Math.floor(Math.random() * 11) + 10;
     const startedAt = Date.now();
-    loadingProgress.value = 8;
+    const estimateMs = energyEstimateMs.value || INITIAL_ENERGY_ESTIMATE_MS;
+    loadingProgress.value = LOADING_START_PROGRESS;
     if (loadingTimer) {
       window.clearInterval(loadingTimer);
     }
     loadingTimer = window.setInterval(() => {
-      const elapsed = (Date.now() - startedAt) / 1000;
-      const progress = Math.min(95, Math.round((elapsed / totalSeconds) * 100));
+      const elapsedMs = Date.now() - startedAt;
+      const progress = Math.min(
+        LOADING_MAX_PROGRESS,
+        Math.max(LOADING_START_PROGRESS, getLoadingProgress(elapsedMs, estimateMs)),
+      );
       loadingProgress.value = Math.max(loadingProgress.value, progress);
-    }, 400);
+    }, LOADING_TICK_MS);
   } else {
     loadingProgress.value = 0;
     if (loadingTimer) {
