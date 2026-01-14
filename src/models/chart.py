@@ -34,11 +34,14 @@ class EarthBranchInfo(BaseModel):
     element: str
     yinyang: str
     hidden_stems: List[HeavenStemInfo]
+    star_fortune: str = Field(default="", description="星运（十二长生阶段）")
 
 
 class PillarInfo(BaseModel):
     heaven_stem: HeavenStemInfo
     earth_branch: EarthBranchInfo
+    na_yin: str = Field(default="", description="纳音")
+    na_yin_trait: str = Field(default="", description="纳音性情")
 
 
 class DestinyPillarInfo(BaseModel):
@@ -68,6 +71,14 @@ class JieQiInfo(BaseModel):
     prev_distance: str = Field(default="", description="距前一节气的时间")
     next_jieqi: str = Field(default="", description="后一个节气")
     next_distance: str = Field(default="", description="距后一节气的时间")
+
+
+class KongWangInfo(BaseModel):
+    """四柱空亡信息"""
+    year: str = Field(default="", description="年柱空亡")
+    month: str = Field(default="", description="月柱空亡")
+    day: str = Field(default="", description="日柱空亡")
+    hour: str = Field(default="", description="时柱空亡")
 
 
 class GanZhiRelation(BaseModel):
@@ -115,6 +126,6 @@ class Chart(BaseModel):
     shen_gong: Optional[NaYinInfo] = Field(default=None, description="身宫")
     ming_gong: Optional[NaYinInfo] = Field(default=None, description="命宫")
     ren_yuan_si_ling: str = Field(default="", description="人元司令分野")
-    kong_wang: str = Field(default="", description="空亡")
+    kong_wang: Optional[KongWangInfo] = Field(default=None, description="空亡")
     current_year_pillar: Optional[PillarInfo] = Field(default=None, description="当前流年柱（以立春为界）")
     ganzi_relations: Optional[GanZhiRelations] = Field(default=None, description="干支关系")

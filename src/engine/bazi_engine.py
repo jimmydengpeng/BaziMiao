@@ -6,6 +6,8 @@ from typing import Dict, List, Optional, Tuple
 
 import sxtwl
 
+from src.data.changsheng_table import STEM_CHANG_SHENG_TABLE
+from src.data.nayin_data import NA_YIN_TABLE, NA_YIN_TRAITS
 from src.engine.true_solar_time import calculate_true_solar_time
 from src.models.chart import (
     Chart,
@@ -16,6 +18,7 @@ from src.models.chart import (
     GanZhiRelations,
     HeavenStemInfo,
     JieQiInfo,
+    KongWangInfo,
     LunarDate,
     NaYinInfo,
     PillarInfo,
@@ -184,25 +187,6 @@ class BaziPaipanEngine:
         "酉": ["辛"],
         "戌": ["戊", "辛", "丁"],
         "亥": ["壬", "甲"],
-    }
-
-    # 六十甲子纳音表
-    NA_YIN_TABLE = {
-        "甲子": "海中金", "乙丑": "海中金", "丙寅": "炉中火", "丁卯": "炉中火",
-        "戊辰": "大林木", "己巳": "大林木", "庚午": "路旁土", "辛未": "路旁土",
-        "壬申": "剑锋金", "癸酉": "剑锋金", "甲戌": "山头火", "乙亥": "山头火",
-        "丙子": "涧下水", "丁丑": "涧下水", "戊寅": "城头土", "己卯": "城头土",
-        "庚辰": "白蜡金", "辛巳": "白蜡金", "壬午": "杨柳木", "癸未": "杨柳木",
-        "甲申": "泉中水", "乙酉": "泉中水", "丙戌": "屋上土", "丁亥": "屋上土",
-        "戊子": "霹雳火", "己丑": "霹雳火", "庚寅": "松柏木", "辛卯": "松柏木",
-        "壬辰": "长流水", "癸巳": "长流水", "甲午": "砂中金", "乙未": "砂中金",
-        "丙申": "山下火", "丁酉": "山下火", "戊戌": "平地木", "己亥": "平地木",
-        "庚子": "壁上土", "辛丑": "壁上土", "壬寅": "金箔金", "癸卯": "金箔金",
-        "甲辰": "覆灯火", "乙巳": "覆灯火", "丙午": "天河水", "丁未": "天河水",
-        "戊申": "大驿土", "己酉": "大驿土", "庚戌": "钗钏金", "辛亥": "钗钏金",
-        "壬子": "桑柘木", "癸丑": "桑柘木", "甲寅": "大溪水", "乙卯": "大溪水",
-        "丙辰": "砂中土", "丁巳": "砂中土", "戊午": "天上火", "己未": "天上火",
-        "庚申": "石榴木", "辛酉": "石榴木", "壬戌": "大海水", "癸亥": "大海水",
     }
 
     # 二十四节气名称
@@ -447,7 +431,7 @@ class BaziPaipanEngine:
 
         # 天运五行（年柱纳音）
         year_gz_str = f"{self.TIAN_GAN_NAMES[year_gz.tg]}{self.DI_ZHI_NAMES[year_gz.dz]}"
-        fortune_element = self.NA_YIN_TABLE.get(year_gz_str, "")
+        fortune_element = NA_YIN_TABLE.get(year_gz_str, "")
 
         # 计算胎元
         tai_yuan = self._calculate_tai_yuan(month_gz.tg, month_gz.dz, day_stem_name)
@@ -465,7 +449,12 @@ class BaziPaipanEngine:
         ren_yuan_si_ling = self._calculate_ren_yuan_si_ling(birth_day)
 
         # 计算空亡
-        kong_wang = self._calculate_kong_wang(day_gz.tg, day_gz.dz)
+        kong_wang = KongWangInfo(
+            year=self._calculate_kong_wang(year_gz.tg, year_gz.dz),
+            month=self._calculate_kong_wang(month_gz.tg, month_gz.dz),
+            day=self._calculate_kong_wang(day_gz.tg, day_gz.dz),
+            hour=self._calculate_kong_wang(hour_gz[0], hour_gz[1]),
+        )
 
         # 计算节气信息
         birth_jieqi = self._calculate_birth_jieqi(birth_day, adjusted_dt.hour, adjusted_dt.minute)
@@ -476,7 +465,7 @@ class BaziPaipanEngine:
             # 获取当前大运
             current_destiny = self.get_current_destiny_pillar(original_solar_datetime, destiny_cycle)
             # 获取当前流年
-            current_year = self.get_current_year_pillar()
+            current_year = self.get_current_year_pillar(day_stem=day_stem_name)
             
             # 计算所有关系
             ganzi_relations = self.calculate_all_ganzi_relations(
@@ -547,14 +536,21 @@ class BaziPaipanEngine:
             ten_god=self._calculate_stem_ten_god(stem_name, day_stem),
         )
 
+        na_yin, na_yin_trait = self._calculate_nayin(stem_name, branch_name)
         earth_branch = EarthBranchInfo(
             name=branch_name,
             element=self.EARTH_BRANCH_ELEMENT_MAP[branch_name],
             yinyang=self.DI_ZHI_YIN_YANG[branch_name],
             hidden_stems=hidden_stem_list,
+            star_fortune=self._calculate_star_fortune(day_stem, branch_name),
         )
 
-        return PillarInfo(heaven_stem=heaven_stem, earth_branch=earth_branch)
+        return PillarInfo(
+            heaven_stem=heaven_stem,
+            earth_branch=earth_branch,
+            na_yin=na_yin,
+            na_yin_trait=na_yin_trait,
+        )
 
     def _calculate_stem_ten_god(self, stem: str, day_stem: str) -> str:
         stem_element = self.HEAVEN_STEM_ELEMENT_MAP[stem]
@@ -563,6 +559,18 @@ class BaziPaipanEngine:
         stem_yinyang = self.TIAN_GAN_YIN_YANG[stem]
         day_yinyang = self.TIAN_GAN_YIN_YANG[day_stem]
         return self.TEN_GODS[("同" if stem_yinyang == day_yinyang else "异", relation)]
+
+    def _calculate_nayin(self, stem: str, branch: str) -> Tuple[str, str]:
+        gan_zhi = f"{stem}{branch}"
+        na_yin = NA_YIN_TABLE.get(gan_zhi, "")
+        na_yin_trait = NA_YIN_TRAITS.get(na_yin, "") if na_yin else ""
+        return na_yin, na_yin_trait
+
+    def _calculate_star_fortune(self, day_stem: str, branch: str) -> str:
+        stem_table = STEM_CHANG_SHENG_TABLE.get(day_stem)
+        if not stem_table:
+            return ""
+        return stem_table.get(branch, "")
 
     def _get_hour_gz(self, day_stem: int, hour: int) -> Tuple[int, int]:
         branch_index = (hour + 1) // 2 % 12
@@ -719,7 +727,7 @@ class BaziPaipanEngine:
         tai_yuan_stem = self.TIAN_GAN_NAMES[tai_yuan_stem_idx]
         tai_yuan_branch = self.DI_ZHI_NAMES[tai_yuan_branch_idx]
         gan_zhi = f"{tai_yuan_stem}{tai_yuan_branch}"
-        na_yin = self.NA_YIN_TABLE.get(gan_zhi, "")
+        na_yin = NA_YIN_TABLE.get(gan_zhi, "")
         return NaYinInfo(gan_zhi=gan_zhi, na_yin=na_yin)
 
     def _calculate_shen_gong(
@@ -737,7 +745,7 @@ class BaziPaipanEngine:
         shen_gong_stem = self.TIAN_GAN_NAMES[shen_gong_stem_idx]
         shen_gong_branch = self.DI_ZHI_NAMES[shen_gong_branch_idx]
         gan_zhi = f"{shen_gong_stem}{shen_gong_branch}"
-        na_yin = self.NA_YIN_TABLE.get(gan_zhi, "")
+        na_yin = NA_YIN_TABLE.get(gan_zhi, "")
         return NaYinInfo(gan_zhi=gan_zhi, na_yin=na_yin)
 
     def _calculate_ming_gong(self, month_branch_idx: int, hour_branch_idx: int, day_stem: str) -> NaYinInfo:
@@ -752,7 +760,7 @@ class BaziPaipanEngine:
         ming_gong_stem = self.TIAN_GAN_NAMES[ming_gong_stem_idx]
         ming_gong_branch = self.DI_ZHI_NAMES[ming_gong_branch_idx]
         gan_zhi = f"{ming_gong_stem}{ming_gong_branch}"
-        na_yin = self.NA_YIN_TABLE.get(gan_zhi, "")
+        na_yin = NA_YIN_TABLE.get(gan_zhi, "")
         return NaYinInfo(gan_zhi=gan_zhi, na_yin=na_yin)
 
     def _calculate_ren_yuan_si_ling(self, birth_day: sxtwl.Day) -> str:
@@ -775,11 +783,11 @@ class BaziPaipanEngine:
         计算空亡
         空亡是旬中没有的两个地支
         """
-        # 找到日柱所在的旬首
-        xun_start = (day_stem_idx - day_branch_idx) % 10
+        # 找到该柱所在旬的起始地支（甲子、甲戌、甲申、甲午、甲辰、甲寅）
+        xun_start_branch = (day_branch_idx - day_stem_idx) % 12
         # 空亡的两个地支是旬中缺失的
-        kong_wang_1 = self.DI_ZHI_NAMES[(10 + xun_start) % 12]
-        kong_wang_2 = self.DI_ZHI_NAMES[(11 + xun_start) % 12]
+        kong_wang_1 = self.DI_ZHI_NAMES[(xun_start_branch + 10) % 12]
+        kong_wang_2 = self.DI_ZHI_NAMES[(xun_start_branch + 11) % 12]
         return f"{kong_wang_1}{kong_wang_2}"
 
     def _calculate_birth_jieqi(self, birth_day: sxtwl.Day, hour: int, minute: int) -> JieQiInfo:
@@ -1235,7 +1243,7 @@ class BaziPaipanEngine:
         
         return matched_dates
 
-    def get_current_year_pillar(self, year: Optional[int] = None) -> PillarInfo:
+    def get_current_year_pillar(self, day_stem: Optional[str] = None, year: Optional[int] = None) -> PillarInfo:
         """
         获取流年干支柱
         
@@ -1272,14 +1280,21 @@ class BaziPaipanEngine:
         )
         
         # 构建地支信息
+        na_yin, na_yin_trait = self._calculate_nayin(stem_name, branch_name)
         earth_branch = EarthBranchInfo(
             name=branch_name,
             element=self.EARTH_BRANCH_ELEMENT_MAP[branch_name],
             yinyang=self.DI_ZHI_YIN_YANG[branch_name],
             hidden_stems=[],  # 简化处理，不计算藏干
+            star_fortune=self._calculate_star_fortune(day_stem, branch_name) if day_stem else "",
         )
         
-        return PillarInfo(heaven_stem=heaven_stem, earth_branch=earth_branch)
+        return PillarInfo(
+            heaven_stem=heaven_stem,
+            earth_branch=earth_branch,
+            na_yin=na_yin,
+            na_yin_trait=na_yin_trait,
+        )
 
     def get_current_destiny_pillar(
         self, 
@@ -1322,9 +1337,15 @@ class BaziPaipanEngine:
         # 获取对应的大运
         if 0 <= destiny_index < len(destiny_cycle.destiny_pillars):
             destiny_pillar_info = destiny_cycle.destiny_pillars[destiny_index]
+            na_yin, na_yin_trait = self._calculate_nayin(
+                destiny_pillar_info.heaven_stem.name,
+                destiny_pillar_info.earth_branch.name,
+            )
             return PillarInfo(
                 heaven_stem=destiny_pillar_info.heaven_stem,
                 earth_branch=destiny_pillar_info.earth_branch,
+                na_yin=na_yin,
+                na_yin_trait=na_yin_trait,
             )
         
         return None

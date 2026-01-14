@@ -457,10 +457,50 @@
         </Transition>
       </teleport>
 
+      <teleport to="body">
+        <Transition name="fade">
+          <div
+            v-if="nayinModalOpen"
+            class="fixed inset-0 z-[70] flex items-center justify-center px-4 overscroll-contain"
+            :style="{ paddingTop: `calc(env(safe-area-inset-top, 0px) + 12px)`, paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + 12px)` }"
+            role="dialog"
+            aria-modal="true"
+            aria-label="纳音性情"
+          >
+            <button
+              class="absolute inset-0 cursor-default bg-black/60"
+              type="button"
+              aria-label="关闭"
+              @click="closeNayinModal"
+            />
+            <div class="relative w-full max-w-[360px] overflow-hidden rounded-2xl border border-white/10 bg-[rgba(18,22,33,0.82)] shadow-[0_20px_55px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+              <div class="bg-[rgba(255,255,255,0.1)] px-4 py-3 text-center text-base font-semibold text-white">
+                {{ nayinModalName }}
+              </div>
+              <div class="px-4 pt-4 text-left">
+                <div class="text-sm font-medium text-[var(--accent-2)]">纳音性情</div>
+                <p class="mt-2 text-sm leading-relaxed text-white/80">
+                  {{ nayinModalTrait }}
+                </p>
+              </div>
+              <div class="flex items-center justify-end px-4 pb-4 pt-4">
+                <button
+                  class="inline-flex items-center justify-center rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
+                  type="button"
+                  @click="closeNayinModal"
+                >
+                  关闭
+                </button>
+              </div>
+            </div>
+          </div>
+        </Transition>
+      </teleport>
+
       <!-- 八字命盘卡片 -->
       <div class="panel-card">
         <PanelHeader title="八字命盘"/>
-        <div class="mx-auto w-full max-w-[720px] overflow-hidden rounded-[14px] border-0 border-[rgba(255,255,255,0.08)]">
+        <div class="mx-auto w-full max-w-[720px] overflow-hidden rounded-[14px] border-1 border-[rgba(255,255,255,0.08)]">
           <div class="mx-auto w-full grid grid-cols-[40px_repeat(4,minmax(0,1fr))] bg-[rgba(255,255,255,0.06)] font-semibold text-[13px]">
             <div class="flex items-center justify-center py-3 text-xs text-[var(--muted)]"></div>
             <div class="flex flex-col items-center justify-center gap-1 px-2 py-3 text-center text-sm">年柱</div>
@@ -566,6 +606,79 @@
                 <span :class="elementClass(stem.element)">{{ stem.name }}</span>
                 <span class="text-[11px] text-[var(--muted)] ml-1">{{ stem.ten_god }}</span>
               </span>
+            </div>
+          </div>
+          <div class="mx-auto w-full grid grid-cols-[40px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
+            <div class="flex items-center justify-center pl-3 py-3 text-xs text-[var(--muted)]">星运</div>
+            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
+              {{ chart.year_pillar.earth_branch.star_fortune || "—" }}
+            </div>
+            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
+              {{ chart.month_pillar.earth_branch.star_fortune || "—" }}
+            </div>
+            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
+              {{ chart.day_pillar.earth_branch.star_fortune || "—" }}
+            </div>
+            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
+              {{ chart.hour_pillar.earth_branch.star_fortune || "—" }}
+            </div>
+          </div>
+          <div class="mx-auto w-full grid grid-cols-[40px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
+            <div class="flex items-center justify-center pl-3 py-3 text-xs text-[var(--muted)]">空亡</div>
+            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
+              {{ chart.kong_wang?.year || "—" }}
+            </div>
+            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
+              {{ chart.kong_wang?.month || "—" }}
+            </div>
+            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
+              {{ chart.kong_wang?.day || "—" }}
+            </div>
+            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
+              {{ chart.kong_wang?.hour || "—" }}
+            </div>
+          </div>
+          <div class="mx-auto w-full grid grid-cols-[40px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
+            <div class="flex items-center justify-center pl-3 py-3 text-xs text-[var(--muted)]">纳音</div>
+            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px]">
+              <button
+                class="text-[var(--muted)] transition hover:text-[var(--text)] disabled:cursor-default disabled:opacity-70"
+                type="button"
+                :disabled="!chart.year_pillar.na_yin"
+                @click="openNayinModal(chart.year_pillar)"
+              >
+                {{ chart.year_pillar.na_yin || "—" }}
+              </button>
+            </div>
+            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px]">
+              <button
+                class="text-[var(--muted)] transition hover:text-[var(--text)] disabled:cursor-default disabled:opacity-70"
+                type="button"
+                :disabled="!chart.month_pillar.na_yin"
+                @click="openNayinModal(chart.month_pillar)"
+              >
+                {{ chart.month_pillar.na_yin || "—" }}
+              </button>
+            </div>
+            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px]">
+              <button
+                class="text-[var(--muted)] transition hover:text-[var(--text)] disabled:cursor-default disabled:opacity-70"
+                type="button"
+                :disabled="!chart.day_pillar.na_yin"
+                @click="openNayinModal(chart.day_pillar)"
+              >
+                {{ chart.day_pillar.na_yin || "—" }}
+              </button>
+            </div>
+            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px]">
+              <button
+                class="text-[var(--muted)] transition hover:text-[var(--text)] disabled:cursor-default disabled:opacity-70"
+                type="button"
+                :disabled="!chart.hour_pillar.na_yin"
+                @click="openNayinModal(chart.hour_pillar)"
+              >
+                {{ chart.hour_pillar.na_yin || "—" }}
+              </button>
             </div>
           </div>
         </div>
@@ -939,6 +1052,23 @@ const handleArchivePickerOpen = () => {
   openArchivePicker?.();
 };
 
+const nayinModalOpen = ref(false);
+const nayinModalName = ref("");
+const nayinModalTrait = ref("");
+
+const openNayinModal = (pillar: PillarInfo) => {
+  if (!pillar?.na_yin) return;
+  nayinModalName.value = pillar.na_yin;
+  nayinModalTrait.value = pillar.na_yin_trait || "暂无说明";
+  nayinModalOpen.value = true;
+};
+
+const closeNayinModal = () => {
+  nayinModalOpen.value = false;
+  nayinModalName.value = "";
+  nayinModalTrait.value = "";
+};
+
 // ========== 基本信息卡片模式切换 ==========
 const infoMode = ref<'basic' | 'pro'>('basic');
 
@@ -1003,6 +1133,9 @@ const containerWidth = ref(0);
 const updateViewportWidth = () => {
   if (typeof window === "undefined") return;
   viewportWidth.value = window.innerWidth;
+  if (nayinModalOpen.value) {
+    closeNayinModal();
+  }
 };
 
 
@@ -1057,6 +1190,13 @@ watch(infoGridRef, (nextEl, prevEl) => {
     updateInfoFontFamily();
   }
 });
+
+watch(
+  () => props.chart,
+  () => {
+    closeNayinModal();
+  }
+);
 
 const gridColumnCount = computed(() => {
   const baseWidth = containerWidth.value || viewportWidth.value;
@@ -1235,8 +1375,8 @@ const proInfoItems = computed<InfoItem[]>(() => {
       key: "kongWang",
       label: "空亡",
       type: "text",
-      value: props.chart.kong_wang || "未知",
-      ...getSpanMeta("空亡", props.chart.kong_wang || "未知"),
+      value: kongWangText.value,
+      ...getSpanMeta("空亡", kongWangText.value),
     },
     {
       key: "renYuan",
@@ -1276,6 +1416,7 @@ const initSmartEnergyCache = () => {
 const energyMode = ref<'default' | 'smart'>('default');
 const smartEnergyConfirmOpen = ref(false);
 let releaseConfirmScrollLock: (() => void) | null = null;
+let releaseNayinScrollLock: (() => void) | null = null;
 const energySectionOpen = ref({
   overall: true,
   temperament: true,
@@ -1424,6 +1565,17 @@ watch(smartEnergyConfirmOpen, (isOpen) => {
   }
 });
 
+watch(nayinModalOpen, (isOpen) => {
+  if (isOpen) {
+    if (!releaseNayinScrollLock) {
+      releaseNayinScrollLock = lockBackgroundScroll();
+    }
+  } else if (releaseNayinScrollLock) {
+    releaseNayinScrollLock();
+    releaseNayinScrollLock = null;
+  }
+});
+
 watch(smartEnergyLoading, (isLoading) => {
   if (isLoading) {
     const startedAt = Date.now();
@@ -1453,6 +1605,10 @@ onUnmounted(() => {
   if (releaseConfirmScrollLock) {
     releaseConfirmScrollLock();
     releaseConfirmScrollLock = null;
+  }
+  if (releaseNayinScrollLock) {
+    releaseNayinScrollLock();
+    releaseNayinScrollLock = null;
   }
   if (loadingTimer) {
     window.clearInterval(loadingTimer);
@@ -1701,6 +1857,12 @@ const taiYuanText = computed(() => formatNaYin(props.chart?.tai_yuan));
 const taiXiText = computed(() => formatNaYin(props.chart?.tai_xi));
 const shenGongText = computed(() => formatNaYin(props.chart?.shen_gong));
 const mingGongText = computed(() => formatNaYin(props.chart?.ming_gong));
+const kongWangText = computed(() => {
+  const kongWang = props.chart?.kong_wang;
+  if (!kongWang) return "未知";
+  if (typeof kongWang === "string") return kongWang || "未知";
+  return `年${kongWang.year || "—"} 月${kongWang.month || "—"} 日${kongWang.day || "—"} 时${kongWang.hour || "—"}`;
+});
 
 // 五行元素顺序和配置
 const elementOrder = ["木", "火", "土", "金", "水"];

@@ -19,11 +19,14 @@ export interface EarthBranchInfo {
   element: string;
   yinyang: string;
   hidden_stems: HeavenStemInfo[];
+  star_fortune?: string;
 }
 
 export interface PillarInfo {
   heaven_stem: HeavenStemInfo;
   earth_branch: EarthBranchInfo;
+  na_yin?: string;
+  na_yin_trait?: string;
 }
 
 export interface StartAge {
@@ -59,6 +62,13 @@ export interface JieQiInfo {
   prev_distance: string; // 距前一节气的时间
   next_jieqi: string; // 后一个节气
   next_distance: string; // 距后一节气的时间
+}
+
+export interface KongWangInfo {
+  year: string; // 年柱空亡
+  month: string; // 月柱空亡
+  day: string; // 日柱空亡
+  hour: string; // 时柱空亡
 }
 
 // 干支关系（单个）
@@ -106,7 +116,7 @@ export interface Chart {
   shen_gong?: NaYinInfo | null; // 身宫
   ming_gong?: NaYinInfo | null; // 命宫
   ren_yuan_si_ling?: string; // 人元司令分野
-  kong_wang?: string; // 空亡
+  kong_wang?: KongWangInfo | string | null; // 空亡
   current_year_pillar?: PillarInfo | null; // 当前流年柱（以立春为界）
   ganzi_relations?: GanZhiRelations | null; // 干支关系
 }
