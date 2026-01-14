@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 
-LLMProvider = Literal["local", "deepseek"]
+LLMProvider = Literal["local", "openai"]
 
 
 @dataclass
@@ -21,6 +21,5 @@ class OllamaError(LLMError):
     pass
 
 
-class DeepSeekError(LLMError):
+class OpenAICompatibleError(LLMError):
     pass
-

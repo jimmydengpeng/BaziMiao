@@ -4,17 +4,20 @@ import json
 import os
 import urllib.error
 import urllib.request
-from typing import Dict, Iterable, Iterator, Optional
+from typing import Any, Dict, Iterable, Iterator, Optional
 
-from src.llm.types import ChatChunk, DeepSeekError
+from src.llm.types import ChatChunk, OpenAICompatibleError
 
 
 DEFAULT_BASE_URL = os.getenv(
-    "DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    "OPENAI_COMPAT_BASE_URL",
+    os.getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
 )
-DEFAULT_MODEL = os.getenv("DASHSCOPE_MODEL", "deepseek-v3.2")
-DEFAULT_TEMPERATURE = float(os.getenv("DASHSCOPE_TEMPERATURE", "0.7"))
-DEFAULT_TIMEOUT = float(os.getenv("DASHSCOPE_TIMEOUT", "60"))
+DEFAULT_MODEL = os.getenv("OPENAI_COMPAT_MODEL", os.getenv("DASHSCOPE_MODEL", "deepseek-v3.2"))
+DEFAULT_TEMPERATURE = float(
+    os.getenv("OPENAI_COMPAT_TEMPERATURE", os.getenv("DASHSCOPE_TEMPERATURE", "0.7"))
+)
+DEFAULT_TIMEOUT = float(os.getenv("OPENAI_COMPAT_TIMEOUT", os.getenv("DASHSCOPE_TIMEOUT", "60")))
 
 
 def _parse_error_body(body: bytes) -> Optional[str]:
@@ -48,6 +51,7 @@ def _build_chat_payload(
     model: Optional[str] = None,
     temperature: Optional[float] = None,
     enable_thinking: Optional[bool] = None,
+    response_format: Optional[Dict[str, Any]] = None,
 ) -> Dict:
     payload: Dict = {
         "model": model or DEFAULT_MODEL,
@@ -57,6 +61,8 @@ def _build_chat_payload(
     }
     if enable_thinking is not None:
         payload["enable_thinking"] = bool(enable_thinking)
+    if response_format:
+        payload["response_format"] = response_format
     return payload
 
 
@@ -68,6 +74,7 @@ def _iter_chat_chunks(
     model: Optional[str],
     temperature: Optional[float],
     enable_thinking: Optional[bool],
+    response_format: Optional[Dict[str, Any]],
     timeout: float,
 ) -> Iterator[ChatChunk]:
     payload = _build_chat_payload(
@@ -76,6 +83,7 @@ def _iter_chat_chunks(
         model=model,
         temperature=temperature,
         enable_thinking=enable_thinking,
+        response_format=response_format,
     )
     data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     endpoint = f"{_normalize_base_url(base_url)}/chat/completions"
@@ -140,14 +148,14 @@ def _iter_chat_chunks(
                 event_data_lines.append(data_part)
     except urllib.error.HTTPError as exc:
         detail = _parse_error_body(exc.read())
-        message = f"DeepSeek 云端调用失败: HTTP {exc.code} {exc.reason}"
+        message = f"OpenAI 兼容云端调用失败: HTTP {exc.code} {exc.reason}"
         if detail:
             message = f"{message} - {detail}"
         message = f"{message} (base_url={base_url}, model={model or DEFAULT_MODEL})"
-        raise DeepSeekError(message) from exc
+        raise OpenAICompatibleError(message) from exc
     except (urllib.error.URLError, TimeoutError) as exc:
-        message = f"DeepSeek 云端调用失败: {exc} (base_url={base_url}, model={model or DEFAULT_MODEL})"
-        raise DeepSeekError(message) from exc
+        message = f"OpenAI 兼容云端调用失败: {exc} (base_url={base_url}, model={model or DEFAULT_MODEL})"
+        raise OpenAICompatibleError(message) from exc
 
 
 def stream_chat_with_reasoning(
@@ -158,11 +166,14 @@ def stream_chat_with_reasoning(
     model: Optional[str] = None,
     temperature: Optional[float] = None,
     enable_thinking: Optional[bool] = None,
+    response_format: Optional[Dict[str, Any]] = None,
     timeout: float = DEFAULT_TIMEOUT,
 ) -> Iterator[ChatChunk]:
-    resolved_key = api_key or os.getenv("DASHSCOPE_API_KEY", "").strip()
+    resolved_key = api_key or os.getenv("OPENAI_COMPAT_API_KEY", "").strip()
     if not resolved_key:
-        raise DeepSeekError("缺少 DASHSCOPE_API_KEY，无法调用 DeepSeek 云端模型")
+        resolved_key = os.getenv("DASHSCOPE_API_KEY", "").strip()
+    if not resolved_key:
+        raise OpenAICompatibleError("缺少 OPENAI_COMPAT_API_KEY，无法调用 OpenAI 兼容云端模型")
     yield from _iter_chat_chunks(
         messages,
         api_key=resolved_key,
@@ -170,6 +181,7 @@ def stream_chat_with_reasoning(
         model=model,
         temperature=temperature,
         enable_thinking=enable_thinking,
+        response_format=response_format,
         timeout=timeout,
     )
 
@@ -182,6 +194,7 @@ def stream_chat(
     model: Optional[str] = None,
     temperature: Optional[float] = None,
     enable_thinking: Optional[bool] = None,
+    response_format: Optional[Dict[str, Any]] = None,
     timeout: float = DEFAULT_TIMEOUT,
 ) -> Iterator[str]:
     for chunk in stream_chat_with_reasoning(
@@ -191,6 +204,7 @@ def stream_chat(
         model=model,
         temperature=temperature,
         enable_thinking=enable_thinking,
+        response_format=response_format,
         timeout=timeout,
     ):
         if chunk.content:
@@ -205,6 +219,7 @@ def chat(
     model: Optional[str] = None,
     temperature: Optional[float] = None,
     enable_thinking: Optional[bool] = None,
+    response_format: Optional[Dict[str, Any]] = None,
     timeout: float = DEFAULT_TIMEOUT,
 ) -> str:
     return "".join(
@@ -215,7 +230,7 @@ def chat(
             model=model,
             temperature=temperature,
             enable_thinking=enable_thinking,
+            response_format=response_format,
             timeout=timeout,
         )
     )
-

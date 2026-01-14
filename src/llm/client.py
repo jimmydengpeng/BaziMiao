@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import os
-from typing import Dict, Iterable, Iterator, Optional
+from typing import Any, Dict, Iterable, Iterator, Optional
 
-from src.llm.deepseek_client import (
-    chat as deepseek_chat,
-    stream_chat as deepseek_stream_chat,
-    stream_chat_with_reasoning as deepseek_stream_chat_with_reasoning,
+from src.llm.openai_client import (
+    chat as openai_chat,
+    stream_chat as openai_stream_chat,
+    stream_chat_with_reasoning as openai_stream_chat_with_reasoning,
 )
 from src.llm.ollama_client import (
     chat as ollama_chat,
@@ -20,8 +20,8 @@ DEFAULT_PROVIDER: LLMProvider = os.getenv("LLM_PROVIDER", "local")  # type: igno
 
 
 def _resolve_provider(provider: Optional[str]) -> LLMProvider:
-    if provider == "deepseek":
-        return "deepseek"
+    if provider == "openai" or provider == "deepseek":
+        return "openai"
     return "local"
 
 
@@ -32,18 +32,20 @@ def stream_chat(
     model: Optional[str] = None,
     temperature: Optional[float] = None,
     enable_thinking: Optional[bool] = None,
+    response_format: Optional[Dict[str, Any]] = None,
     timeout: Optional[float] = None,
 ) -> Iterator[str]:
     resolved = _resolve_provider(provider or DEFAULT_PROVIDER)
-    if resolved == "deepseek":
+    if resolved == "openai":
         kwargs = {
             "model": model,
             "temperature": temperature,
             "enable_thinking": enable_thinking,
+            "response_format": response_format,
         }
         if timeout is not None:
             kwargs["timeout"] = timeout
-        yield from deepseek_stream_chat(messages, **kwargs)
+        yield from openai_stream_chat(messages, **kwargs)
         return
     kwargs = {"model": model, "temperature": temperature}
     if timeout is not None:
@@ -58,18 +60,20 @@ def chat(
     model: Optional[str] = None,
     temperature: Optional[float] = None,
     enable_thinking: Optional[bool] = None,
+    response_format: Optional[Dict[str, Any]] = None,
     timeout: Optional[float] = None,
 ) -> str:
     resolved = _resolve_provider(provider or DEFAULT_PROVIDER)
-    if resolved == "deepseek":
+    if resolved == "openai":
         kwargs = {
             "model": model,
             "temperature": temperature,
             "enable_thinking": enable_thinking,
+            "response_format": response_format,
         }
         if timeout is not None:
             kwargs["timeout"] = timeout
-        return deepseek_chat(messages, **kwargs)
+        return openai_chat(messages, **kwargs)
     kwargs = {"model": model, "temperature": temperature}
     if timeout is not None:
         kwargs["timeout"] = timeout
@@ -83,18 +87,20 @@ def stream_chat_with_reasoning(
     model: Optional[str] = None,
     temperature: Optional[float] = None,
     enable_thinking: Optional[bool] = None,
+    response_format: Optional[Dict[str, Any]] = None,
     timeout: Optional[float] = None,
 ) -> Iterator[ChatChunk]:
     resolved = _resolve_provider(provider or DEFAULT_PROVIDER)
-    if resolved == "deepseek":
+    if resolved == "openai":
         kwargs = {
             "model": model,
             "temperature": temperature,
             "enable_thinking": enable_thinking,
+            "response_format": response_format,
         }
         if timeout is not None:
             kwargs["timeout"] = timeout
-        yield from deepseek_stream_chat_with_reasoning(messages, **kwargs)
+        yield from openai_stream_chat_with_reasoning(messages, **kwargs)
         return
     kwargs = {"model": model, "temperature": temperature}
     if timeout is not None:

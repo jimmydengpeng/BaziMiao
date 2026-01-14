@@ -21,6 +21,7 @@ from src.engine.bazi_engine import BaziPaipanEngine
 from src.knowledge.base import retrieve_knowledge
 from src.llm import LLMError, chat, stream_chat_with_reasoning
 from src.models.chart import Chart
+from src.api.energy_prompt import build_energy_analysis_schema
 from src.prompt.report_prompt import build_report_prompt
 from src.rules.analysis import evaluate_chart
 
@@ -37,9 +38,16 @@ def _env_flag(name: str, default: bool = False) -> bool:
 
 def _resolve_llm_provider(requested: Optional[str] = None) -> str:
     provider = (requested or "").strip()
-    if provider in {"local", "deepseek"}:
+    if provider in {"local", "openai"}:
         return provider
-    return os.getenv("LLM_PROVIDER", "local").strip() or "local"
+    if provider == "deepseek":
+        return "openai"
+    if provider == "dashscope":
+        return "openai"
+    fallback = os.getenv("LLM_PROVIDER", "local").strip() or "local"
+    if fallback in {"deepseek", "dashscope"}:
+        return "openai"
+    return fallback if fallback in {"local", "openai"} else "local"
 
 
 def _resolve_enable_thinking(provider: str, requested: Optional[bool] = None) -> bool:
@@ -47,7 +55,42 @@ def _resolve_enable_thinking(provider: str, requested: Optional[bool] = None) ->
         return True
     if requested is not None:
         return bool(requested)
-    return _env_flag("DEEPSEEK_ENABLE_THINKING", True)
+    return _env_flag(
+        "OPENAI_COMPAT_ENABLE_THINKING",
+        _env_flag("DASHSCOPE_ENABLE_THINKING", _env_flag("DEEPSEEK_ENABLE_THINKING", True)),
+    )
+
+
+def _resolve_llm_model(feature: str, provider: str) -> Optional[str]:
+    env_key = f"LLM_MODEL_{feature.upper()}"
+    env_value = (os.getenv(env_key) or "").strip()
+    if env_value:
+        return env_value
+    if feature == "energy" and provider == "openai":
+        return "qwen-plus-2025-12-01"
+    return None
+
+
+def _resolve_llm_temperature(feature: str) -> Optional[float]:
+    env_key = f"LLM_MODEL_{feature.upper()}_TEMPERATURE"
+    env_value = (os.getenv(env_key) or "").strip()
+    if not env_value:
+        return None
+    try:
+        return float(env_value)
+    except ValueError:
+        return None
+
+
+def _resolve_llm_timeout(feature: str) -> Optional[float]:
+    env_key = f"LLM_MODEL_{feature.upper()}_TIMEOUT"
+    env_value = (os.getenv(env_key) or "").strip()
+    if not env_value:
+        return None
+    try:
+        return float(env_value)
+    except ValueError:
+        return None
 
 
 def _build_solar_datetime(payload: Union[ChartRequest, ReportRequest]) -> datetime:
@@ -92,7 +135,17 @@ def generate_report(payload: ReportRequest):
 
     try:
         provider = _resolve_llm_provider()
-        raw_text = chat(messages, provider=provider, enable_thinking=_resolve_enable_thinking(provider))
+        model = _resolve_llm_model("report", provider)
+        temperature = _resolve_llm_temperature("report")
+        timeout = _resolve_llm_timeout("report")
+        raw_text = chat(
+            messages,
+            provider=provider,
+            model=model,
+            temperature=temperature,
+            enable_thinking=_resolve_enable_thinking(provider),
+            timeout=timeout,
+        )
     except LLMError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
@@ -112,6 +165,9 @@ def generate_report_stream(payload: ReportRequest):
     messages = _build_llm_messages(prompt)
     provider = _resolve_llm_provider()
     enable_thinking = _resolve_enable_thinking(provider)
+    model = _resolve_llm_model("report", provider)
+    temperature = _resolve_llm_temperature("report")
+    timeout = _resolve_llm_timeout("report")
 
     def _event_stream() -> Iterator[str]:
         meta = {
@@ -127,7 +183,12 @@ def generate_report_stream(payload: ReportRequest):
         thinking_chunks: List[str] = []
         try:
             for chunk in stream_chat_with_reasoning(
-                messages, provider=provider, enable_thinking=enable_thinking
+                messages,
+                provider=provider,
+                model=model,
+                temperature=temperature,
+                enable_thinking=enable_thinking,
+                timeout=timeout,
             ):
                 if chunk.reasoning:
                     thinking_chunks.append(chunk.reasoning)
@@ -159,8 +220,16 @@ def chat_with_chart(payload: ChatRequest):
     prompt = _build_chat_prompt(payload)
     try:
         provider = _resolve_llm_provider()
+        model = _resolve_llm_model("chat", provider)
+        temperature = _resolve_llm_temperature("chat")
+        timeout = _resolve_llm_timeout("chat")
         raw_text = chat(
-            _build_llm_messages(prompt), provider=provider, enable_thinking=_resolve_enable_thinking(provider)
+            _build_llm_messages(prompt),
+            provider=provider,
+            model=model,
+            temperature=temperature,
+            enable_thinking=_resolve_enable_thinking(provider),
+            timeout=timeout,
         )
     except LLMError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -175,13 +244,21 @@ def chat_with_chart_stream(payload: ChatRequest):
     messages = _build_llm_messages(prompt)
     provider = _resolve_llm_provider()
     enable_thinking = _resolve_enable_thinking(provider)
+    model = _resolve_llm_model("chat", provider)
+    temperature = _resolve_llm_temperature("chat")
+    timeout = _resolve_llm_timeout("chat")
 
     def _event_stream() -> Iterator[str]:
         chunks: List[str] = []
         thinking_chunks: List[str] = []
         try:
             for chunk in stream_chat_with_reasoning(
-                messages, provider=provider, enable_thinking=enable_thinking
+                messages,
+                provider=provider,
+                model=model,
+                temperature=temperature,
+                enable_thinking=enable_thinking,
+                timeout=timeout,
             ):
                 if chunk.reasoning:
                     thinking_chunks.append(chunk.reasoning)
@@ -218,6 +295,9 @@ def general_chat_stream(payload: GeneralChatRequest):
     system_prompt = payload.system_prompt or default_system
     provider = _resolve_llm_provider(payload.llm_provider)
     enable_thinking = _resolve_enable_thinking(provider, payload.deep_think)
+    model = _resolve_llm_model("chat", provider)
+    temperature = _resolve_llm_temperature("chat")
+    timeout = _resolve_llm_timeout("chat")
 
     # 可选：命主上下文（前端只传姓名 + 出生日期文本，后端用提示词方式注入，避免改动更大结构）
     if payload.subject_enabled and payload.subject_name:
@@ -240,7 +320,12 @@ def general_chat_stream(payload: GeneralChatRequest):
         thinking_chunks: List[str] = []
         try:
             for chunk in stream_chat_with_reasoning(
-                messages, provider=provider, enable_thinking=enable_thinking
+                messages,
+                provider=provider,
+                model=model,
+                temperature=temperature,
+                enable_thinking=enable_thinking,
+                timeout=timeout,
             ):
                 if chunk.reasoning:
                     thinking_chunks.append(chunk.reasoning)
@@ -343,10 +428,36 @@ def analyze_energy(payload: EnergyAnalysisRequest):
         prompt_text = build_energy_analysis_prompt(chart_data)
 
         provider = _resolve_llm_provider()
+        model = _resolve_llm_model("energy", provider)
+        temperature = _resolve_llm_temperature("energy")
+        timeout = _resolve_llm_timeout("energy")
+        response_format = {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "energy_analysis",
+                "schema": build_energy_analysis_schema(),
+                "strict": True,
+            },
+        }
         # 不启用思考模式，快速返回结果
-        messages = [{"role": "system", "content": "你是一位专业的八字命理师，请严格按要求的 JSON 格式输出分析结果。"}, {"role": "user", "content": prompt_text}]
+        system_message = (
+            "你是一位专业的八字命理师，"
+            "请严格按要求的 JSON 格式输出分析结果。"
+        )
+        messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": prompt_text},
+        ]
 
-        raw_text = chat(messages, provider=provider, enable_thinking=False)
+        raw_text = chat(
+            messages,
+            provider=provider,
+            model=model,
+            temperature=temperature,
+            enable_thinking=False,
+            response_format=response_format,
+            timeout=timeout,
+        )
         result = _extract_json(raw_text)
 
         if not result or "elements" not in result:

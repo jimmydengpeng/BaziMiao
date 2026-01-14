@@ -95,3 +95,68 @@ def build_energy_analysis_prompt(chart: Dict[str, Any]) -> str:
 """
 
     return prompt
+
+
+def build_energy_analysis_schema() -> Dict[str, Any]:
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "elements": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "木": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {
+                            "score": {"type": "integer", "minimum": 0, "maximum": 100},
+                            "description": {"type": "string"},
+                        },
+                        "required": ["score", "description"],
+                    },
+                    "火": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {
+                            "score": {"type": "integer", "minimum": 0, "maximum": 100},
+                            "description": {"type": "string"},
+                        },
+                        "required": ["score", "description"],
+                    },
+                    "土": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {
+                            "score": {"type": "integer", "minimum": 0, "maximum": 100},
+                            "description": {"type": "string"},
+                        },
+                        "required": ["score", "description"],
+                    },
+                    "金": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {
+                            "score": {"type": "integer", "minimum": 0, "maximum": 100},
+                            "description": {"type": "string"},
+                        },
+                        "required": ["score", "description"],
+                    },
+                    "水": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "properties": {
+                            "score": {"type": "integer", "minimum": 0, "maximum": 100},
+                            "description": {"type": "string"},
+                        },
+                        "required": ["score", "description"],
+                    },
+                },
+                "required": ["木", "火", "土", "金", "水"],
+            },
+            "overall": {"type": "string"},
+            "temperament": {"type": "string"},
+            "health": {"type": "string"},
+        },
+        "required": ["elements", "overall", "temperament", "health"],
+    }

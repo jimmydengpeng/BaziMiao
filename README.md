@@ -26,10 +26,10 @@ make dev
 ```
 默认使用 `uvicorn src.api.server:app --reload --port 8000`。
 
-如需配置云端 DeepSeek（阿里云百炼 DashScope）：
+如需配置云端 OpenAI 兼容渠道（默认阿里云百炼 DashScope）：
 ```bash
 cp .env.example .env
-# 编辑 .env，填入 DASHSCOPE_API_KEY，并把 LLM_PROVIDER 改为 deepseek（或在前端聊天里切换为 DeepSeek）
+# 编辑 .env，填入 OPENAI_COMPAT_API_KEY，并把 LLM_PROVIDER 改为 openai（或在前端聊天里切换为“云端兼容”）
 ```
 
 3) 前端启动

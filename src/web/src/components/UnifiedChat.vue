@@ -288,11 +288,11 @@
 	              {{ selectedArchive ? selectedArchive.displayName : '未选择命主' }}
 	            </button>
 
-	            <!-- 3. 模型选择（本地 / DeepSeek） -->
+	            <!-- 3. 模型选择（本地 / 云端兼容） -->
 	            <button
 	              :class="[
 	                'ui-sans-font shrink-0 rounded-full border px-2.5 py-1 text-sm transition',
-	                selectedLlmProvider === 'deepseek'
+	                selectedLlmProvider === 'openai'
 	                  ? 'border-[rgba(88,150,250,0.55)] bg-[rgba(88,150,250,0.14)] text-[#7fb0ff]'
 	                  : 'border-white/10 bg-white/5 text-white/75 hover:bg-white/10'
 	              ]"
@@ -300,10 +300,10 @@
 	              @click="toggleLlmProvider"
 	              aria-label="选择模型"
 	            >
-	              {{ selectedLlmProvider === 'deepseek' ? 'DeepSeek' : '本地' }}
+	              {{ selectedLlmProvider === 'openai' ? '云端兼容' : '本地' }}
 	            </button>
 
-	            <!-- 4. 深度思考（仅 DeepSeek 可切换；本地默认开启） -->
+	            <!-- 4. 深度思考（仅云端兼容可切换；本地默认开启） -->
 	            <button
 	              :class="[
 	                'ui-sans-font shrink-0 rounded-xl border px-2.5 py-1 text-sm transition',
@@ -530,26 +530,26 @@ const archivePickerOpen = ref(false);
 const selectedArchiveId = ref<number | null>(null);
 	// 是否把命主信息一起发给后端（命主按钮的选中/未选中状态）
 	const subjectEnabled = ref(true);
-	// LLM 渠道选择：local(本地 Ollama) / deepseek(云端)
-	const selectedLlmProvider = ref<"local" | "deepseek">("deepseek");
-	// 深度思考开关：仅 DeepSeek 可切换；本地默认开启
-	const deepThinkingEnabledForDeepseek = ref(false);
+	// LLM 渠道选择：local(本地 Ollama) / openai(云端兼容)
+	const selectedLlmProvider = ref<"local" | "openai">("openai");
+	// 深度思考开关：仅云端兼容可切换；本地默认开启
+	const deepThinkingEnabledForOpenai = ref(false);
 // 是否跟随当前正在查看的档案（activeArchiveId）。用户手动选择后会切到 manual。
 const archiveSelectionMode = ref<"auto" | "manual">("auto");
 const didInitSubjectDefaults = ref(false);
 
 const effectiveDeepThinkingEnabled = computed(() => {
   if (selectedLlmProvider.value === "local") return true;
-  return deepThinkingEnabledForDeepseek.value;
+  return deepThinkingEnabledForOpenai.value;
 });
 
 const toggleLlmProvider = () => {
-  selectedLlmProvider.value = selectedLlmProvider.value === "local" ? "deepseek" : "local";
+  selectedLlmProvider.value = selectedLlmProvider.value === "local" ? "openai" : "local";
 };
 
 const toggleDeepThinking = () => {
-  if (selectedLlmProvider.value !== "deepseek") return;
-  deepThinkingEnabledForDeepseek.value = !deepThinkingEnabledForDeepseek.value;
+  if (selectedLlmProvider.value !== "openai") return;
+  deepThinkingEnabledForOpenai.value = !deepThinkingEnabledForOpenai.value;
 };
 
 const selectedArchive = computed(() => {

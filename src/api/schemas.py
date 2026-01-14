@@ -5,7 +5,7 @@ from typing import Dict, List, Literal, Optional
 from pydantic import BaseModel, Field
 
 
-LlmProvider = Literal["local", "deepseek"]
+LlmProvider = Literal["local", "openai", "deepseek", "dashscope"]
 
 
 class ChartRequest(BaseModel):
@@ -60,13 +60,15 @@ class GeneralChatRequest(BaseModel):
     """通用聊天请求（无需命盘）"""
     history: List[ChatTurn]
     system_prompt: Optional[str] = Field(None, description="自定义系统提示词")
-    llm_provider: LlmProvider = Field("local", description="模型渠道：local(本地Ollama) / deepseek(云端)")
+    llm_provider: LlmProvider = Field(
+        "local", description="模型渠道：local(本地Ollama) / openai(云端兼容)"
+    )
     # 可选：命主上下文（用于通用聊天里也能“带命主”提问）
     subject_enabled: bool = Field(False, description="是否启用命主上下文")
     subject_name: Optional[str] = Field(None, description="命主姓名（简化：仅姓名）")
     subject_birth: Optional[str] = Field(None, description="命主出生日期文本（简化：一段字符串即可）")
-    # 可选：思考模式（云端 DeepSeek：enable_thinking；本地默认开启，忽略该开关）
-    deep_think: bool = Field(False, description="是否启用思考模式（deepseek 有效；本地默认开启）")
+    # 可选：思考模式（云端 OpenAI 兼容：enable_thinking；本地默认开启，忽略该开关）
+    deep_think: bool = Field(False, description="是否启用思考模式（openai 有效；本地默认开启）")
 
 
 class PillarSearchRequest(BaseModel):

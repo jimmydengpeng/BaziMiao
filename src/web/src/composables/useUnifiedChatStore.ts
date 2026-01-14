@@ -43,7 +43,7 @@ export type SendMessageOptions = {
   // 深度思考开关（可选）
   deepThinking?: boolean;
   // LLM 渠道（可选）
-  llmProvider?: "local" | "deepseek";
+  llmProvider?: "local" | "openai";
   // 自定义系统提示词（可选，覆盖默认）
   systemPrompt?: string | null;
 };
