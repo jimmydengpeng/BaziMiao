@@ -99,6 +99,7 @@ import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore } from '../composables/useStore';
 import type { ReportStreamEvent, ReportResponse } from '../types';
+import { normalizeChartForRequest } from '../utils/chart';
 
 const route = useRoute();
 const router = useRouter();
@@ -128,7 +129,7 @@ const generateReport = async () => {
   reportThinking.value = '';
 
   const payload = JSON.stringify({
-    chart: chart.value,
+    chart: normalizeChartForRequest(chart.value),
     focus: []
   });
 

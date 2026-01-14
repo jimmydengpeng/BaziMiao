@@ -3,17 +3,20 @@
     <div v-if="!chart" class="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[var(--panel)] p-5 text-[var(--muted)]">
       生成后会显示命盘信息。
     </div>
-    <div v-else class="flex flex-col gap-2 mt-0.5">
+    <div v-else class="flex flex-col gap-4 mt-0.5">
       <!-- 基本信息卡片 -->
       <div class="overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.12)] bg-[rgba(18,20,28,0.65)] backdrop-blur-[16px]">
         <!-- 标题栏：姓名 + 农历生日 + 基础/专业切换 -->
-        <div class="flex items-center justify-between gap-1 border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 pr-2 py-3 pb-2">
+        <div
+          class="flex items-center justify-between gap-1 border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 pr-2 py-3 pb-2 cursor-pointer"
+          @click="toggleInfoMode"
+        >
           <div class="flex flex-1 flex-wrap items-baseline gap-x-3 gap-y-1 min-w-0 text-left">
             <span class="text-lg font-bold tracking-wide text-(--accent-2) truncate whitespace-nowrap">{{ chart.name || "命主" }}</span>
             <span class="text-sm text-(--white) whitespace-nowrap">{{ lunarBirthText }}</span>
           </div>
           <!-- 右侧功能区：切换档案 + 展开/收起详细 -->
-          <div class="ml-auto inline-flex shrink-0 items-center gap-2">
+          <div class="ml-auto inline-flex shrink-0 items-center gap-2" @click.stop>
             <button
               v-if="infoMode === 'pro'"
               class="group flex h-8 w-8 items-center justify-center rounded-lg bg-transparent text-white/50 transition hover:text-white/70"
@@ -112,43 +115,49 @@
 
       <!-- 五行能量卡片 -->
       <div class="panel-card">
-        <PanelHeader title="五行能量">
-          <template #actions>
-            <div class="relative inline-flex shrink-0 cursor-pointer items-center rounded-3xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,17,24,0.9)] p-0.5">
-              <span
-                :class="[
-                  'relative z-[1] w-[80px] rounded-3xl px-2 py-1.5 text-center text-[12px] font-medium transition-colors duration-200',
-                  energyMode === 'default' ? 'text-white' : 'text-white/65'
-                ]"
-                @click="setEnergyMode('default')"
+        <PanelHeader title="五行能量" clickable @header-click="toggleEnergyDetailsExpanded">
+          <template #title>
+            <div class="flex items-center gap-2">
+              <h3 class="text-base font-semibold text-(--accent-2)">五行能量</h3>
+              <svg
+                class="h-4 w-4 text-white/50 transition-transform duration-200"
+                :class="energyDetailsExpanded ? 'rotate-180' : ''"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
               >
-                干支个数
-              </span>
-              <span
-                :class="[
-                  'relative z-[1] flex w-[80px] items-center justify-center gap-1 rounded-3xl px-2 py-1.5 text-[12px] font-medium transition-colors duration-200',
-                  energyMode === 'smart' ? 'text-[var(--accent-2)]' : 'text-white/65'
-                ]"
-                @click="setEnergyMode('smart')"
-              >
-                神机秘算
-                <span
-                  class="icon-mask h-3 w-3 align-middle"
-                  :style="{ maskImage: `url(${thinkingDoubleIconUrl})`, WebkitMaskImage: `url(${thinkingDoubleIconUrl})` }"
-                  aria-hidden="true"
-                ></span>
-              </span>
-              <div
-                :class="[
-                  'absolute left-0.5 top-0.5 z-0 h-[calc(100%-4px)] w-[80px] rounded-3xl shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
-                  energyMode === 'smart' ? 'bg-[rgba(214,160,96,0.18)]' : 'bg-[rgba(176,184,210,0.1)]',
-                  energyMode === 'smart' ? 'translate-x-[80px]' : ''
-                ]"
-              ></div>
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
             </div>
           </template>
+          <template #actions>
+            <button
+              class="flex items-center gap-1 rounded-xl border border-[var(--border)] px-3 py-1.5 text-[12px] font-medium transition-all duration-200"
+              :class="energyMode === 'smart'
+                ? 'bg-[rgba(214,160,96,0.12)] text-[var(--accent-2)] hover:bg-[rgba(214,160,96,0.2)]'
+                : 'bg-[rgba(255,255,255,0.04)] text-white/50 hover:bg-[rgba(255,255,255,0.08)]'"
+              type="button"
+              @click="toggleEnergyMode"
+            >
+              神机秘算
+              <span
+                class="icon-mask h-3 w-3 align-middle"
+                :style="{ maskImage: `url(${thinkingIconUrl})`, WebkitMaskImage: `url(${thinkingIconUrl})` }"
+                aria-hidden="true"
+              ></span>
+            </button>
+          </template>
         </PanelHeader>
-        <div class="grid grid-cols-1 gap-0 lg:grid-cols-2">
+        <div
+          :class="[
+            'grid grid-cols-1 gap-0',
+            energyDetailsExpanded ? 'lg:grid-cols-2' : ''
+          ]"
+        >
           <!-- 雷达图 -->
           <div class="flex flex-col gap-1">
             <div class="flex justify-center">
@@ -170,7 +179,14 @@
               </div>
 
               <!-- 雷达图 SVG -->
-              <svg v-else class="w-full max-w-[260px] lg:max-w-[300px]" viewBox="0 0 400 400" role="img" aria-label="五行雷达图">
+              <button
+                v-else
+                class="inline-flex cursor-pointer border-0 bg-transparent p-0"
+                type="button"
+                aria-label="切换神机秘算模式"
+                @click="toggleEnergyMode"
+              >
+                <svg class="w-full max-w-[260px] lg:max-w-[300px]" viewBox="0 0 400 400" role="img" aria-label="五行雷达图">
                 <g class="radar-grid">
                   <polygon
                     v-for="level in radarLevels"
@@ -224,174 +240,173 @@
                     {{ axis.element }}
                   </text>
                 </g>
-              </svg>
+                </svg>
+              </button>
             </div>
           </div>
 
           <!-- 五行占比 -->
-          <div class="flex flex-col gap-2 md:gap-3">
-            <div class="mb-1.5 flex items-end justify-between gap-2 text-xs md:mb-2 md:text-[13px] px-3">
-              <div class="flex flex-col items-start gap-1 pt-5">
+          <div v-show="energyDetailsExpanded" class="flex flex-col gap-3">
+            <div class="flex flex-col gap-2 px-3 md:gap-3">
+              <div class="text-left text-xs font-semibold text-[var(--text)] md:text-[13px]">
                 <strong>五行占比</strong>
               </div>
-              <span v-if="energyMode === 'smart'" class="flex items-center gap-2">
+              <div class="flex flex-col gap-2 md:gap-3">
+                <div v-for="item in energyItems" :key="item.element" class="flex flex-col">
+                  <div class="flex flex-wrap items-start gap-x-2 gap-y-1 text-xs md:text-[13px]">
+                    <div class="flex items-center gap-1.5 md:gap-2 shrink-0">
+                      <!-- 五行标识圆点：使用对应颜色 -->
+                      <span
+                        class="h-2.5 w-2.5 shrink-0 rounded-full shadow-[0_0_8px_currentColor]"
+                        :style="{
+                          backgroundColor: elementColorMap[item.element],
+                          color: elementColorMap[item.element],
+                          boxShadow: `0 0 8px ${elementColorMap[item.element]}40`
+                        }"
+                      ></span>
+                      <!-- 五行名称：使用对应颜色 -->
+                      <span
+                        class="font-semibold shrink-0"
+                        :style="{ color: elementColorMap[item.element] }"
+                      >{{ item.element }}</span>
+                      <span class="text-[10px] text-[var(--muted)] md:text-[11px] shrink-0">{{ item.relation }}</span>
+                    </div>
+                    <!-- 智能解析的解释文本 -->
+                    <div v-if="energyMode === 'smart'" class="flex min-w-0 items-start text-[10px] text-[var(--muted)] md:text-[11px] leading-snug break-words">
+                      <span class="text-white/40">「</span>
+                      <span class="min-w-0">{{ item.description }}</span>
+                      <span class="text-white/40">」</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <!-- 百分比条 -->
+                    <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)] md:h-2">
+                      <div
+                        class="h-full rounded-full transition-[width] duration-500"
+                        :style="{
+                          width: `${(item.ratio / (energyMode === 'smart' ? maxSmartScore : maxEnergyRatio)) * 100}%`,
+                          background: `linear-gradient(90deg, ${elementColorMap[item.element]}dd, ${elementColorMap[item.element]})`
+                        }"
+                      ></div>
+                    </div>
+                    <div class="flex items-center gap-1 md:gap-2.5 shrink-0">
+                      <!-- 百分比：使用对应颜色 -->
+                      <span
+                        class="min-w-[42px] text-right text-xs font-semibold md:min-w-[48px] md:text-[13px]"
+                        :style="{ color: elementColorMap[item.element] }"
+                      >{{ formatPercent(item.ratio) }}</span>
+                      <!-- 普通模式显示个数 -->
+                      <span v-if="energyMode !== 'smart'" class="min-w-[24px] text-right text-[10px] text-[var(--muted)] md:min-w-[28px] md:text-[11px]">{{ item.count }}个</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- 神机秘算三段式内容区 -->
+            <div v-if="energyMode === 'smart'" class="flex flex-col gap-2 px-3 text-xs md:gap-3">
+              <div class="border-[rgba(255,255,255,0.08)] pt-2">
                 <button
-                  class="flex items-center gap-1.5 rounded-xl border-1 py-2 border-[rgba(255,255,255,0.16)] bg-[rgba(255,255,255,0.04)] px-3 py-1 text-[12px] font-medium text-white/70 transition-all duration-200 hover:bg-[rgba(255,255,255,0.08)] active:bg-[rgba(255,255,255,0.16)] active:translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
+                  class="flex items-center gap-2 text-left text-xs font-semibold text-[var(--text)]"
+                  type="button"
+                  @click="toggleEnergySection('overall')"
+                >
+                  <strong>五行总势</strong>
+                  <svg
+                    class="h-4 w-4 text-white/50 transition-transform duration-200"
+                    :class="energySectionOpen.overall ? 'rotate-180' : ''"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                <div v-show="energySectionOpen.overall" class="mt-2 text-xs leading-relaxed text-[var(--muted)]">
+                  <span
+                    v-if="smartEnergyOverall"
+                    class="summary-markdown"
+                    v-html="renderEnergySummary(smartEnergyOverall)"
+                  ></span>
+                  <span v-else>暂无秘算提示</span>
+                </div>
+              </div>
+              <div class="border-[rgba(255,255,255,0.08)] pt-2">
+                <button
+                  class="flex items-center gap-2 text-left text-xs font-semibold text-[var(--text)]"
+                  type="button"
+                  @click="toggleEnergySection('temperament')"
+                >
+                  <strong>性情底色</strong>
+                  <svg
+                    class="h-4 w-4 text-white/50 transition-transform duration-200"
+                    :class="energySectionOpen.temperament ? 'rotate-180' : ''"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                <div v-show="energySectionOpen.temperament" class="mt-2 text-xs leading-relaxed text-[var(--muted)]">
+                  <span
+                    v-if="smartEnergyTemperament"
+                    class="summary-markdown"
+                    v-html="renderEnergySummary(smartEnergyTemperament)"
+                  ></span>
+                  <span v-else>暂无秘算提示</span>
+                </div>
+              </div>
+              <div class="border-[rgba(255,255,255,0.08)] pt-2">
+                <button
+                  class="flex items-center gap-2 text-left text-xs font-semibold text-[var(--text)]"
+                  type="button"
+                  @click="toggleEnergySection('health')"
+                >
+                  <strong>身心气机</strong>
+                  <svg
+                    class="h-4 w-4 text-white/50 transition-transform duration-200"
+                    :class="energySectionOpen.health ? 'rotate-180' : ''"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                <div v-show="energySectionOpen.health" class="mt-2 text-xs leading-relaxed text-[var(--muted)]">
+                  <span
+                    v-if="smartEnergyHealth"
+                    class="summary-markdown"
+                    v-html="renderEnergySummary(smartEnergyHealth)"
+                  ></span>
+                  <span v-else>暂无秘算提示</span>
+                </div>
+              </div>
+              <div class="flex justify-end pt-2">
+                <button
+                  class="flex items-center gap-1.5 rounded-xl border-1 border-[rgba(255,255,255,0.16)] bg-[rgba(255,255,255,0.04)] px-3 py-1 text-[12px] font-medium text-white/70 transition-all duration-200 hover:bg-[rgba(255,255,255,0.08)] active:bg-[rgba(255,255,255,0.16)] active:translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
                   :disabled="smartEnergyLoading"
                   @click="openSmartEnergyConfirm"
                 >
                   再行秘算
                   <span
                     class="icon-mask h-3 w-3 align-middle"
-                    :style="{ maskImage: `url(${thinkingDoubleIconUrl})`, WebkitMaskImage: `url(${thinkingDoubleIconUrl})` }"
+                    :style="{ maskImage: `url(${thinkingIconUrl})`, WebkitMaskImage: `url(${thinkingIconUrl})` }"
                     aria-hidden="true"
                   ></span>
                 </button>
-              </span>
-            </div>
-            <div class="flex flex-col gap-2 px-3 md:gap-3">
-              <div v-for="item in energyItems" :key="item.element" class="flex flex-col">
-                <div class="flex flex-wrap items-start gap-x-2 gap-y-1 text-xs md:text-[13px]">
-                  <div class="flex items-center gap-1.5 md:gap-2 shrink-0">
-                    <!-- 五行标识圆点：使用对应颜色 -->
-                    <span
-                      class="h-2.5 w-2.5 shrink-0 rounded-full shadow-[0_0_8px_currentColor]"
-                      :style="{
-                        backgroundColor: elementColorMap[item.element],
-                        color: elementColorMap[item.element],
-                        boxShadow: `0 0 8px ${elementColorMap[item.element]}40`
-                      }"
-                    ></span>
-                    <!-- 五行名称：使用对应颜色 -->
-                    <span
-                      class="font-semibold shrink-0"
-                      :style="{ color: elementColorMap[item.element] }"
-                    >{{ item.element }}</span>
-                    <span class="text-[10px] text-[var(--muted)] md:text-[11px] shrink-0">{{ item.relation }}</span>
-                  </div>
-                  <!-- 智能解析的解释文本 -->
-                  <div v-if="energyMode === 'smart'" class="flex min-w-0 items-start text-[10px] text-[var(--muted)] md:text-[11px] leading-snug break-words">
-                    <span class="text-white/40">「</span>
-                    <span class="min-w-0">{{ item.description }}</span>
-                    <span class="text-white/40">」</span>
-                  </div>
-                </div>
-                <div class="flex items-center gap-2">
-                  <!-- 百分比条 -->
-                  <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)] md:h-2">
-                    <div
-                      class="h-full rounded-full transition-[width] duration-500"
-                      :style="{
-                        width: `${(item.ratio / (energyMode === 'smart' ? maxSmartScore : maxEnergyRatio)) * 100}%`,
-                        background: `linear-gradient(90deg, ${elementColorMap[item.element]}dd, ${elementColorMap[item.element]})`
-                      }"
-                    ></div>
-                  </div>
-                  <div class="flex items-center gap-1 md:gap-2.5 shrink-0">
-                    <!-- 百分比：使用对应颜色 -->
-                    <span
-                      class="min-w-[42px] text-right text-xs font-semibold md:min-w-[48px] md:text-[13px]"
-                      :style="{ color: elementColorMap[item.element] }"
-                    >{{ formatPercent(item.ratio) }}</span>
-                    <!-- 普通模式显示个数 -->
-                    <span v-if="energyMode !== 'smart'" class="min-w-[24px] text-right text-[10px] text-[var(--muted)] md:min-w-[28px] md:text-[11px]">{{ item.count }}个</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <!-- 神机秘算三段式内容区 -->
-            <div v-if="energyMode === 'smart'" class="mt-3 px-3">
-              <div class="flex flex-col gap-2 text-xs md:gap-3">
-                <div class="border-[rgba(255,255,255,0.08)] pt-2">
-                  <button
-                    class="flex w-full items-center justify-between text-left text-xs font-semibold text-[var(--text)]"
-                    type="button"
-                    @click="toggleEnergySection('overall')"
-                  >
-                    五行总势
-                    <svg
-                      class="h-4 w-4 text-white/50 transition-transform duration-200"
-                      :class="energySectionOpen.overall ? 'rotate-180' : ''"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </button>
-                  <div v-show="energySectionOpen.overall" class="mt-2 text-xs leading-relaxed text-[var(--muted)]">
-                    <span
-                      v-if="smartEnergyOverall"
-                      class="summary-markdown"
-                      v-html="renderEnergySummary(smartEnergyOverall)"
-                    ></span>
-                    <span v-else>暂无秘算提示</span>
-                  </div>
-                </div>
-                <div class="border-[rgba(255,255,255,0.08)] pt-2">
-                  <button
-                    class="flex w-full items-center justify-between text-left text-xs font-semibold text-[var(--text)]"
-                    type="button"
-                    @click="toggleEnergySection('temperament')"
-                  >
-                    性情底色
-                    <svg
-                      class="h-4 w-4 text-white/50 transition-transform duration-200"
-                      :class="energySectionOpen.temperament ? 'rotate-180' : ''"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </button>
-                  <div v-show="energySectionOpen.temperament" class="mt-2 text-xs leading-relaxed text-[var(--muted)]">
-                    <span
-                      v-if="smartEnergyTemperament"
-                      class="summary-markdown"
-                      v-html="renderEnergySummary(smartEnergyTemperament)"
-                    ></span>
-                    <span v-else>暂无秘算提示</span>
-                  </div>
-                </div>
-                <div class="border-[rgba(255,255,255,0.08)] pt-2">
-                  <button
-                    class="flex w-full items-center justify-between text-left text-xs font-semibold text-[var(--text)]"
-                    type="button"
-                    @click="toggleEnergySection('health')"
-                  >
-                    身心气机
-                    <svg
-                      class="h-4 w-4 text-white/50 transition-transform duration-200"
-                      :class="energySectionOpen.health ? 'rotate-180' : ''"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </button>
-                  <div v-show="energySectionOpen.health" class="mt-2 text-xs leading-relaxed text-[var(--muted)]">
-                    <span
-                      v-if="smartEnergyHealth"
-                      class="summary-markdown"
-                      v-html="renderEnergySummary(smartEnergyHealth)"
-                    ></span>
-                    <span v-else>暂无秘算提示</span>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -497,9 +512,92 @@
         </Transition>
       </teleport>
 
+      <teleport to="body">
+        <Transition name="fade">
+          <div
+            v-if="destinyAnalysisConfirmOpen"
+            class="fixed inset-0 z-[75] flex items-center justify-center px-4 overscroll-contain"
+            :style="{ paddingTop: `calc(env(safe-area-inset-top, 0px) + 12px)`, paddingBottom: `calc(env(safe-area-inset-bottom, 0px) + 12px)` }"
+            role="dialog"
+            aria-modal="true"
+            aria-label="确认再行秘算"
+          >
+            <button
+              class="absolute inset-0 cursor-default bg-black/60"
+              type="button"
+              aria-label="关闭"
+              @click="closeDestinyAnalysisConfirm"
+            />
+            <div class="relative w-full max-w-[360px] overflow-hidden rounded-2xl border border-white/10 bg-[rgba(18,22,33,0.92)] shadow-[0_20px_55px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+              <div class="px-4 pt-4">
+                <div class="flex items-center gap-2 text-base font-semibold text-white">
+                  确认再行秘算？
+                </div>
+                <p class="mt-2 text-sm leading-relaxed text-white/70">
+                  再行秘算将重新推演全部大运走势，是否继续？
+                </p>
+                <p
+                  class="mt-4 text-xs leading-[1.75] text-white/50 tracking-wide
+                        border-l border-white/15 pl-4 italic">
+                  运势微移，仍由命盘根基而来。<br />
+                  再行秘算，意在求其侧影。<br />
+                  <span class="opacity-80">
+                    不改既定趋势，<br />
+                    只换推演角度，<br />
+                    以得更清晰的提示。
+                  </span>
+                </p>
+              </div>
+              <div class="flex items-center justify-end gap-4 px-4 pb-4 pt-3">
+                <button
+                  class="inline-flex items-center justify-center rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/80 transition hover:bg-white/10"
+                  type="button"
+                  @click="closeDestinyAnalysisConfirm"
+                >
+                  取消
+                </button>
+                <button
+                  class="inline-flex items-center justify-center rounded-lg bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] px-4 py-2 text-sm font-semibold text-[#0a0604] shadow-[0_8px_22px_rgba(214,160,96,0.28)] transition hover:-translate-y-[1px] hover:shadow-[0_12px_26px_rgba(214,160,96,0.35)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-70"
+                  type="button"
+                  :disabled="destinyAnalysisLoading"
+                  @click="confirmDestinyAnalysisRefresh"
+                >
+                  确认
+                </button>
+              </div>
+            </div>
+          </div>
+        </Transition>
+      </teleport>
+
       <!-- 八字命盘卡片 -->
       <div class="panel-card">
-        <PanelHeader title="八字命盘"/>
+        <PanelHeader title="八字命盘" clickable @header-click="toggleBaziExtraVisible">
+          <template #actions>
+            <button
+              class="flex h-8 w-8 items-center justify-center rounded-lg bg-transparent text-white/50 transition hover:text-white/70"
+              type="button"
+              @click="toggleBaziExtraVisible"
+              :aria-expanded="baziExtraVisible"
+              :aria-label="baziExtraVisible ? '收起星运空亡纳音' : '展开星运空亡纳音'"
+              :title="baziExtraVisible ? '收起星运/空亡/纳音' : '展开星运/空亡/纳音'"
+            >
+              <svg
+                class="h-4 w-4 transition-transform duration-200"
+                :class="baziExtraVisible ? 'rotate-180' : ''"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+          </template>
+        </PanelHeader>
         <div class="mx-auto w-full max-w-[720px] overflow-hidden rounded-[14px] border-1 border-[rgba(255,255,255,0.08)]">
           <div class="mx-auto w-full grid grid-cols-[40px_repeat(4,minmax(0,1fr))] bg-[rgba(255,255,255,0.06)] font-semibold text-[13px]">
             <div class="flex items-center justify-center py-3 text-xs text-[var(--muted)]"></div>
@@ -608,77 +706,79 @@
               </span>
             </div>
           </div>
-          <div class="mx-auto w-full grid grid-cols-[40px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
-            <div class="flex items-center justify-center pl-3 py-3 text-xs text-[var(--muted)]">星运</div>
-            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
-              {{ chart.year_pillar.earth_branch.star_fortune || "—" }}
+          <div v-show="baziExtraVisible">
+            <div class="mx-auto w-full grid grid-cols-[40px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
+              <div class="flex items-center justify-center pl-3 py-3 text-xs text-[var(--muted)]">星运</div>
+              <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
+                {{ chart.year_pillar.earth_branch.star_fortune || "—" }}
+              </div>
+              <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
+                {{ chart.month_pillar.earth_branch.star_fortune || "—" }}
+              </div>
+              <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
+                {{ chart.day_pillar.earth_branch.star_fortune || "—" }}
+              </div>
+              <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
+                {{ chart.hour_pillar.earth_branch.star_fortune || "—" }}
+              </div>
             </div>
-            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
-              {{ chart.month_pillar.earth_branch.star_fortune || "—" }}
+            <div class="mx-auto w-full grid grid-cols-[40px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
+              <div class="flex items-center justify-center pl-3 py-3 text-xs text-[var(--muted)]">空亡</div>
+              <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
+                {{ chart.kong_wang?.year || "—" }}
+              </div>
+              <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
+                {{ chart.kong_wang?.month || "—" }}
+              </div>
+              <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
+                {{ chart.kong_wang?.day || "—" }}
+              </div>
+              <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
+                {{ chart.kong_wang?.hour || "—" }}
+              </div>
             </div>
-            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
-              {{ chart.day_pillar.earth_branch.star_fortune || "—" }}
-            </div>
-            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
-              {{ chart.hour_pillar.earth_branch.star_fortune || "—" }}
-            </div>
-          </div>
-          <div class="mx-auto w-full grid grid-cols-[40px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
-            <div class="flex items-center justify-center pl-3 py-3 text-xs text-[var(--muted)]">空亡</div>
-            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
-              {{ chart.kong_wang?.year || "—" }}
-            </div>
-            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
-              {{ chart.kong_wang?.month || "—" }}
-            </div>
-            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
-              {{ chart.kong_wang?.day || "—" }}
-            </div>
-            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px] text-[var(--muted)]">
-              {{ chart.kong_wang?.hour || "—" }}
-            </div>
-          </div>
-          <div class="mx-auto w-full grid grid-cols-[40px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
-            <div class="flex items-center justify-center pl-3 py-3 text-xs text-[var(--muted)]">纳音</div>
-            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px]">
-              <button
-                class="text-[var(--muted)] transition hover:text-[var(--text)] disabled:cursor-default disabled:opacity-70"
-                type="button"
-                :disabled="!chart.year_pillar.na_yin"
-                @click="openNayinModal(chart.year_pillar)"
-              >
-                {{ chart.year_pillar.na_yin || "—" }}
-              </button>
-            </div>
-            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px]">
-              <button
-                class="text-[var(--muted)] transition hover:text-[var(--text)] disabled:cursor-default disabled:opacity-70"
-                type="button"
-                :disabled="!chart.month_pillar.na_yin"
-                @click="openNayinModal(chart.month_pillar)"
-              >
-                {{ chart.month_pillar.na_yin || "—" }}
-              </button>
-            </div>
-            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px]">
-              <button
-                class="text-[var(--muted)] transition hover:text-[var(--text)] disabled:cursor-default disabled:opacity-70"
-                type="button"
-                :disabled="!chart.day_pillar.na_yin"
-                @click="openNayinModal(chart.day_pillar)"
-              >
-                {{ chart.day_pillar.na_yin || "—" }}
-              </button>
-            </div>
-            <div class="flex items-center justify-center px-2 py-3 text-center text-[13px]">
-              <button
-                class="text-[var(--muted)] transition hover:text-[var(--text)] disabled:cursor-default disabled:opacity-70"
-                type="button"
-                :disabled="!chart.hour_pillar.na_yin"
-                @click="openNayinModal(chart.hour_pillar)"
-              >
-                {{ chart.hour_pillar.na_yin || "—" }}
-              </button>
+            <div class="mx-auto w-full grid grid-cols-[40px_repeat(4,minmax(0,1fr))] border-t border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)]">
+              <div class="flex items-center justify-center pl-3 py-3 text-xs text-[var(--muted)]">纳音</div>
+              <div class="flex items-center justify-center px-2 py-3 text-center text-[13px]">
+                <button
+                  class="text-[var(--muted)] transition hover:text-[var(--text)] disabled:cursor-default disabled:opacity-70"
+                  type="button"
+                  :disabled="!chart.year_pillar.na_yin"
+                  @click="openNayinModal(chart.year_pillar)"
+                >
+                  {{ chart.year_pillar.na_yin || "—" }}
+                </button>
+              </div>
+              <div class="flex items-center justify-center px-2 py-3 text-center text-[13px]">
+                <button
+                  class="text-[var(--muted)] transition hover:text-[var(--text)] disabled:cursor-default disabled:opacity-70"
+                  type="button"
+                  :disabled="!chart.month_pillar.na_yin"
+                  @click="openNayinModal(chart.month_pillar)"
+                >
+                  {{ chart.month_pillar.na_yin || "—" }}
+                </button>
+              </div>
+              <div class="flex items-center justify-center px-2 py-3 text-center text-[13px]">
+                <button
+                  class="text-[var(--muted)] transition hover:text-[var(--text)] disabled:cursor-default disabled:opacity-70"
+                  type="button"
+                  :disabled="!chart.day_pillar.na_yin"
+                  @click="openNayinModal(chart.day_pillar)"
+                >
+                  {{ chart.day_pillar.na_yin || "—" }}
+                </button>
+              </div>
+              <div class="flex items-center justify-center px-2 py-3 text-center text-[13px]">
+                <button
+                  class="text-[var(--muted)] transition hover:text-[var(--text)] disabled:cursor-default disabled:opacity-70"
+                  type="button"
+                  :disabled="!chart.hour_pillar.na_yin"
+                  @click="openNayinModal(chart.hour_pillar)"
+                >
+                  {{ chart.hour_pillar.na_yin || "—" }}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -686,7 +786,7 @@
 
       <!-- 大运卡片 -->
       <div class="panel-card">
-        <PanelHeader title="大运">
+        <PanelHeader title="大运" clickable @header-click="toggleDestinyListExpanded">
           <template #title>
             <div class="flex items-center gap-3">
               <h3 class="text-base font-semibold text-(--accent-2)">十年大运</h3>
@@ -695,55 +795,195 @@
             </div>
           </template>
           <template #actions>
-            <div class="relative inline-flex shrink-0 cursor-pointer items-center rounded-3xl border border-[rgba(255,255,255,0.1)] bg-[rgba(15,17,24,0.9)] p-0.5">
-              <span
-                v-for="mode in ['60', '120']"
-                :key="mode"
-                :class="[
-                  'relative z-[1] w-[52px] rounded-3xl px-2 py-1.5 text-center text-[12px] font-medium transition-colors duration-200',
-                  destinyRangeMode === mode ? 'text-white' : 'text-white/65'
-                ]"
-                @click="setDestinyRangeMode(mode as '60' | '120')"
+            <div class="flex items-center gap-2">
+              <button
+                class="flex items-center gap-1.5 rounded-xl border border-[rgba(255,255,255,0.16)] bg-[rgba(255,255,255,0.04)] px-3 py-1.5 text-[12px] font-medium text-white/70 transition-all duration-200 hover:bg-[rgba(255,255,255,0.08)] active:bg-[rgba(255,255,255,0.16)] active:translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
+                :disabled="!destinyPillars.length || destinyAnalysisLoading"
+                type="button"
+                @click="hasDestinyAnalysis ? openDestinyAnalysisConfirm() : fetchDestinyAnalysisBatchData()"
               >
-                {{ mode === '60' ? '60年' : '120年' }}
-              </span>
-              <div
-                :class="[
-                  'absolute left-0.5 top-0.5 z-0 h-[calc(100%-4px)] w-[52px] rounded-3xl bg-[rgba(176,184,210,0.1)] shadow-[0_2px_8px_rgba(0,0,0,0.25)] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
-                  destinyRangeMode === '120' ? 'translate-x-[52px]' : ''
-                ]"
-              ></div>
+                {{ hasDestinyAnalysis ? "再行秘算" : "神机秘算" }}
+                <span
+                  class="icon-mask h-3 w-3 align-middle"
+                  :style="{ maskImage: `url(${thinkingIconUrl})`, WebkitMaskImage: `url(${thinkingIconUrl})` }"
+                  aria-hidden="true"
+                ></span>
+              </button>
+              <button
+                class="flex h-8 w-8 items-center justify-center rounded-lg bg-transparent text-white/50 transition hover:text-white/70"
+                type="button"
+                @click="toggleDestinyListExpanded"
+                :aria-label="destinyListExpanded ? '收起大运列表' : '展开大运列表'"
+                :title="destinyListExpanded ? '收起' : '展开'"
+              >
+                <svg
+                  class="h-4 w-4 transition-transform duration-200"
+                  :class="destinyListExpanded ? 'rotate-180' : ''"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
             </div>
           </template>
         </PanelHeader>
         <div v-if="!destinyPillars.length" class="text-[var(--muted)]">暂无大运数据。</div>
-        <div
-          v-else
-          class="grid grid-cols-6 gap-1"
-        >
+        <div v-else class="flex flex-col gap-3">
           <div
-            v-for="(pillar, index) in destinyPillarsDisplay"
-            :key="pillar.year"
-            :class="[
-              'flex flex-col items-center gap-2 rounded-[14px] border p-3 text-center transition-all duration-200 hover:-translate-y-0.5',
-              destinyPillarTone(pillar, index)
-            ]"
+            ref="destinyListRef"
+            :class="destinyListExpanded ? 'grid grid-cols-6 gap-1' : 'flex gap-2 overflow-x-auto pb-2 pt-1 [-webkit-overflow-scrolling:touch]'"
           >
-            <div class="flex flex-wrap items-center justify-center gap-1 text-center">
-              <span class="text-[13px] font-medium text-[var(--text)]">{{ pillar.year }}</span>
-              <span class="text-[11px] text-[var(--muted)]">{{ pillar.age }}岁</span>
+            <button
+              v-for="(pillar, index) in destinyPillarsDisplay"
+              :key="pillar.year"
+              :class="[
+                'flex flex-col items-center gap-2 rounded-[14px] border p-3 text-center transition-all duration-200 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(240,192,122,0.6)]',
+                selectedDestinyPillar?.year === pillar.year
+                  ? 'border-[rgba(240,192,122,0.45)] bg-[rgba(240,192,122,0.12)] shadow-[0_0_12px_rgba(240,192,122,0.18)]'
+                  : pillar.is_current
+                    ? 'border-[rgba(255,255,255,0.15)] bg-[rgba(255,255,255,0.08)] shadow-[0_0_10px_rgba(255,255,255,0.12)]'
+                    : destinyPillarTone(pillar, index)
+              ]"
+              type="button"
+              @click="selectDestinyPillar(pillar)"
+              :data-destiny-current="pillar.is_current ? 'true' : 'false'"
+              :aria-label="`查看${pillar.year}年大运详情`"
+            >
+              <div class="flex flex-wrap items-center justify-center gap-1 text-center">
+                <span class="text-[13px] font-medium text-[var(--text)]">{{ pillar.year }}</span>
+                <span class="text-[11px] text-[var(--muted)]">{{ pillar.age }}岁</span>
+              </div>
+              <div class="flex flex-nowrap items-center justify-center gap-x-[clamp(0px,0.5vw,0.25rem)] text-center">
+                <span :class="['text-[22px] font-bold leading-tight tracking-wide', elementClass(pillar.heaven_stem.element)]">
+                  {{ pillar.heaven_stem.name }}
+                </span>
+                <span class="text-[10px] font-medium text-[var(--accent-2)] opacity-85 whitespace-nowrap">{{ pillar.heaven_stem.ten_god }}</span>
+              </div>
+              <div class="flex flex-nowrap items-center justify-center gap-x-[clamp(0px,0.5vw,0.25rem)] text-center">
+                <span :class="['text-[22px] font-bold leading-tight tracking-wide', elementClass(pillar.earth_branch.element)]">
+                  {{ pillar.earth_branch.name }}
+                </span>
+                <span class="text-[10px] font-medium text-[var(--accent-2)] opacity-85 whitespace-nowrap">{{ pillar.earth_branch_ten_god }}</span>
+              </div>
+            </button>
+          </div>
+          <div v-if="selectedDestinyPillar" class="flex flex-col gap-3 rounded-[14px] border border-[rgba(240,192,122,0.45)] bg-[rgba(240,192,122,0.08)] p-3">
+            <div class="flex flex-col gap-2">
+              <div class="text-xs text-[var(--muted)]">干支关系</div>
+              <div v-if="destinyRelationsLoading" class="text-xs text-[var(--muted)]">关系推演中...</div>
+              <div v-else-if="destinyRelationsError" class="text-xs text-[var(--muted)]">{{ destinyRelationsError }}</div>
+              <div v-else class="flex flex-col gap-2">
+                <div v-if="destinyStemRelations.length" class="flex flex-col gap-1">
+                  <span class="text-[11px] text-white/60">天干</span>
+                  <div class="summary-pills">
+                    <span
+                      v-for="(rel, idx) in destinyStemRelations"
+                      :key="`destiny-stem-${idx}`"
+                      :class="['relation-pill', `pill-${rel.cssType}`]"
+                    >{{ rel.description }}</span>
+                  </div>
+                </div>
+                <div v-if="destinyBranchRelations.length" class="flex flex-col gap-1">
+                  <span class="text-[11px] text-white/60">地支</span>
+                  <div class="summary-pills">
+                    <span
+                      v-for="(rel, idx) in destinyBranchRelations"
+                      :key="`destiny-branch-${idx}`"
+                      :class="['relation-pill', `pill-${rel.cssType}`]"
+                    >{{ rel.description }}</span>
+                  </div>
+                </div>
+                <div v-if="destinyRelationEmpty" class="text-xs text-[var(--muted)]">
+                  暂无明显刑冲合会克害破关系
+                </div>
+              </div>
             </div>
-            <div class="flex flex-nowrap items-center justify-center gap-x-[clamp(0px,0.5vw,0.25rem)] text-center">
-              <span :class="['text-[22px] font-bold leading-tight tracking-wide', elementClass(pillar.heaven_stem.element)]">
-                {{ pillar.heaven_stem.name }}
-              </span>
-              <span class="text-[10px] font-medium text-[var(--accent-2)] opacity-85 whitespace-nowrap">{{ pillar.heaven_stem.ten_god }}</span>
-            </div>
-            <div class="flex flex-nowrap items-center justify-center gap-x-[clamp(0px,0.5vw,0.25rem)] text-center">
-              <span :class="['text-[22px] font-bold leading-tight tracking-wide', elementClass(pillar.earth_branch.element)]">
-                {{ pillar.earth_branch.name }}
-              </span>
-              <span class="text-[10px] font-medium text-[var(--accent-2)] opacity-85 whitespace-nowrap">{{ pillar.earth_branch_ten_god }}</span>
+            <div class="flex flex-col gap-2">
+              <div class="text-xs text-[var(--muted)]">运势秘算</div>
+              <div v-if="destinyAnalysisLoading" class="flex flex-col items-start gap-3 rounded-xl border border-white/10 bg-[rgba(255,255,255,0.03)] p-4">
+                <div class="flex items-center gap-3">
+                  <div class="relative">
+                    <div class="h-10 w-10 animate-spin rounded-full border-4 border-[rgba(255,255,255,0.1)] border-t-[var(--accent-2)]"></div>
+                    <img :src="sparkleIconUrl" class="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 transform opacity-80" alt="加载中" />
+                  </div>
+                  <p class="text-sm text-[var(--muted)]">{{ destinyLoadingMessage }}</p>
+                </div>
+                <div class="w-full max-w-[260px]">
+                  <div class="h-1.5 overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)]">
+                    <div
+                      class="h-full rounded-full bg-[var(--accent-2)] transition-[width] duration-300"
+                      :style="{ width: `${destinyLoadingProgress}%` }"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+              <div v-else-if="destinyAnalysisData" class="flex flex-col gap-2 text-xs">
+                <div class="border-[rgba(255,255,255,0.08)] pt-2">
+                  <button
+                    class="flex w-full items-center justify-between text-left text-xs font-semibold text-[var(--text)]"
+                    type="button"
+                    @click="toggleDestinySection('summary')"
+                  >
+                    大运总势
+                    <svg
+                      class="h-4 w-4 text-white/50 transition-transform duration-200"
+                      :class="destinySectionOpen.summary ? 'rotate-180' : ''"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+                  <div v-show="destinySectionOpen.summary" class="mt-2 text-xs leading-relaxed text-[var(--muted)]">
+                    <span
+                      class="summary-markdown"
+                      v-html="renderEnergySummary(destinyAnalysisData.summary)"
+                    ></span>
+                  </div>
+                </div>
+                <div class="border-[rgba(255,255,255,0.08)] pt-2">
+                  <button
+                    class="flex w-full items-center justify-between text-left text-xs font-semibold text-[var(--text)]"
+                    type="button"
+                    @click="toggleDestinySection('tips')"
+                  >
+                    行动建议
+                    <svg
+                      class="h-4 w-4 text-white/50 transition-transform duration-200"
+                      :class="destinySectionOpen.tips ? 'rotate-180' : ''"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+                  <div v-show="destinySectionOpen.tips" class="mt-2 text-xs leading-relaxed text-[var(--muted)]">
+                    <span
+                      class="summary-markdown"
+                      v-html="renderEnergySummary(destinyAnalysisData.tips)"
+                    ></span>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="text-sm text-[var(--muted)]">
+                暂无解析内容，点击「神机秘算」生成全部大运解析。
+              </div>
             </div>
           </div>
         </div>
@@ -1030,16 +1270,28 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, onMounted, onUnmounted, ref, watch } from "vue";
-import type { Chart, GanZhiRelation, PillarInfo, HeavenStemInfo, EarthBranchInfo, SmartEnergyResult } from "../types";
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, watch } from "vue";
+import type {
+  Chart,
+  DestinyAnalysisBatchResult,
+  DestinyAnalysisResult,
+  DestinyPillarInfo,
+  EarthBranchInfo,
+  GanZhiRelation,
+  GanZhiRelations,
+  HeavenStemInfo,
+  PillarInfo,
+  SmartEnergyResult,
+} from "../types";
 import PanelHeader from "./PanelHeader.vue";
 import { lockBackgroundScroll } from "../utils/scroll-lock";
+import { normalizeChartForRequest } from "../utils/chart";
 // 导入性别图标
 import maleIconUrl from "../assets/gender-male.png";
 import femaleIconUrl from "../assets/gender-female.png";
 // 导入 sparkle 图标
 import sparkleIconUrl from "../assets/sparkles.png";
-import thinkingDoubleIconUrl from "../assets/svg/thinking-double-full.svg";
+import thinkingIconUrl from "../assets/svg/thinking-tripple-full.svg";
 import switchArchiveIconUrl from "../assets/change-arch.png";
 
 const props = defineProps<{
@@ -1069,6 +1321,46 @@ const closeNayinModal = () => {
   nayinModalTrait.value = "";
 };
 
+type DestinyPillarWithAge = DestinyPillarInfo & {
+  age: number;
+  earth_branch_ten_god: string;
+};
+
+const selectedDestinyPillar = ref<DestinyPillarWithAge | null>(null);
+const destinyRelations = ref<GanZhiRelations | null>(null);
+const destinyRelationsLoading = ref(false);
+const destinyRelationsError = ref("");
+const destinyAnalysisData = ref<DestinyAnalysisResult | null>(null);
+const destinyAnalysisMap = ref<Record<string, DestinyAnalysisResult>>({});
+const destinyAnalysisLoading = ref(false);
+const destinyAnalysisConfirmOpen = ref(false);
+let releaseDestinyConfirmScrollLock: (() => void) | null = null;
+const destinyListRef = ref<HTMLElement | null>(null);
+const hasDestinyAnalysis = computed(() => Object.keys(destinyAnalysisMap.value).length > 0);
+const destinySectionOpen = ref({
+  summary: true,
+  tips: true,
+});
+
+const toggleDestinySection = (key: keyof typeof destinySectionOpen.value) => {
+  destinySectionOpen.value[key] = !destinySectionOpen.value[key];
+};
+
+const selectDestinyPillar = (pillar: DestinyPillarWithAge) => {
+  selectedDestinyPillar.value = pillar;
+};
+
+const resetDestinySelection = () => {
+  selectedDestinyPillar.value = null;
+  destinyRelations.value = null;
+  destinyRelationsLoading.value = false;
+  destinyRelationsError.value = "";
+  destinyAnalysisLoading.value = false;
+  destinyAnalysisData.value = null;
+  destinyAnalysisMap.value = {};
+  destinyAnalysisConfirmOpen.value = false;
+};
+
 // ========== 基本信息卡片模式切换 ==========
 const infoMode = ref<'basic' | 'pro'>('basic');
 
@@ -1076,10 +1368,17 @@ const toggleInfoMode = () => {
   infoMode.value = infoMode.value === "basic" ? "pro" : "basic";
 };
 
-const destinyRangeMode = ref<'60' | '120'>('60');
+// 八字命盘额外行（星运/空亡/纳音）折叠控制
+const baziExtraVisible = ref(true);
 
-const setDestinyRangeMode = (mode: '60' | '120') => {
-  destinyRangeMode.value = mode;
+const toggleBaziExtraVisible = () => {
+  baziExtraVisible.value = !baziExtraVisible.value;
+};
+
+const destinyListExpanded = ref(false);
+
+const toggleDestinyListExpanded = () => {
+  destinyListExpanded.value = !destinyListExpanded.value;
 };
 
 const infoGridClass = [
@@ -1195,7 +1494,9 @@ watch(
   () => props.chart,
   () => {
     closeNayinModal();
-  }
+    resetDestinySelection();
+  },
+  { immediate: true }
 );
 
 const gridColumnCount = computed(() => {
@@ -1417,6 +1718,7 @@ const energyMode = ref<'default' | 'smart'>('default');
 const smartEnergyConfirmOpen = ref(false);
 let releaseConfirmScrollLock: (() => void) | null = null;
 let releaseNayinScrollLock: (() => void) | null = null;
+const energyDetailsExpanded = ref(false);
 const energySectionOpen = ref({
   overall: true,
   temperament: true,
@@ -1480,8 +1782,9 @@ const loadingMessage = computed(() => {
 });
 let loadingTimer: number | null = null;
 
-const setEnergyMode = (mode: 'default' | 'smart') => {
-  energyMode.value = mode;
+const toggleEnergyMode = () => {
+  energyMode.value = energyMode.value === 'smart' ? 'default' : 'smart';
+  energyDetailsExpanded.value = true;
 };
 
 // 监听 chart 变化，自动设置默认模式
@@ -1508,7 +1811,7 @@ const fetchSmartEnergyData = async () => {
     const response = await fetch('/api/bazi/energy-analysis', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chart: props.chart }),
+      body: JSON.stringify({ chart: normalizeChartForRequest(props.chart) }),
     });
 
     if (!response.ok) {
@@ -1550,6 +1853,10 @@ const confirmSmartEnergyRefresh = () => {
   refreshSmartEnergy();
 };
 
+const toggleEnergyDetailsExpanded = () => {
+  energyDetailsExpanded.value = !energyDetailsExpanded.value;
+};
+
 const toggleEnergySection = (key: keyof typeof energySectionOpen.value) => {
   energySectionOpen.value[key] = !energySectionOpen.value[key];
 };
@@ -1573,6 +1880,17 @@ watch(nayinModalOpen, (isOpen) => {
   } else if (releaseNayinScrollLock) {
     releaseNayinScrollLock();
     releaseNayinScrollLock = null;
+  }
+});
+
+watch(destinyAnalysisConfirmOpen, (isOpen) => {
+  if (isOpen) {
+    if (!releaseDestinyConfirmScrollLock) {
+      releaseDestinyConfirmScrollLock = lockBackgroundScroll();
+    }
+  } else if (releaseDestinyConfirmScrollLock) {
+    releaseDestinyConfirmScrollLock();
+    releaseDestinyConfirmScrollLock = null;
   }
 });
 
@@ -1610,9 +1928,17 @@ onUnmounted(() => {
     releaseNayinScrollLock();
     releaseNayinScrollLock = null;
   }
+  if (releaseDestinyConfirmScrollLock) {
+    releaseDestinyConfirmScrollLock();
+    releaseDestinyConfirmScrollLock = null;
+  }
   if (loadingTimer) {
     window.clearInterval(loadingTimer);
     loadingTimer = null;
+  }
+  if (destinyLoadingTimer) {
+    window.clearInterval(destinyLoadingTimer);
+    destinyLoadingTimer = null;
   }
 });
 
@@ -1633,6 +1959,275 @@ watch(() => props.chart, () => {
     } else {
       smartEnergyData.value = null;
       fetchSmartEnergyData();
+    }
+  }
+});
+
+const destinyRelationsCache = new Map<string, GanZhiRelations>();
+
+const getDestinyRelationsCacheKey = (chart: Chart, pillar: DestinyPillarWithAge) => {
+  const dayPillar = chart.day_pillar;
+  return `destiny_rel_${dayPillar.heaven_stem.name}${dayPillar.earth_branch.name}_${pillar.year}`;
+};
+
+const getDestinyAnalysisBatchCacheKey = (chart: Chart) => {
+  const dayPillar = chart.day_pillar;
+  return `destiny_analysis_batch_${dayPillar.heaven_stem.name}${dayPillar.earth_branch.name}`;
+};
+
+const DESTINY_ESTIMATE_KEY = "destiny_analysis_estimate_ms";
+const INITIAL_DESTINY_ESTIMATE_MS = 12000;
+const DESTINY_ESTIMATE_ALPHA = 0.2;
+const DESTINY_ESTIMATE_MIN_MS = 4000;
+const DESTINY_ESTIMATE_MAX_MS = 60000;
+
+const clampDestinyEstimate = (value: number) => Math.min(
+  DESTINY_ESTIMATE_MAX_MS,
+  Math.max(DESTINY_ESTIMATE_MIN_MS, value),
+);
+
+const loadDestinyEstimateMs = () => {
+  const raw = localStorage.getItem(DESTINY_ESTIMATE_KEY);
+  const parsed = raw ? Number.parseFloat(raw) : Number.NaN;
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return INITIAL_DESTINY_ESTIMATE_MS;
+  }
+  return clampDestinyEstimate(parsed);
+};
+
+const saveDestinyEstimateMs = (value: number) => {
+  localStorage.setItem(DESTINY_ESTIMATE_KEY, String(Math.round(value)));
+};
+
+const DESTINY_LOADING_MESSAGES = [
+  "天机推演，大运气场归纳中...",
+  "逐条校核干支关系...",
+  "运势脉络生成中...",
+  "收束结论，准备呈现结果...",
+];
+
+const destinyLoadingProgress = ref(0);
+const destinyEstimateMs = ref(loadDestinyEstimateMs());
+const updateDestinyEstimateMs = (elapsedMs: number) => {
+  if (!Number.isFinite(elapsedMs) || elapsedMs <= 0) return;
+  const current = destinyEstimateMs.value;
+  const next = clampDestinyEstimate(current * (1 - DESTINY_ESTIMATE_ALPHA) + elapsedMs * DESTINY_ESTIMATE_ALPHA);
+  destinyEstimateMs.value = next;
+  saveDestinyEstimateMs(next);
+};
+const DESTINY_LOADING_START_PROGRESS = 10;
+const DESTINY_LOADING_MAX_PROGRESS = 95;
+const DESTINY_LOADING_TICK_MS = 400;
+const destinyLoadingMessage = computed(() => {
+  if (!destinyAnalysisLoading.value) return "";
+  const progress = destinyLoadingProgress.value;
+  if (progress < 35) return DESTINY_LOADING_MESSAGES[0];
+  if (progress < 60) return DESTINY_LOADING_MESSAGES[1];
+  if (progress < 80) return DESTINY_LOADING_MESSAGES[2];
+  return DESTINY_LOADING_MESSAGES[3];
+});
+let destinyLoadingTimer: number | null = null;
+
+const buildDestinyAnalysisMap = (items: DestinyAnalysisBatchResult["items"]) => {
+  const map: Record<string, DestinyAnalysisResult> = {};
+  items.forEach((item) => {
+    map[String(item.year)] = {
+      summary: item.summary,
+      tips: item.tips,
+    };
+  });
+  return map;
+};
+
+const parseDestinyAnalysisMap = (raw: string | null) => {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return typeof parsed === "object" && parsed ? parsed : {};
+  } catch (error) {
+    console.warn("解析大运缓存失败，已忽略:", error);
+    return {};
+  }
+};
+
+const syncDestinyAnalysisSelection = () => {
+  if (!selectedDestinyPillar.value) {
+    destinyAnalysisData.value = null;
+    return;
+  }
+  const data = destinyAnalysisMap.value[String(selectedDestinyPillar.value.year)];
+  destinyAnalysisData.value = data ?? null;
+};
+
+const loadDestinyAnalysisCache = () => {
+  if (!props.chart) {
+    destinyAnalysisMap.value = {};
+    destinyAnalysisData.value = null;
+    return;
+  }
+  const cacheKey = getDestinyAnalysisBatchCacheKey(props.chart);
+  const cached = localStorage.getItem(cacheKey);
+  destinyAnalysisMap.value = parseDestinyAnalysisMap(cached);
+  syncDestinyAnalysisSelection();
+};
+
+watch(
+  () => props.chart,
+  () => {
+    closeNayinModal();
+    resetDestinySelection();
+    loadDestinyAnalysisCache();
+  },
+  { immediate: true }
+);
+
+const scrollToCurrentDestiny = () => {
+  if (destinyListExpanded.value) return;
+  const container = destinyListRef.value;
+  if (!container) return;
+  const currentItem = container.querySelector<HTMLElement>('[data-destiny-current="true"]');
+  if (!currentItem) return;
+
+  const containerRect = container.getBoundingClientRect();
+  const itemRect = currentItem.getBoundingClientRect();
+  const itemCenter = itemRect.left - containerRect.left + itemRect.width / 2;
+  const target = itemCenter - containerRect.width / 2;
+  const maxScroll = container.scrollWidth - container.clientWidth;
+
+  if (itemCenter <= containerRect.width / 2) {
+    container.scrollLeft = 0;
+    return;
+  }
+
+  container.scrollLeft = Math.min(maxScroll, Math.max(0, target));
+};
+
+const scheduleDestinyScroll = (attempts = 0) => {
+  if (attempts > 6) return;
+  window.requestAnimationFrame(() => {
+    scrollToCurrentDestiny();
+    scheduleDestinyScroll(attempts + 1);
+  });
+};
+
+const fetchDestinyRelations = async () => {
+  if (!props.chart || !selectedDestinyPillar.value) return;
+  const cacheKey = getDestinyRelationsCacheKey(props.chart, selectedDestinyPillar.value);
+  const cached = destinyRelationsCache.get(cacheKey);
+  if (cached) {
+    destinyRelations.value = cached;
+    return;
+  }
+  destinyRelationsLoading.value = true;
+  destinyRelationsError.value = "";
+  const relationsMap = props.chart.destiny_relations_map;
+  const data = relationsMap ? relationsMap[cacheKey] : null;
+  if (data) {
+    destinyRelations.value = data;
+    destinyRelationsCache.set(cacheKey, data);
+    destinyRelationsLoading.value = false;
+    return;
+  }
+  destinyRelations.value = null;
+  destinyRelationsError.value = "暂无关系数据";
+  destinyRelationsLoading.value = false;
+};
+
+const fetchDestinyAnalysisBatchData = async () => {
+  if (!props.chart || !destinyPillars.value.length) return;
+  const cacheKey = getDestinyAnalysisBatchCacheKey(props.chart);
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) {
+    destinyAnalysisMap.value = parseDestinyAnalysisMap(cached);
+    syncDestinyAnalysisSelection();
+    return;
+  }
+  const requestStartedAt = Date.now();
+  destinyAnalysisLoading.value = true;
+  try {
+    const response = await fetch("/api/bazi/destiny-analysis-batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chart: normalizeChartForRequest(props.chart),
+        destiny_pillars: destinyPillars.value.map((pillar) => ({
+          year: pillar.year,
+          heaven_stem: pillar.heaven_stem,
+          earth_branch: pillar.earth_branch,
+        })),
+      }),
+    });
+    if (!response.ok) {
+      throw new Error("请求失败");
+    }
+    const data = (await response.json()) as DestinyAnalysisBatchResult;
+    const items = Array.isArray(data?.items) ? data.items : [];
+    const map = buildDestinyAnalysisMap(items);
+    destinyAnalysisMap.value = map;
+    localStorage.setItem(cacheKey, JSON.stringify(map));
+    syncDestinyAnalysisSelection();
+  } catch (error) {
+    console.error("获取大运解析失败:", error);
+    destinyAnalysisData.value = null;
+    destinyAnalysisMap.value = {};
+  } finally {
+    updateDestinyEstimateMs(Date.now() - requestStartedAt);
+    destinyAnalysisLoading.value = false;
+  }
+};
+
+const refreshDestinyAnalysis = () => {
+  if (!props.chart) return;
+  const cacheKey = getDestinyAnalysisBatchCacheKey(props.chart);
+  localStorage.removeItem(cacheKey);
+  destinyAnalysisData.value = null;
+  destinyAnalysisMap.value = {};
+  fetchDestinyAnalysisBatchData();
+};
+
+const openDestinyAnalysisConfirm = () => {
+  destinyAnalysisConfirmOpen.value = true;
+};
+
+const closeDestinyAnalysisConfirm = () => {
+  destinyAnalysisConfirmOpen.value = false;
+};
+
+const confirmDestinyAnalysisRefresh = () => {
+  closeDestinyAnalysisConfirm();
+  refreshDestinyAnalysis();
+};
+
+watch(selectedDestinyPillar, (pillar) => {
+  if (!pillar) return;
+  destinyRelations.value = null;
+  destinyRelationsError.value = "";
+  syncDestinyAnalysisSelection();
+  fetchDestinyRelations();
+});
+
+
+watch(destinyAnalysisLoading, (isLoading) => {
+  if (isLoading) {
+    const startedAt = Date.now();
+    const estimateMs = destinyEstimateMs.value || INITIAL_DESTINY_ESTIMATE_MS;
+    destinyLoadingProgress.value = DESTINY_LOADING_START_PROGRESS;
+    if (destinyLoadingTimer) {
+      window.clearInterval(destinyLoadingTimer);
+    }
+    destinyLoadingTimer = window.setInterval(() => {
+      const elapsedMs = Date.now() - startedAt;
+      const progress = Math.min(
+        DESTINY_LOADING_MAX_PROGRESS,
+        Math.max(DESTINY_LOADING_START_PROGRESS, getLoadingProgress(elapsedMs, estimateMs)),
+      );
+      destinyLoadingProgress.value = Math.max(destinyLoadingProgress.value, progress);
+    }, DESTINY_LOADING_TICK_MS);
+  } else {
+    destinyLoadingProgress.value = 0;
+    if (destinyLoadingTimer) {
+      window.clearInterval(destinyLoadingTimer);
+      destinyLoadingTimer = null;
     }
   }
 });
@@ -1976,8 +2571,24 @@ const destinyPillarsWithAge = computed(() => {
 });
 
 const destinyPillarsDisplay = computed(() => {
-  const maxDisplay = destinyRangeMode.value === "60" ? 6 : DESTINY_PILLAR_MAX;
-  return destinyPillarsWithAge.value.slice(0, maxDisplay);
+  return destinyPillarsWithAge.value.slice(0, DESTINY_PILLAR_MAX);
+});
+
+const didInitialDestinyScroll = ref(false);
+
+watch(destinyPillarsDisplay, async (pillars) => {
+  if (didInitialDestinyScroll.value) return;
+  if (!pillars.length) return;
+  if (destinyListExpanded.value) return;
+  await nextTick();
+  scheduleDestinyScroll();
+  didInitialDestinyScroll.value = true;
+}, { flush: "post" });
+
+onMounted(() => {
+  if (!destinyListExpanded.value) {
+    scheduleDestinyScroll();
+  }
 });
 
 const currentDestinyIndex = computed(() => {
@@ -2004,6 +2615,35 @@ const destinyPillarTone = (pillar: typeof destinyPillarsWithAge.value[number], i
 
   return "border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] hover:border-[rgba(214,160,96,0.4)]";
 };
+
+const filterDestinyRelation = (relation: GanZhiRelation) => {
+  if (!relation.pillars.includes("destiny")) return false;
+  return relation.pillars.some((pillar) => ["year", "month", "day", "hour"].includes(pillar));
+};
+
+const destinyStemRelations = computed(() => {
+  if (!destinyRelations.value) return [];
+  return destinyRelations.value.stem_relations
+    .filter(filterDestinyRelation)
+    .map((rel) => ({
+      description: rel.description,
+      cssType: getRelationCssType(rel.type),
+    }));
+});
+
+const destinyBranchRelations = computed(() => {
+  if (!destinyRelations.value) return [];
+  return destinyRelations.value.branch_relations
+    .filter(filterDestinyRelation)
+    .map((rel) => ({
+      description: rel.description,
+      cssType: getRelationCssType(rel.type),
+    }));
+});
+
+const destinyRelationEmpty = computed(() => {
+  return !destinyStemRelations.value.length && !destinyBranchRelations.value.length;
+});
 
 // 大运元信息（起运时间等）
 const destinyMeta = computed(() => {

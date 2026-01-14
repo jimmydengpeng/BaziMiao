@@ -91,3 +91,21 @@ class FeedbackRequest(BaseModel):
 class EnergyAnalysisRequest(BaseModel):
     """五行能量智能分析请求"""
     chart: Dict = Field(..., description="命盘数据")
+
+
+class DestinyAnalysisRequest(BaseModel):
+    """大运智能解析请求"""
+    chart: Dict = Field(..., description="命盘数据")
+    destiny_pillar: Dict = Field(..., description="大运柱信息")
+
+
+class DestinyAnalysisBatchRequest(BaseModel):
+    """多条大运智能解析请求"""
+    chart: Dict = Field(..., description="命盘数据")
+    destiny_pillars: List[Dict] = Field(..., description="大运柱信息列表")
+
+
+class DestinyRelationsRequest(BaseModel):
+    """大运与本命干支关系请求"""
+    chart: Dict = Field(..., description="命盘数据")
+    destiny_pillar: Dict = Field(..., description="大运柱信息")

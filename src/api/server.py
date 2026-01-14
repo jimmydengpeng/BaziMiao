@@ -22,12 +22,16 @@ from src.api.schemas import (
     GeneralChatRequest,
     FeedbackRequest,
     EnergyAnalysisRequest,
+    DestinyAnalysisRequest,
+    DestinyAnalysisBatchRequest,
+    DestinyRelationsRequest,
 )
 from src.engine.bazi_engine import BaziPaipanEngine
 from src.knowledge.base import retrieve_knowledge
 from src.llm import LLMError, chat, chat_with_usage, stream_chat_with_reasoning
-from src.models.chart import Chart
+from src.models.chart import Chart, GanZhiRelations, PillarInfo
 from src.api.energy_prompt import build_energy_analysis_schema
+from src.api.destiny_prompt import build_destiny_analysis_schema, build_destiny_analysis_batch_schema
 from src.prompt.report_prompt import build_report_prompt
 from src.rules.analysis import evaluate_chart
 
@@ -44,6 +48,9 @@ feedback_logger.setLevel(logging.INFO)
 energy_logger = logging.getLogger("energy_analysis")
 energy_logger.setLevel(logging.INFO)
 energy_logger.propagate = True
+destiny_logger = logging.getLogger("destiny_analysis")
+destiny_logger.setLevel(logging.INFO)
+destiny_logger.propagate = True
 
 app = FastAPI(title="神机喵算 / BaziMiao API", version="0.1.0")
 engine = BaziPaipanEngine()
@@ -159,7 +166,8 @@ def generate_chart(payload: ChartRequest):
         latitude=payload.latitude,
         birth_place=payload.birth_place,
     )
-    return {"chart": chart.model_dump()}
+    destiny_relations_map = _build_destiny_relations_map(chart)
+    return {"chart": chart.model_dump(), "destiny_relations_map": destiny_relations_map}
 
 
 @app.post("/api/bazi/report")
@@ -536,6 +544,286 @@ def analyze_energy(payload: EnergyAnalysisRequest):
         elapsed_ms = int((time.perf_counter() - start_time) * 1000) if "start_time" in locals() else None
         energy_logger.error(
             "energy_analysis error elapsed_ms=%s message=%s",
+            elapsed_ms,
+            str(exc),
+        )
+        raise HTTPException(status_code=400, detail=f"分析失败: {exc}") from exc
+
+
+def _build_destiny_pillar(destiny_data: Dict[str, Any]) -> PillarInfo:
+    if not destiny_data:
+        raise HTTPException(status_code=400, detail="缺少大运柱信息")
+    return PillarInfo.model_validate(
+        {
+            "heaven_stem": destiny_data.get("heaven_stem", {}),
+            "earth_branch": destiny_data.get("earth_branch", {}),
+        }
+    )
+
+
+def _calculate_destiny_relations(chart: Chart, destiny_pillar: PillarInfo) -> GanZhiRelations:
+    return engine.calculate_all_ganzi_relations(
+        chart.year_pillar,
+        chart.month_pillar,
+        chart.day_pillar,
+        chart.hour_pillar,
+        destiny_pillar=destiny_pillar,
+    )
+
+
+def _filter_destiny_relations(relations: GanZhiRelations) -> List[Dict[str, Any]]:
+    def is_destiny_relation(rel: Any) -> bool:
+        if not getattr(rel, "pillars", None):
+            return False
+        if "destiny" not in rel.pillars:
+            return False
+        return any(pid in {"year", "month", "day", "hour"} for pid in rel.pillars)
+
+    filtered: List[Dict[str, Any]] = []
+    for rel in relations.stem_relations + relations.branch_relations:
+        if is_destiny_relation(rel):
+            filtered.append(rel.model_dump())
+    return filtered
+
+
+def _build_destiny_relations_map(chart: Chart) -> Dict[str, Any]:
+    destiny_cycle = chart.destiny_cycle
+    if not destiny_cycle or not destiny_cycle.destiny_pillars:
+        return {}
+    day_pillar = chart.day_pillar
+    key_prefix = f"destiny_rel_{day_pillar.heaven_stem.name}{day_pillar.earth_branch.name}_"
+    relations_map: Dict[str, Any] = {}
+    for pillar in destiny_cycle.destiny_pillars:
+        destiny_pillar = _build_destiny_pillar(pillar.model_dump())
+        relations = _calculate_destiny_relations(chart, destiny_pillar)
+        relations_map[f"{key_prefix}{pillar.year}"] = relations.model_dump()
+    return relations_map
+
+
+@app.post("/api/bazi/destiny-relations")
+def destiny_relations(payload: DestinyRelationsRequest):
+    """获取指定大运与本命四柱的干支关系"""
+    try:
+        chart = Chart.model_validate(payload.chart)
+        destiny_pillar = _build_destiny_pillar(payload.destiny_pillar)
+        relations = _calculate_destiny_relations(chart, destiny_pillar)
+        return relations.model_dump()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"关系计算失败: {exc}") from exc
+
+
+@app.post("/api/bazi/destiny-analysis")
+def analyze_destiny(payload: DestinyAnalysisRequest):
+    """大运智能解析接口"""
+    from src.api.destiny_prompt import build_destiny_analysis_prompt
+
+    try:
+        chart_data = payload.chart
+        chart = Chart.model_validate(chart_data)
+        destiny_pillar_data = payload.destiny_pillar
+        destiny_pillar = _build_destiny_pillar(destiny_pillar_data)
+        relations = _calculate_destiny_relations(chart, destiny_pillar)
+        relation_list = _filter_destiny_relations(relations)
+
+        prompt_text = build_destiny_analysis_prompt(chart_data, destiny_pillar_data, relation_list)
+
+        provider = _resolve_llm_provider()
+        model = _resolve_llm_model("destiny", provider)
+        temperature = _resolve_llm_temperature("destiny")
+        timeout = _resolve_llm_timeout("destiny")
+        enable_thinking = _resolve_feature_enable_thinking("destiny", provider)
+        response_format = {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "destiny_analysis",
+                "schema": build_destiny_analysis_schema(),
+                "strict": True,
+            },
+        }
+        system_message = (
+            "你是一位专业的八字命理师，"
+            "请严格按要求的 JSON 格式输出分析结果。"
+        )
+        messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": prompt_text},
+        ]
+
+        start_time = time.perf_counter()
+        destiny_logger.info(
+            "destiny_analysis llm_request provider=%s model=%s enable_thinking=%s temperature=%s timeout=%s",
+            provider,
+            model or "default",
+            enable_thinking,
+            temperature,
+            timeout,
+        )
+        raw_text, usage = chat_with_usage(
+            messages,
+            provider=provider,
+            model=model,
+            temperature=temperature,
+            enable_thinking=enable_thinking,
+            response_format=response_format,
+            timeout=timeout,
+        )
+        elapsed_ms = int((time.perf_counter() - start_time) * 1000)
+        destiny_logger.info(
+            "destiny_analysis llm_call provider=%s model=%s enable_thinking=%s temperature=%s timeout=%s "
+            "elapsed_ms=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s",
+            provider,
+            model or "default",
+            enable_thinking,
+            temperature,
+            timeout,
+            elapsed_ms,
+            usage.get("prompt_tokens") if isinstance(usage, dict) else None,
+            usage.get("completion_tokens") if isinstance(usage, dict) else None,
+            usage.get("total_tokens") if isinstance(usage, dict) else None,
+        )
+        result = _extract_json(raw_text)
+
+        if not result or "summary" not in result or "tips" not in result:
+            raise HTTPException(status_code=502, detail="AI 返回格式解析失败")
+
+        return result
+    except LLMError as exc:
+        elapsed_ms = int((time.perf_counter() - start_time) * 1000) if "start_time" in locals() else None
+        destiny_logger.error(
+            "destiny_analysis llm_error elapsed_ms=%s message=%s",
+            elapsed_ms,
+            str(exc),
+        )
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception as exc:
+        elapsed_ms = int((time.perf_counter() - start_time) * 1000) if "start_time" in locals() else None
+        destiny_logger.error(
+            "destiny_analysis error elapsed_ms=%s message=%s",
+            elapsed_ms,
+            str(exc),
+        )
+        raise HTTPException(status_code=400, detail=f"分析失败: {exc}") from exc
+
+
+@app.post("/api/bazi/destiny-analysis-batch")
+def analyze_destiny_batch(payload: DestinyAnalysisBatchRequest):
+    """多条大运智能解析接口"""
+    from src.api.destiny_prompt import build_destiny_analysis_batch_prompt
+
+    try:
+        chart_data = payload.chart
+        chart = Chart.model_validate(chart_data)
+        destiny_items: List[Dict[str, Any]] = []
+        input_years: List[int] = []
+        for destiny_pillar_data in payload.destiny_pillars:
+            destiny_pillar = _build_destiny_pillar(destiny_pillar_data)
+            relations = _calculate_destiny_relations(chart, destiny_pillar)
+            relation_list = _filter_destiny_relations(relations)
+            destiny_items.append({
+                "destiny_pillar": destiny_pillar_data,
+                "relations": relation_list,
+            })
+            year = destiny_pillar_data.get("year")
+            if isinstance(year, int):
+                input_years.append(year)
+
+        prompt_text = build_destiny_analysis_batch_prompt(chart_data, destiny_items)
+
+        provider = _resolve_llm_provider()
+        model = _resolve_llm_model("destiny", provider)
+        temperature = _resolve_llm_temperature("destiny")
+        timeout = _resolve_llm_timeout("destiny")
+        enable_thinking = _resolve_feature_enable_thinking("destiny", provider)
+        response_format = {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "destiny_analysis_batch",
+                "schema": build_destiny_analysis_batch_schema(),
+                "strict": True,
+            },
+        }
+        system_message = (
+            "你是一位专业的八字命理师，"
+            "请严格按要求的 JSON 格式输出分析结果。"
+        )
+        messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": prompt_text},
+        ]
+
+        start_time = time.perf_counter()
+        destiny_logger.info(
+            "destiny_analysis_batch llm_request provider=%s model=%s enable_thinking=%s temperature=%s timeout=%s",
+            provider,
+            model or "default",
+            enable_thinking,
+            temperature,
+            timeout,
+        )
+        raw_text, usage = chat_with_usage(
+            messages,
+            provider=provider,
+            model=model,
+            temperature=temperature,
+            enable_thinking=enable_thinking,
+            response_format=response_format,
+            timeout=timeout,
+        )
+        elapsed_ms = int((time.perf_counter() - start_time) * 1000)
+        destiny_logger.info(
+            "destiny_analysis_batch llm_call provider=%s model=%s enable_thinking=%s temperature=%s timeout=%s "
+            "elapsed_ms=%s prompt_tokens=%s completion_tokens=%s total_tokens=%s",
+            provider,
+            model or "default",
+            enable_thinking,
+            temperature,
+            timeout,
+            elapsed_ms,
+            usage.get("prompt_tokens") if isinstance(usage, dict) else None,
+            usage.get("completion_tokens") if isinstance(usage, dict) else None,
+            usage.get("total_tokens") if isinstance(usage, dict) else None,
+        )
+        result = _extract_json(raw_text)
+        items = result.get("items") if isinstance(result, dict) else None
+        if not isinstance(items, list):
+            raise HTTPException(status_code=502, detail="AI 返回格式解析失败")
+
+        normalized: List[Dict[str, Any]] = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            year = item.get("year")
+            summary = str(item.get("summary", "")).strip()
+            tips = str(item.get("tips", "")).strip()
+            if not isinstance(year, int) or not summary or not tips:
+                continue
+            normalized.append({
+                "year": year,
+                "summary": summary,
+                "tips": tips,
+            })
+
+        if not normalized:
+            raise HTTPException(status_code=502, detail="AI 返回格式解析失败")
+
+        if input_years:
+            by_year = {item["year"]: item for item in normalized}
+            ordered = [by_year[year] for year in input_years if year in by_year]
+            return {"items": ordered or normalized}
+
+        return {"items": normalized}
+    except LLMError as exc:
+        elapsed_ms = int((time.perf_counter() - start_time) * 1000) if "start_time" in locals() else None
+        destiny_logger.error(
+            "destiny_analysis_batch llm_error elapsed_ms=%s message=%s",
+            elapsed_ms,
+            str(exc),
+        )
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception as exc:
+        elapsed_ms = int((time.perf_counter() - start_time) * 1000) if "start_time" in locals() else None
+        destiny_logger.error(
+            "destiny_analysis_batch error elapsed_ms=%s message=%s",
             elapsed_ms,
             str(exc),
         )

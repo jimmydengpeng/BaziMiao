@@ -136,7 +136,11 @@ const handleSubmit = async (payload: BirthFormValues) => {
       if (!chartRes.ok) throw new Error(await chartRes.text());
 
       const chartData = (await chartRes.json()) as ChartResponse;
-      const updatedChart = { ...chartData.chart, name: payload.name.trim() || null };
+      const updatedChart = {
+        ...chartData.chart,
+        name: payload.name.trim() || null,
+        destiny_relations_map: chartData.destiny_relations_map ?? {}
+      };
       updatedEntry = {
         ...updatedEntry,
         gender: chartData.chart.gender,

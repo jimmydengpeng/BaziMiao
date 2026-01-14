@@ -119,6 +119,7 @@ export interface Chart {
   kong_wang?: KongWangInfo | string | null; // 空亡
   current_year_pillar?: PillarInfo | null; // 当前流年柱（以立春为界）
   ganzi_relations?: GanZhiRelations | null; // 干支关系
+  destiny_relations_map?: Record<string, GanZhiRelations>; // 大运关系缓存
 }
 
 export interface Analysis {
@@ -169,6 +170,7 @@ export type ReportStreamEvent =
 
 export interface ChartResponse {
   chart: Chart;
+  destiny_relations_map?: Record<string, GanZhiRelations>;
 }
 
 export interface ChatMessage {
@@ -231,4 +233,17 @@ export interface SmartEnergyResult {
   overall?: string;
   temperament?: string;
   health?: string;
+}
+
+export interface DestinyAnalysisResult {
+  summary: string;
+  tips: string;
+}
+
+export interface DestinyAnalysisItem extends DestinyAnalysisResult {
+  year: number;
+}
+
+export interface DestinyAnalysisBatchResult {
+  items: DestinyAnalysisItem[];
 }

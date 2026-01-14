@@ -156,10 +156,16 @@ const handleSubmit = async (payload: BirthFormValues) => {
     const chartData = (await chartRes.json()) as ChartResponse;
 
     // 保存到全局状态
-    chart.value = chartData.chart;
+    chart.value = {
+      ...chartData.chart,
+      destiny_relations_map: chartData.destiny_relations_map ?? {}
+    };
 
     // 保存到档案
-    saveArchive(payload, chartData.chart);
+    saveArchive(payload, {
+      ...chartData.chart,
+      destiny_relations_map: chartData.destiny_relations_map ?? {}
+    });
 
     // 清空报告和分析（新的命盘）
     analysis.value = null;

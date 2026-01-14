@@ -338,7 +338,7 @@ let releaseMenuScrollLock: (() => void) | null = null;
 
 // 导航项配置
 const NAV_LABELS = {
-  bazi: '神机命盘',
+  bazi: '神机密盘',
   compatibility: '双人合盘',
   encyclopedia: '命理百科',
   archives: '命盘档案',
