@@ -1,20 +1,16 @@
 <template>
   <teleport to="body">
-    <!-- 地区选择器：模态层，打开时锁定底层滚动，并且不遮住顶部导航栏（TopNav） -->
+    <!-- 地区选择器：模态层，打开时锁定底层滚动 -->
     <div
-      class="fixed inset-x-0 bottom-0 top-[calc(48px+env(safe-area-inset-top,0px))] z-[300] flex items-center justify-center bg-[rgba(7,10,16,0.8)] px-3 pt-3 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] overscroll-contain md:top-[calc(56px+env(safe-area-inset-top,0px))] md:px-4 lg:top-[calc(64px+env(safe-area-inset-top,0px))] lg:px-6"
+      class="fixed inset-0 z-[230] flex items-center justify-center bg-[rgba(7,10,16,0.72)] px-4 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] overscroll-contain"
       @click.self="handleClose"
     >
-      <div class="flex h-[88dvh] max-h-full w-full min-w-0 max-w-[900px] flex-col overflow-hidden rounded-[20px] border border-[rgba(255,255,255,0.15)] bg-[rgba(18,20,28,0.95)] shadow-[0_24px_60px_rgba(0,0,0,0.5)] backdrop-blur-[20px]">
-        <div class="flex items-center justify-between border-b border-[rgba(255,255,255,0.1)] px-5 py-3.5">
-          <div class="text-lg font-semibold text-[var(--accent-2)]">选择出生地区</div>
-          <button
-            class="flex h-8 w-8 items-center justify-center rounded-lg border-0 bg-[rgba(255,255,255,0.08)] text-xl text-[var(--muted)] transition-all duration-200 hover:bg-[rgba(255,255,255,0.15)] hover:text-[var(--text)]"
-            type="button"
-            @click="handleClose"
-          >
-            ×
-          </button>
+      <div class="flex h-[88dvh] max-h-full w-full min-w-0 max-w-[900px] flex-col overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(15,24,40,0.65)] shadow-[0_22px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+        <div class="relative flex items-center justify-center px-5 py-3.5">
+          <div class="text-lg font-semibold text-[var(--text)]">选择出生地区</div>
+          <div class="absolute right-5 top-1/2 -translate-y-1/2">
+            <CloseIconButton @click="handleClose" />
+          </div>
         </div>
 
         <div class="flex flex-1 min-h-0 flex-col gap-3 overflow-hidden p-4">
@@ -105,6 +101,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onUnmounted } from "vue";
 import { chinaRegions, getDefaultRegion, type Province, type City, type SelectedRegion } from "../data/china-regions";
+import CloseIconButton from "./CloseIconButton.vue";
 import { lockBackgroundScroll } from "../utils/scroll-lock";
 
 const props = defineProps<{

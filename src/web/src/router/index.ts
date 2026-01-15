@@ -11,7 +11,7 @@ const routes: RouteRecordRaw[] = [
     path: '/bazi/form',
     name: 'BaziForm',
     component: () => import('../views/BaziFormPage.vue'),
-    meta: { title: '填写生辰信息' }
+    meta: { title: '新建档案' }
   },
   {
     path: '/bazi/chart/:id',

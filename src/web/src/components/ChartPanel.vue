@@ -136,12 +136,13 @@
           </template>
           <template #actions>
             <button
-              class="flex items-center gap-1 rounded-xl border border-[var(--border)] px-3 py-1.5 text-[12px] font-medium transition-all duration-200"
+              class="flex items-center gap-1 rounded-xl border border-[var(--border)] px-3 py-1.5 text-[12px] font-medium transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60"
               :class="energyMode === 'smart'
                 ? 'bg-[rgba(214,160,96,0.12)] text-[var(--accent-2)] hover:bg-[rgba(214,160,96,0.2)]'
                 : 'bg-[rgba(255,255,255,0.04)] text-white/50 hover:bg-[rgba(255,255,255,0.08)]'"
               type="button"
-              @click="toggleEnergyMode"
+              :disabled="energyMode === 'smart' && smartEnergyLoading"
+              @click="handleSmartEnergyAction"
             >
               神机秘算
               <span
@@ -184,7 +185,7 @@
                 class="inline-flex cursor-pointer border-0 bg-transparent p-0"
                 type="button"
                 aria-label="切换神机秘算模式"
-                @click="toggleEnergyMode"
+                @click="handleRadarClick"
               >
                 <svg class="w-full max-w-[260px] lg:max-w-[300px]" viewBox="0 0 400 400" role="img" aria-label="五行雷达图">
                 <g class="radar-grid">
@@ -248,10 +249,27 @@
           <!-- 五行占比 -->
           <div v-show="energyDetailsExpanded" class="flex flex-col gap-3">
             <div class="flex flex-col gap-2 px-3 md:gap-3">
-              <div class="text-left text-xs font-semibold text-[var(--text)] md:text-[13px]">
+              <button
+                class="flex items-center gap-2 text-left text-xs font-semibold text-[var(--text)] md:text-[13px]"
+                type="button"
+                @click="toggleEnergySection('ratio')"
+              >
                 <strong>五行占比</strong>
-              </div>
-              <div class="flex flex-col gap-2 md:gap-3">
+                <svg
+                  class="h-4 w-4 text-white/50 transition-transform duration-200"
+                  :class="energySectionOpen.ratio ? 'rotate-180' : ''"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+              <div v-show="energySectionOpen.ratio" class="flex flex-col gap-2 md:gap-3">
                 <div v-for="item in energyItems" :key="item.element" class="flex flex-col">
                   <div class="flex flex-wrap items-start gap-x-2 gap-y-1 text-xs md:text-[13px]">
                     <div class="flex items-center gap-1.5 md:gap-2 shrink-0">
@@ -393,20 +411,6 @@
                   ></span>
                   <span v-else>暂无秘算提示</span>
                 </div>
-              </div>
-              <div class="flex justify-end pt-2">
-                <button
-                  class="flex items-center gap-1.5 rounded-xl border-1 border-[rgba(255,255,255,0.16)] bg-[rgba(255,255,255,0.04)] px-3 py-1 text-[12px] font-medium text-white/70 transition-all duration-200 hover:bg-[rgba(255,255,255,0.08)] active:bg-[rgba(255,255,255,0.16)] active:translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-60"
-                  :disabled="smartEnergyLoading"
-                  @click="openSmartEnergyConfirm"
-                >
-                  再行秘算
-                  <span
-                    class="icon-mask h-3 w-3 align-middle"
-                    :style="{ maskImage: `url(${thinkingIconUrl})`, WebkitMaskImage: `url(${thinkingIconUrl})` }"
-                    aria-hidden="true"
-                  ></span>
-                </button>
               </div>
             </div>
           </div>
@@ -873,116 +877,136 @@
               </div>
             </button>
           </div>
-          <div v-if="selectedDestinyPillar" class="flex flex-col gap-3 rounded-[14px] border border-[rgba(240,192,122,0.45)] bg-[rgba(240,192,122,0.08)] p-3">
-            <div class="flex flex-col gap-2">
-              <div class="text-xs text-[var(--muted)]">干支关系</div>
-              <div v-if="destinyRelationsLoading" class="text-xs text-[var(--muted)]">关系推演中...</div>
-              <div v-else-if="destinyRelationsError" class="text-xs text-[var(--muted)]">{{ destinyRelationsError }}</div>
-              <div v-else class="flex flex-col gap-2">
-                <div v-if="destinyStemRelations.length" class="flex flex-col gap-1">
-                  <span class="text-[11px] text-white/60">天干</span>
-                  <div class="summary-pills">
-                    <span
-                      v-for="(rel, idx) in destinyStemRelations"
-                      :key="`destiny-stem-${idx}`"
-                      :class="['relation-pill', `pill-${rel.cssType}`]"
-                    >{{ rel.description }}</span>
+          <div v-if="selectedDestinyPillar" class="flex flex-col gap-3">
+            <div class="flex flex-col gap-2 px-3">
+              <button
+                class="flex items-center gap-2 text-left text-xs font-semibold text-[var(--text)]"
+                type="button"
+                @click="toggleDestinySection('relations')"
+              >
+                <strong>干支关系</strong>
+                <svg
+                  class="h-4 w-4 text-white/50 transition-transform duration-200"
+                  :class="destinySectionOpen.relations ? 'rotate-180' : ''"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+              <div v-show="destinySectionOpen.relations" class="flex flex-col gap-2 text-xs">
+                <div v-if="destinyRelationsLoading" class="text-[var(--muted)]">关系推演中...</div>
+                <div v-else-if="destinyRelationsError" class="text-[var(--muted)]">{{ destinyRelationsError }}</div>
+                <div v-else class="flex flex-col gap-2">
+                  <div v-if="destinyStemRelations.length" class="flex flex-col gap-1">
+                    <span class="text-[11px] text-white/60">天干</span>
+                    <div class="summary-pills">
+                      <span
+                        v-for="(rel, idx) in destinyStemRelations"
+                        :key="`destiny-stem-${idx}`"
+                        :class="['relation-pill', `pill-${rel.cssType}`]"
+                      >{{ rel.description }}</span>
+                    </div>
                   </div>
-                </div>
-                <div v-if="destinyBranchRelations.length" class="flex flex-col gap-1">
-                  <span class="text-[11px] text-white/60">地支</span>
-                  <div class="summary-pills">
-                    <span
-                      v-for="(rel, idx) in destinyBranchRelations"
-                      :key="`destiny-branch-${idx}`"
-                      :class="['relation-pill', `pill-${rel.cssType}`]"
-                    >{{ rel.description }}</span>
+                  <div v-if="destinyBranchRelations.length" class="flex flex-col gap-1">
+                    <span class="text-[11px] text-white/60">地支</span>
+                    <div class="summary-pills">
+                      <span
+                        v-for="(rel, idx) in destinyBranchRelations"
+                        :key="`destiny-branch-${idx}`"
+                        :class="['relation-pill', `pill-${rel.cssType}`]"
+                      >{{ rel.description }}</span>
+                    </div>
                   </div>
-                </div>
-                <div v-if="destinyRelationEmpty" class="text-xs text-[var(--muted)]">
-                  暂无明显刑冲合会克害破关系
+                  <div v-if="destinyRelationEmpty" class="text-[var(--muted)]">暂无明显刑冲合会克害破关系</div>
                 </div>
               </div>
             </div>
-            <div class="flex flex-col gap-2">
-              <div class="text-xs text-[var(--muted)]">运势秘算</div>
-              <div v-if="destinyAnalysisLoading" class="flex flex-col items-start gap-3 rounded-xl border border-white/10 bg-[rgba(255,255,255,0.03)] p-4">
-                <div class="flex items-center gap-3">
-                  <div class="relative">
-                    <div class="h-10 w-10 animate-spin rounded-full border-4 border-[rgba(255,255,255,0.1)] border-t-[var(--accent-2)]"></div>
-                    <img :src="sparkleIconUrl" class="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 transform opacity-80" alt="加载中" />
+
+            <div class="flex flex-col gap-2 px-3 text-xs">
+              <div class="border-[rgba(255,255,255,0.08)] pt-2">
+                <button
+                  class="flex items-center gap-2 text-left text-xs font-semibold text-[var(--text)]"
+                  type="button"
+                  @click="toggleDestinySection('summary')"
+                >
+                  <strong>大运总势</strong>
+                  <svg
+                    class="h-4 w-4 text-white/50 transition-transform duration-200"
+                    :class="destinySectionOpen.summary ? 'rotate-180' : ''"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                <div v-show="destinySectionOpen.summary" class="mt-2 text-xs leading-relaxed text-[var(--muted)]">
+                  <div v-if="destinyAnalysisLoading" class="flex flex-col items-start gap-3 rounded-xl border border-white/10 bg-[rgba(255,255,255,0.03)] p-4">
+                    <div class="flex items-center gap-3">
+                      <div class="relative">
+                        <div class="h-10 w-10 animate-spin rounded-full border-4 border-[rgba(255,255,255,0.1)] border-t-[var(--accent-2)]"></div>
+                        <img :src="sparkleIconUrl" class="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 transform opacity-80" alt="加载中" />
+                      </div>
+                      <p class="text-sm text-[var(--muted)]">{{ destinyLoadingMessage }}</p>
+                    </div>
+                    <div class="w-full max-w-[260px]">
+                      <div class="h-1.5 overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)]">
+                        <div
+                          class="h-full rounded-full bg-[var(--accent-2)] transition-[width] duration-300"
+                          :style="{ width: `${destinyLoadingProgress}%` }"
+                        ></div>
+                      </div>
+                    </div>
                   </div>
-                  <p class="text-sm text-[var(--muted)]">{{ destinyLoadingMessage }}</p>
-                </div>
-                <div class="w-full max-w-[260px]">
-                  <div class="h-1.5 overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)]">
-                    <div
-                      class="h-full rounded-full bg-[var(--accent-2)] transition-[width] duration-300"
-                      :style="{ width: `${destinyLoadingProgress}%` }"
-                    ></div>
-                  </div>
+                  <span
+                    v-else-if="destinyAnalysisData"
+                    class="summary-markdown"
+                    v-html="renderEnergySummary(destinyAnalysisData.summary)"
+                  ></span>
+                  <span v-else>暂无解析内容，点击「神机秘算」生成全部大运解析。</span>
                 </div>
               </div>
-              <div v-else-if="destinyAnalysisData" class="flex flex-col gap-2 text-xs">
-                <div class="border-[rgba(255,255,255,0.08)] pt-2">
-                  <button
-                    class="flex w-full items-center justify-between text-left text-xs font-semibold text-[var(--text)]"
-                    type="button"
-                    @click="toggleDestinySection('summary')"
+
+              <div class="border-[rgba(255,255,255,0.08)] pt-2">
+                <button
+                  class="flex items-center gap-2 text-left text-xs font-semibold text-[var(--text)]"
+                  type="button"
+                  @click="toggleDestinySection('tips')"
+                >
+                  <strong>行动建议</strong>
+                  <svg
+                    class="h-4 w-4 text-white/50 transition-transform duration-200"
+                    :class="destinySectionOpen.tips ? 'rotate-180' : ''"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
                   >
-                    大运总势
-                    <svg
-                      class="h-4 w-4 text-white/50 transition-transform duration-200"
-                      :class="destinySectionOpen.summary ? 'rotate-180' : ''"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </button>
-                  <div v-show="destinySectionOpen.summary" class="mt-2 text-xs leading-relaxed text-[var(--muted)]">
-                    <span
-                      class="summary-markdown"
-                      v-html="renderEnergySummary(destinyAnalysisData.summary)"
-                    ></span>
-                  </div>
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                <div v-show="destinySectionOpen.tips" class="mt-2 text-xs leading-relaxed text-[var(--muted)]">
+                  <span v-if="destinyAnalysisLoading">解析中...</span>
+                  <span
+                    v-else-if="destinyAnalysisData"
+                    class="summary-markdown"
+                    v-html="renderEnergySummary(destinyAnalysisData.tips)"
+                  ></span>
+                  <span v-else>暂无解析内容，点击「神机秘算」生成全部大运解析。</span>
                 </div>
-                <div class="border-[rgba(255,255,255,0.08)] pt-2">
-                  <button
-                    class="flex w-full items-center justify-between text-left text-xs font-semibold text-[var(--text)]"
-                    type="button"
-                    @click="toggleDestinySection('tips')"
-                  >
-                    行动建议
-                    <svg
-                      class="h-4 w-4 text-white/50 transition-transform duration-200"
-                      :class="destinySectionOpen.tips ? 'rotate-180' : ''"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </button>
-                  <div v-show="destinySectionOpen.tips" class="mt-2 text-xs leading-relaxed text-[var(--muted)]">
-                    <span
-                      class="summary-markdown"
-                      v-html="renderEnergySummary(destinyAnalysisData.tips)"
-                    ></span>
-                  </div>
-                </div>
-              </div>
-              <div v-else class="text-sm text-[var(--muted)]">
-                暂无解析内容，点击「神机秘算」生成全部大运解析。
               </div>
             </div>
           </div>
@@ -1338,6 +1362,7 @@ let releaseDestinyConfirmScrollLock: (() => void) | null = null;
 const destinyListRef = ref<HTMLElement | null>(null);
 const hasDestinyAnalysis = computed(() => Object.keys(destinyAnalysisMap.value).length > 0);
 const destinySectionOpen = ref({
+  relations: true,
   summary: true,
   tips: true,
 });
@@ -1700,6 +1725,7 @@ const getEnergyCacheKey = (chart: Chart): string => {
 // 智能解析数据
 const smartEnergyData = ref<SmartEnergyResult | null>(null);
 const smartEnergyLoading = ref(false);
+const hasSmartEnergyData = computed(() => Boolean(smartEnergyData.value));
 // 初始化检查是否有缓存
 const initSmartEnergyCache = () => {
   if (props.chart) {
@@ -1720,6 +1746,7 @@ let releaseConfirmScrollLock: (() => void) | null = null;
 let releaseNayinScrollLock: (() => void) | null = null;
 const energyDetailsExpanded = ref(false);
 const energySectionOpen = ref({
+  ratio: true,
   overall: true,
   temperament: true,
   health: true,
@@ -1784,7 +1811,22 @@ let loadingTimer: number | null = null;
 
 const toggleEnergyMode = () => {
   energyMode.value = energyMode.value === 'smart' ? 'default' : 'smart';
+};
+
+const handleRadarClick = () => {
+  toggleEnergyMode();
+};
+
+const handleSmartEnergyAction = () => {
+  if (energyMode.value === 'smart' && hasSmartEnergyData.value) {
+    openSmartEnergyConfirm();
+    return;
+  }
+  energyMode.value = 'smart';
   energyDetailsExpanded.value = true;
+  if (!smartEnergyLoading.value && !smartEnergyData.value) {
+    fetchSmartEnergyData();
+  }
 };
 
 // 监听 chart 变化，自动设置默认模式

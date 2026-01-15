@@ -1,6 +1,6 @@
 <template>
   <div
-    class="[--safe-top:0px] [--safe-top:env(safe-area-inset-top,0px)] [--nav-height:45px] md:[--nav-height:3.5rem] lg:[--nav-height:4rem]"
+    class="[--safe-top:0px] [--safe-top:env(safe-area-inset-top,0px)] [--nav-height:48px] md:[--nav-height:3.5rem] lg:[--nav-height:4rem]"
   >
   <!-- 顶部导航栏 - 毛玻璃效果，固定覆盖层 -->
   <!-- 三档响应式：手机(<768px) h-12 px-3, 平板(768-1023px) h-14 px-4, 桌面(≥1024px) h-16 px-6 -->

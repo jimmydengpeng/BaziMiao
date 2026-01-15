@@ -3,6 +3,13 @@
     <!-- 云朵装饰背景 -->
     <CloudDecoration />
 
+    <!-- 首页专属：星宿粒子连线背景（固定在 viewport，不随 app-scroll 滚动） -->
+    <div v-if="isHomePage" class="pointer-events-none fixed inset-0 z-0" aria-hidden="true">
+      <ConstellationBackground class="absolute inset-0 opacity-35" :particle-count="108" :max-link-distance="150" />
+      <!-- 轻微顶部高光：只做氛围，避免滚动时“上方过亮” -->
+      <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(100,100,149,0.3),transparent_62%)]"></div>
+    </div>
+
     <!-- 顶部导航栏（所有页面都显示，聊天全屏页面除外） -->
     <TopNav
       v-if="!isLayoutChatPage"
@@ -19,7 +26,7 @@
     />
 
     <!-- 主内容区域：路由视图（滚动由 app-scroll 容器接管） -->
-    <div class="app-content h-full pt-0 md:pt-0 lg:pt-0">
+    <div class="app-content relative z-10 h-full pt-0 md:pt-0 lg:pt-0">
       <div
         ref="scrollEl"
         class="app-scroll h-full overflow-y-auto overscroll-contain"
@@ -86,6 +93,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick, provide } from 
 import { useRouter, useRoute, type RouteLocationNormalizedLoaded } from 'vue-router';
 import TopNav from './components/TopNav.vue';
 import CloudDecoration from './components/CloudDecoration.vue';
+import ConstellationBackground from './components/ConstellationBackground.vue';
 import ChatFab from './components/ChatFab.vue';
 import UnifiedChat from './components/UnifiedChat.vue';
 import LogoDialog from './components/LogoDialog.vue';
@@ -435,7 +443,7 @@ const handleNavigate = (module: 'bazi' | 'compatibility' | 'profile' | 'master' 
           router.push('/bazi/form');
         }
       } else {
-        // 没有活跃命盘，跳转到表单页（表单页会显示新建和从档案选择两个选项）
+        // 没有活跃命盘，跳转到新建排盘页
         router.push('/bazi/form');
       }
       break;

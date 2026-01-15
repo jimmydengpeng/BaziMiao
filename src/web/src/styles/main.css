@@ -54,11 +54,14 @@ body {
 
 /* 页面背景类 */
 html.page-home {
-  background: url("../assets/bg-hero.png") center / cover no-repeat fixed, #050505;
+  background:
+    linear-gradient(to bottom, #24222C 0%, #121024 55%, #070812 100%);
 }
 
 html.page-main {
-  background: linear-gradient(to bottom, #131829 0%, #151724 50%, #0d0e19 75%, #0a0b15 100%);
+  /* background: linear-gradient(to bottom, #131829 0%, #151724 50%, #0d0e19 75%, #0a0b15 100%); */
+  background:
+    linear-gradient(to bottom, #17161d 0%, #181824 55%, #171724 100%);
 }
 
 /* 滚动条样式 */

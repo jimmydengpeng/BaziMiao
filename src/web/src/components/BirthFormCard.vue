@@ -11,7 +11,7 @@
     
     <!-- 表单卡片 -->
     <div class="flex justify-center">
-      <div class="flex w-full min-w-0 max-w-[640px] flex-col gap-4 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[var(--panel)] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.35)] animate-[fade-up_0.35s_ease_both]">
+      <div class="panel-card flex w-full min-w-0 max-w-[720px] flex-col gap-4 p-6 shadow-[0_14px_46px_rgba(0,0,0,0.45)] backdrop-blur-[22px] animate-[fade-up_0.35s_ease_both] md:p-7">
         <!-- 姓名 -->
         <div class="flex flex-col gap-1.5">
           <label class="block text-[13px] text-[var(--muted)]">姓名</label>
@@ -110,132 +110,150 @@
         </div>
         
         <!-- 时间选择器弹窗 -->
-        <div
-          v-if="pickerOpen"
-          class="fixed inset-0 z-[200] flex items-center justify-center bg-[rgba(7,10,16,0.72)] p-5"
-          role="dialog"
-          aria-modal="true"
-          @click.self="pickerOpen = false"
-        >
-          <div class="flex w-full max-w-[720px] flex-col gap-4 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(15,24,40,0.65)] p-5 shadow-[0_22px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl">
-            <!-- 选择器头部 -->
-            <div class="flex items-center justify-between gap-3">
-              <div class="inline-flex gap-2 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#0f1421] p-1.5">
-                <button
-                  :class="[
-                    'rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm transition-all duration-200',
-                    form.calendar === 'solar'
-                      ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0a0d12] font-semibold shadow-sm'
-                      : 'text-[var(--muted)] hover:bg-white/5'
-                  ]"
-                  type="button"
-                  @click="form.calendar = 'solar'"
-                >
-                  公历
-                </button>
-                <button
-                  :class="[
-                    'rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm transition-all duration-200',
-                    form.calendar === 'lunar'
-                      ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0a0d12] font-semibold shadow-sm'
-                      : 'text-[var(--muted)] hover:bg-white/5'
-                  ]"
-                  type="button"
-                  @click="form.calendar = 'lunar'"
-                >
-                  农历
-                </button>
-              </div>
-              <button
-                class="rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.06)] px-3 py-1.5 text-xs font-semibold text-[var(--text)] transition-all duration-200 hover:bg-[rgba(255,255,255,0.1)]"
-                type="button"
-                @click="setToday"
+        <teleport to="body">
+          <Transition
+            enter-active-class="transition-opacity duration-150 ease-out"
+            leave-active-class="transition-opacity duration-150 ease-in"
+            enter-from-class="opacity-0"
+            leave-to-class="opacity-0"
+          >
+            <div
+              v-if="pickerOpen"
+              class="fixed inset-0 z-[220] flex items-center justify-center bg-[rgba(7,10,16,0.72)] px-4 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] overscroll-contain"
+              role="dialog"
+              aria-modal="true"
+              @click.self="closeDateTimePicker"
+            >
+              <Transition
+                enter-active-class="transition duration-200 ease-out"
+                leave-active-class="transition duration-200 ease-in"
+                enter-from-class="translate-y-3 opacity-0"
+                leave-to-class="translate-y-3 opacity-0"
               >
-                今天
-              </button>
+                <div class="flex w-full max-w-[720px] flex-col gap-4 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(15,24,40,0.65)] p-5 shadow-[0_22px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+                  <!-- 头部：标题居中 + 右侧关闭 -->
+                  <div class="relative flex items-center justify-center">
+                    <div class="text-base font-semibold text-white">选择出生时间</div>
+                    <div class="absolute right-0 top-1/2 -translate-y-1/2">
+                      <CloseIconButton @click="closeDateTimePicker" />
+                    </div>
+                  </div>
+
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="inline-flex gap-2 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#0f1421] p-1.5">
+                      <button
+                        :class="[
+                          'rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm transition-all duration-200',
+                          form.calendar === 'solar'
+                            ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0a0d12] font-semibold shadow-sm'
+                            : 'text-[var(--muted)] hover:bg-white/5'
+                        ]"
+                        type="button"
+                        @click="form.calendar = 'solar'"
+                      >
+                        公历
+                      </button>
+                      <button
+                        :class="[
+                          'rounded-[10px] border border-transparent bg-transparent px-4 py-1.5 text-sm transition-all duration-200',
+                          form.calendar === 'lunar'
+                            ? 'border-[rgba(255,255,255,0.2)] bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[#0a0d12] font-semibold shadow-sm'
+                            : 'text-[var(--muted)] hover:bg-white/5'
+                        ]"
+                        type="button"
+                        @click="form.calendar = 'lunar'"
+                      >
+                        农历
+                      </button>
+                    </div>
+
+                    <button
+                      class="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.06)] px-3 py-2 text-xs font-semibold text-[var(--text)] transition-all duration-200 hover:bg-[rgba(255,255,255,0.1)]"
+                      type="button"
+                      @click="setToday"
+                    >
+                      今天
+                    </button>
+                  </div>
+
+                  <!-- 选择器：年月日一组；时分一组 -->
+                  <div class="flex flex-col gap-3">
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <div class="flex flex-col gap-2">
+                        <span class="text-xs uppercase tracking-wider text-[var(--muted)]">年</span>
+                        <select
+                          v-model.number="form.year"
+                          class="w-full rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0d1626] px-2.5 py-3 text-[15px] text-[var(--text)] outline-none transition-colors focus:border-[rgba(255,255,255,0.2)]"
+                        >
+                          <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
+                        </select>
+                      </div>
+                      <div class="flex flex-col gap-2">
+                        <span class="text-xs uppercase tracking-wider text-[var(--muted)]">月</span>
+                        <select
+                          v-model.number="form.month"
+                          class="w-full rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0d1626] px-2.5 py-3 text-[15px] text-[var(--text)] outline-none transition-colors focus:border-[rgba(255,255,255,0.2)]"
+                        >
+                          <option v-for="month in monthOptions" :key="month.value" :value="month.value">
+                            {{ month.label }}
+                          </option>
+                        </select>
+                        <label
+                          v-if="isLunar"
+                          class="inline-flex items-center gap-2 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#0f1421] px-3 py-2 text-xs text-white/80"
+                        >
+                          <input v-model="form.isLeapMonth" type="checkbox" class="accent-[var(--accent-2)]" />
+                          <span>闰月</span>
+                        </label>
+                      </div>
+                      <div class="flex flex-col gap-2">
+                        <span class="text-xs uppercase tracking-wider text-[var(--muted)]">日</span>
+                        <select
+                          v-model.number="form.day"
+                          class="w-full rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0d1626] px-2.5 py-3 text-[15px] text-[var(--text)] outline-none transition-colors focus:border-[rgba(255,255,255,0.2)]"
+                        >
+                          <option v-for="day in days" :key="day" :value="day">{{ day }}</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                      <div class="flex flex-col gap-2">
+                        <span class="text-xs uppercase tracking-wider text-[var(--muted)]">时</span>
+                        <select
+                          v-model.number="form.hour"
+                          class="w-full rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0d1626] px-2.5 py-3 text-[15px] text-[var(--text)] outline-none transition-colors focus:border-[rgba(255,255,255,0.2)]"
+                        >
+                          <option v-for="hour in hours" :key="hour" :value="hour">
+                            {{ hour.toString().padStart(2, "0") }}
+                          </option>
+                        </select>
+                      </div>
+                      <div class="flex flex-col gap-2">
+                        <span class="text-xs uppercase tracking-wider text-[var(--muted)]">分</span>
+                        <select
+                          v-model.number="form.minute"
+                          class="w-full rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0d1626] px-2.5 py-3 text-[15px] text-[var(--text)] outline-none transition-colors focus:border-[rgba(255,255,255,0.2)]"
+                        >
+                          <option v-for="minute in minutes" :key="minute" :value="minute">
+                            {{ minute.toString().padStart(2, "0") }}
+                          </option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center justify-between gap-3">
+                    <span class="text-xs text-[var(--muted)]">选择好后点击确定收起。</span>
+                    <button class="btn-primary px-4 py-2.5" type="button" @click="closeDateTimePicker">
+                      确定
+                    </button>
+                  </div>
+                </div>
+              </Transition>
             </div>
-            
-            <!-- 选择器网格 -->
-            <div class="grid grid-cols-[repeat(auto-fit,minmax(88px,1fr))] gap-3">
-              <div class="flex flex-col gap-2">
-                <span class="text-xs uppercase tracking-wider text-[var(--muted)]">年</span>
-                <select
-                  v-model.number="form.year"
-                  class="w-full rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0d1626] px-2.5 py-3 text-[15px] text-[var(--text)] outline-none transition-colors focus:border-[rgba(255,255,255,0.2)]"
-                >
-                  <option v-for="year in years" :key="year" :value="year">{{ year }}</option>
-                </select>
-              </div>
-              <div class="flex flex-col gap-2">
-                <span class="text-xs uppercase tracking-wider text-[var(--muted)]">月</span>
-                <select
-                  v-model.number="form.month"
-                  class="w-full rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0d1626] px-2.5 py-3 text-[15px] text-[var(--text)] outline-none transition-colors focus:border-[rgba(255,255,255,0.2)]"
-                >
-                  <option v-for="month in monthOptions" :key="month.value" :value="month.value">
-                    {{ month.label }}
-                  </option>
-                </select>
-              </div>
-              <div class="flex flex-col gap-2">
-                <span class="text-xs uppercase tracking-wider text-[var(--muted)]">日</span>
-                <select
-                  v-model.number="form.day"
-                  class="w-full rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0d1626] px-2.5 py-3 text-[15px] text-[var(--text)] outline-none transition-colors focus:border-[rgba(255,255,255,0.2)]"
-                >
-                  <option v-for="day in days" :key="day" :value="day">{{ day }}</option>
-                </select>
-              </div>
-              <div class="flex flex-col gap-2">
-                <span class="text-xs uppercase tracking-wider text-[var(--muted)]">时</span>
-                <select
-                  v-model.number="form.hour"
-                  class="w-full rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0d1626] px-2.5 py-3 text-[15px] text-[var(--text)] outline-none transition-colors focus:border-[rgba(255,255,255,0.2)]"
-                >
-                  <option v-for="hour in hours" :key="hour" :value="hour">
-                    {{ hour.toString().padStart(2, "0") }}
-                  </option>
-                </select>
-              </div>
-              <div class="flex flex-col gap-2">
-                <span class="text-xs uppercase tracking-wider text-[var(--muted)]">分</span>
-                <select
-                  v-model.number="form.minute"
-                  class="w-full rounded-[14px] border border-[rgba(255,255,255,0.08)] bg-[#0d1626] px-2.5 py-3 text-[15px] text-[var(--text)] outline-none transition-colors focus:border-[rgba(255,255,255,0.2)]"
-                >
-                  <option v-for="minute in minutes" :key="minute" :value="minute">
-                    {{ minute.toString().padStart(2, "0") }}
-                  </option>
-                </select>
-              </div>
-            </div>
-            
-            <!-- 闰月选项 -->
-            <div v-if="isLunar" class="flex flex-col gap-1.5">
-              <label class="block text-[13px] text-[var(--muted)]">闰月</label>
-              <label class="inline-flex items-center gap-2 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#0f1421] px-3 py-2.5 text-sm text-[var(--text)]">
-                <input
-                  v-model="form.isLeapMonth"
-                  type="checkbox"
-                  class="accent-[var(--accent-2)]"
-                />
-                <span>本月为闰月</span>
-              </label>
-            </div>
-            
-            <!-- 选择器底部 -->
-            <div class="flex items-center justify-between gap-3">
-              <span class="text-xs text-[var(--muted)]">选择好后点击确定收起。</span>
-              <button
-                class="rounded-xl border-none bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] px-4 py-2.5 font-semibold text-[#0c0f15] transition-all duration-200 hover:-translate-y-[1px]"
-                type="button"
-                @click="pickerOpen = false"
-              >
-                确定
-              </button>
-            </div>
-          </div>
-        </div>
+          </Transition>
+        </teleport>
         
         <!-- 出生地点 -->
         <div class="flex flex-col gap-1.5">
@@ -287,12 +305,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref, watch, onUnmounted } from "vue";
 import RegionPicker from "./RegionPicker.vue";
 import PillarPicker from "./PillarPicker.vue";
+import CloseIconButton from "./CloseIconButton.vue";
 import { getDefaultRegion } from "../data/china-regions";
 import type { BirthFormValues, PillarMatchedDate } from "../types/forms";
 import { lunarMonthLabels } from "../types/forms";
+import { lockBackgroundScroll } from "../utils/scroll-lock";
 
 const props = defineProps<{
   loading?: boolean;
@@ -339,6 +359,7 @@ const pickerOpen = ref(false);
 const showRegionPicker = ref(false);
 const showPillarPicker = ref(false);
 const previousCalendar = ref<"solar" | "lunar">("solar"); // 保存打开四柱选择器前的历法状态
+let releaseDateTimeScrollLock: (() => void) | null = null;
 
 const nowYear = new Date().getFullYear();
 const years = Array.from({ length: nowYear - 1801 + 1 }, (_, idx) => nowYear - idx);
@@ -396,6 +417,31 @@ watch(
     }
   }
 );
+
+const closeDateTimePicker = () => {
+  pickerOpen.value = false;
+};
+
+watch(
+  () => pickerOpen.value,
+  (open) => {
+    if (open) {
+      if (!releaseDateTimeScrollLock) releaseDateTimeScrollLock = lockBackgroundScroll();
+      return;
+    }
+    if (releaseDateTimeScrollLock) {
+      releaseDateTimeScrollLock();
+      releaseDateTimeScrollLock = null;
+    }
+  }
+);
+
+onUnmounted(() => {
+  if (releaseDateTimeScrollLock) {
+    releaseDateTimeScrollLock();
+    releaseDateTimeScrollLock = null;
+  }
+});
 
 const setToday = () => {
   const now = new Date();

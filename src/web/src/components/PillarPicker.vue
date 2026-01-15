@@ -1,16 +1,18 @@
 <template>
-  <div class="fixed inset-0 z-[200] flex items-center justify-center bg-[rgba(7,10,16,0.72)] p-5" @click.self="$emit('close')">
-    <div class="flex w-full max-w-[720px] flex-col gap-4 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(15,24,40,0.65)] p-5 shadow-[0_22px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl">
-      <div class="flex items-center justify-between gap-3">
-        <div class="text-lg font-semibold text-[var(--text)]">输入四柱八字</div>
-        <button
-          class="rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.06)] px-3 py-1.5 text-xs font-semibold text-[var(--text)] transition-all duration-200 hover:bg-[rgba(255,255,255,0.1)]"
-          type="button"
-          @click="$emit('close')"
-        >
-          关闭
-        </button>
-      </div>
+  <teleport to="body">
+    <div
+      class="fixed inset-0 z-[230] flex items-center justify-center bg-[rgba(7,10,16,0.72)] px-4 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] overscroll-contain"
+      role="dialog"
+      aria-modal="true"
+      @click.self="$emit('close')"
+    >
+      <div class="flex w-full max-w-[720px] flex-col gap-4 rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(15,24,40,0.65)] p-5 shadow-[0_22px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+        <div class="relative flex items-center justify-center">
+          <div class="text-lg font-semibold text-[var(--text)]">输入四柱八字</div>
+          <div class="absolute right-0 top-1/2 -translate-y-1/2">
+            <CloseIconButton @click="$emit('close')" />
+          </div>
+        </div>
 
       <!-- 当前选择的步骤说明 -->
       <div class="flex flex-col gap-2">
@@ -135,12 +137,15 @@
       <div v-if="error" class="rounded-lg border border-[rgba(200,16,46,0.3)] bg-[rgba(200,16,46,0.1)] px-4 py-3 text-sm text-[var(--accent-red)]">
         {{ error }}
       </div>
+      </div>
     </div>
-  </div>
+  </teleport>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, onMounted, onUnmounted } from "vue";
+import CloseIconButton from "./CloseIconButton.vue";
+import { lockBackgroundScroll } from "../utils/scroll-lock";
 
 // 十天干和十二地支
 const TIAN_GAN = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"];
@@ -210,6 +215,19 @@ const loading = ref(false);
 const error = ref("");
 const matchedDates = ref<MatchedDate[]>([]);
 const searchProgress = ref("");  // 查找进度信息
+
+let releaseScrollLock: (() => void) | null = null;
+
+onMounted(() => {
+  releaseScrollLock = lockBackgroundScroll();
+});
+
+onUnmounted(() => {
+  if (releaseScrollLock) {
+    releaseScrollLock();
+    releaseScrollLock = null;
+  }
+});
 
 // 当前是否在选择天干（偶数步骤选天干，奇数步骤选地支）
 const isSelectingStem = computed(() => currentStep.value % 2 === 0);

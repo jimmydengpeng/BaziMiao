@@ -2,7 +2,7 @@
   <section class="flex flex-col gap-3">
     <header
       v-if="mode === 'page'"
-      class="sticky top-0 z-20 -mx-3 flex flex-col gap-3 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(18,22,33,0.75)] px-3 py-3 backdrop-blur-xl md:-mx-4 md:px-4 lg:-mx-6 lg:px-6"
+      class="sticky top-0 z-20 -mx-3 -mt-px relative before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-[rgba(18,22,33,0.75)] flex flex-col gap-3 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(18,22,33,0.75)] px-3 py-3 backdrop-blur-xl md:-mx-4 md:px-4 lg:-mx-6 lg:px-6"
     >
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="relative flex min-w-[200px] flex-1 items-center">
@@ -12,7 +12,7 @@
             class="pointer-events-none absolute left-3 h-3.5 w-3.5 object-contain opacity-70"
           />
           <input
-            v-model="query"
+            v-model="queryModel"
             type="text"
             class="h-9 w-full rounded-full border border-white/10 bg-white/5 pl-9 pr-2 text-sm text-white/85 placeholder-white/35 outline-none focus:border-[rgba(214,160,96,0.55)]"
             :placeholder="`搜索共 ${profiles.length} 份命盘档案...`"
@@ -67,14 +67,17 @@
       </div>
     </header>
 
-    <div v-else class="px-1">
+    <header
+      v-else-if="showModalSearch"
+      class="sticky top-0 z-20 -mx-4 relative before:content-[''] before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-[rgba(18,20,28,0.96)] border-b border-[rgba(255,255,255,0.08)] bg-[rgba(18,20,28,0.96)] px-4 py-3 backdrop-blur-xl md:-mx-5 md:px-5"
+    >
       <input
-        v-model="query"
+        v-model="queryModel"
         type="text"
         class="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/85 placeholder-white/35 outline-none focus:border-[rgba(214,160,96,0.55)]"
         placeholder="搜索档案名称..."
       />
-    </div>
+    </header>
 
     <div v-if="profiles.length === 0" class="panel-card flex flex-col gap-2.5 text-center bg-[rgba(16,12,10,0.7)]">
       <h2 class="text-lg font-semibold text-white">还没有档案</h2>
@@ -101,6 +104,7 @@
           :is-current="entry.id === currentId"
           :is-pending="entry.id === pendingEntry?.id"
           :show-actions="pendingEntry?.id === entry.id ? pendingActions : false"
+          :show-more="mode === 'page'"
           :show-checkbox="isDeleteMode"
           :checked="selectedIds.includes(entry.id)"
           @click="handleItemClick(entry)"
@@ -124,12 +128,16 @@ import archiveSearchIconUrl from '../assets/archive_search.png';
 import archiveManageIconUrl from '../assets/archive_manage.png';
 import archiveManageExitIconUrl from '../assets/archive_manage_exit.png';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   mode: 'page' | 'modal';
   profiles: ArchiveEntry[];
   currentId: number | null;
   pendingId?: number | null;
-}>();
+  searchQuery?: string;
+  showModalSearch?: boolean;
+}>(), {
+  showModalSearch: true
+});
 
 const emit = defineEmits<{
   (e: 'select', entry: ArchiveEntry): void;
@@ -139,9 +147,21 @@ const emit = defineEmits<{
   (e: 'edit', entry: ArchiveEntry): void;
   (e: 'request-delete', entry: ArchiveEntry): void;
   (e: 'request-delete-bulk', ids: number[]): void;
+  (e: 'update:searchQuery', value: string): void;
 }>();
 
-const query = ref('');
+const localQuery = ref('');
+const queryModel = computed<string>({
+  get: () => props.searchQuery ?? localQuery.value,
+  set: (next) => {
+    if (props.searchQuery !== undefined) {
+      emit('update:searchQuery', next);
+      return;
+    }
+    localQuery.value = next;
+  }
+});
+const showModalSearch = computed(() => props.showModalSearch);
 const isDeleteMode = ref(false);
 const selectedIds = ref<number[]>([]);
 const pendingEntry = ref<ArchiveEntry | null>(null);
@@ -160,7 +180,7 @@ const isAllSelected = computed(() => {
 const selectAllLabel = computed(() => (isAllSelected.value ? '取消全选' : '全选'));
 
 const filteredProfiles = computed(() => {
-  const keyword = query.value.trim().toLowerCase();
+  const keyword = queryModel.value.trim().toLowerCase();
   if (!keyword) return props.profiles;
   return props.profiles.filter((entry) => {
     const haystack = `${entry.displayName} ${entry.birthLabel} #${entry.id}`.toLowerCase();
