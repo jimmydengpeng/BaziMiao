@@ -139,7 +139,7 @@ const previewText = computed(() => {
 // 是否可以确认（至少选择了城市/区域）
 const canConfirm = computed(() => !!selectedCity.value);
 
-// 打开模态时锁定底层滚动（app-scroll + body/html），避免滑动穿透
+// 打开模态时锁定底层滚动（body/html），避免滑动穿透
 let releaseScrollLock: (() => void) | null = null;
 
 // 初始化选中状态

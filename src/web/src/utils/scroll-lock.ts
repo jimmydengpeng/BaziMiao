@@ -1,20 +1,12 @@
 type ScrollLockRelease = () => void;
 
 let lockCount = 0;
-let scrollContainer: HTMLElement | null = null;
-let previousOverflowY = "";
 let previousBodyOverflow = "";
 let previousHtmlOverflow = "";
 let previousBodyOverscrollY = "";
 let previousHtmlOverscrollY = "";
 
 const applyScrollLock = () => {
-  scrollContainer = document.querySelector(".app-scroll") as HTMLElement | null;
-  if (scrollContainer) {
-    previousOverflowY = scrollContainer.style.overflowY;
-    scrollContainer.style.overflowY = "hidden";
-  }
-
   previousBodyOverflow = document.body.style.overflow;
   previousHtmlOverflow = document.documentElement.style.overflow;
   previousBodyOverscrollY = document.body.style.overscrollBehaviorY;
@@ -26,10 +18,6 @@ const applyScrollLock = () => {
 };
 
 const restoreScrollLock = () => {
-  if (scrollContainer) {
-    scrollContainer.style.overflowY = previousOverflowY;
-    scrollContainer = null;
-  }
   document.body.style.overflow = previousBodyOverflow;
   document.documentElement.style.overflow = previousHtmlOverflow;
   document.body.style.overscrollBehaviorY = previousBodyOverscrollY;

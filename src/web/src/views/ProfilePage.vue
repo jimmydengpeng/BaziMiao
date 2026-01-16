@@ -1,5 +1,5 @@
 <template>
-  <div class="flex min-h-[calc(100vh-64px)] items-center justify-center px-3 py-8 md:px-4 md:py-10 lg:py-12">
+  <div class="flex flex-col min-h-[calc(100vh-64px)] items-center justify-center px-3 py-8 md:px-4 md:py-10 lg:py-12">
     <div
       class="panel-card w-full max-w-md p-6"
     >
@@ -86,6 +86,32 @@
           登录成功状态占位。后续可在此展示账户信息、历史记录等。
         </div>
       </template>
+
+    </div>
+
+    <div class="mt-6 w-full max-w-md rounded-xl border border-white/10 bg-white/1 backdrop-blur-md p-4">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <div class="text-sm font-semibold text-white">开发模式</div>
+          <div class="text-xs text-white/60">显示页面里的调试信息</div>
+        </div>
+        <button
+          class="relative inline-flex h-6 w-11 items-center rounded-full transition"
+          :class="devMode ? 'bg-[var(--accent-2)]' : 'bg-white/15'"
+          type="button"
+          @click="devMode = !devMode"
+          :aria-pressed="devMode"
+          aria-label="切换开发模式"
+        >
+          <span
+            class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition"
+            :class="devMode ? 'translate-x-6' : 'translate-x-1'"
+          ></span>
+        </button>
+      </div>
+      <div class="mt-2 text-[11px] text-white/45">
+        仅用于开发调试，默认关闭。
+      </div>
     </div>
   </div>
 </template>
@@ -98,7 +124,7 @@ const emit = defineEmits<{
   (e: "login"): void;
 }>();
 
-const { isAuthenticated } = useStore();
+const { isAuthenticated, devMode } = useStore();
 const email = ref("");
 const password = ref("");
 

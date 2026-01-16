@@ -416,6 +416,9 @@
             </div>
           </div>
         </div>
+        <div v-if="shouldShowDevInfo && smartEnergyDevInfoText" class="px-3 pb-3 text-[10px] text-white/40">
+          {{ smartEnergyDevInfoText }}
+        </div>
       </div>
 
       <teleport to="body">
@@ -1009,9 +1012,12 @@
                   <span v-else>暂无解析内容，点击「神机秘算」生成全部大运解析。</span>
                 </div>
               </div>
-            </div>
           </div>
         </div>
+      </div>
+      <div v-if="shouldShowDevInfo && destinyDevInfoText" class="px-3 pb-3 text-[10px] text-white/40">
+        {{ destinyDevInfoText }}
+      </div>
       </div>
 
       <!-- 干支关系卡片 -->
@@ -1295,10 +1301,13 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: "ChartBasicTab" });
+
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import type {
   Chart,
+  DevInfo,
   DestinyAnalysisBatchResult,
   DestinyAnalysisResult,
   DestinyPillarInfo,
@@ -1322,7 +1331,7 @@ import thinkingIconUrl from "../assets/svg/thinking-tripple-full.svg";
 import switchArchiveIconUrl from "../assets/change-arch.png";
 
 const router = useRouter();
-const { chart: storeChart } = useStore();
+const { chart: storeChart, devMode } = useStore();
 
 // 保留 `props.chart` 形式，减少历史代码改动；本 Tab 直接读全局 store。
 const props = {
@@ -1333,6 +1342,21 @@ const props = {
 
 // 模板里原本直接用 `chart`（来自 prop）；这里用 computed 继续提供同名变量。
 const chart = computed(() => props.chart);
+
+const shouldShowDevInfo = computed(() => devMode.value);
+
+const formatDevInfo = (devInfo: DevInfo | null) => {
+  if (!devInfo) return "";
+  const elapsedMs = Number.isFinite(devInfo.elapsed_ms) ? devInfo.elapsed_ms : 0;
+  const elapsedText = elapsedMs >= 1000
+    ? `${(elapsedMs / 1000).toFixed(elapsedMs >= 10000 ? 0 : 1)}s`
+    : `${Math.max(0, Math.round(elapsedMs))}ms`;
+  const totalTokens = Number.isFinite(devInfo.total_tokens) ? devInfo.total_tokens : null;
+  if (totalTokens === null) {
+    return `cost: ${elapsedText}`;
+  }
+  return `cost: ${elapsedText} ${totalTokens} tokens`;
+};
 
 const goToForm = () => {
   router.push("/bazi/form");
@@ -1372,16 +1396,19 @@ const destinyRelationsLoading = ref(false);
 const destinyRelationsError = ref("");
 const destinyAnalysisData = ref<DestinyAnalysisResult | null>(null);
 const destinyAnalysisMap = ref<Record<string, DestinyAnalysisResult>>({});
+const destinyAnalysisDevInfo = ref<DevInfo | null>(null);
 const destinyAnalysisLoading = ref(false);
 const destinyAnalysisConfirmOpen = ref(false);
 let releaseDestinyConfirmScrollLock: (() => void) | null = null;
 const destinyListRef = ref<HTMLElement | null>(null);
+const didInitialDestinyScroll = ref(false);
 const hasDestinyAnalysis = computed(() => Object.keys(destinyAnalysisMap.value).length > 0);
 const destinySectionOpen = ref({
   relations: true,
   summary: true,
   tips: true,
 });
+const destinyDevInfoText = computed(() => formatDevInfo(destinyAnalysisDevInfo.value));
 
 const toggleDestinySection = (key: keyof typeof destinySectionOpen.value) => {
   destinySectionOpen.value[key] = !destinySectionOpen.value[key];
@@ -1399,6 +1426,7 @@ const resetDestinySelection = () => {
   destinyAnalysisLoading.value = false;
   destinyAnalysisData.value = null;
   destinyAnalysisMap.value = {};
+  destinyAnalysisDevInfo.value = null;
   destinyAnalysisConfirmOpen.value = false;
 };
 
@@ -1742,6 +1770,7 @@ const getEnergyCacheKey = (chart: Chart): string => {
 const smartEnergyData = ref<SmartEnergyResult | null>(null);
 const smartEnergyLoading = ref(false);
 const hasSmartEnergyData = computed(() => Boolean(smartEnergyData.value));
+const smartEnergyDevInfoText = computed(() => formatDevInfo(smartEnergyData.value?.dev_info ?? null));
 // 初始化检查是否有缓存
 const initSmartEnergyCache = () => {
   if (props.chart) {
@@ -2097,14 +2126,27 @@ const buildDestinyAnalysisMap = (items: DestinyAnalysisBatchResult["items"]) => 
   return map;
 };
 
-const parseDestinyAnalysisMap = (raw: string | null) => {
-  if (!raw) return {};
+type DestinyAnalysisCache = {
+  version: 1;
+  map: Record<string, DestinyAnalysisResult>;
+  devInfo?: DevInfo | null;
+};
+
+const parseDestinyAnalysisCache = (raw: string | null) => {
+  if (!raw) return { map: {}, devInfo: null };
   try {
-    const parsed = JSON.parse(raw);
-    return typeof parsed === "object" && parsed ? parsed : {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") {
+      return { map: {}, devInfo: null };
+    }
+    const record = parsed as Partial<DestinyAnalysisCache>;
+    if (record.version === 1 && record.map && typeof record.map === "object") {
+      return { map: record.map, devInfo: record.devInfo ?? null };
+    }
+    return { map: parsed as Record<string, DestinyAnalysisResult>, devInfo: null };
   } catch (error) {
     console.warn("解析大运缓存失败，已忽略:", error);
-    return {};
+    return { map: {}, devInfo: null };
   }
 };
 
@@ -2121,11 +2163,14 @@ const loadDestinyAnalysisCache = () => {
   if (!props.chart) {
     destinyAnalysisMap.value = {};
     destinyAnalysisData.value = null;
+    destinyAnalysisDevInfo.value = null;
     return;
   }
   const cacheKey = getDestinyAnalysisBatchCacheKey(props.chart);
   const cached = localStorage.getItem(cacheKey);
-  destinyAnalysisMap.value = parseDestinyAnalysisMap(cached);
+  const cache = parseDestinyAnalysisCache(cached);
+  destinyAnalysisMap.value = cache.map;
+  destinyAnalysisDevInfo.value = cache.devInfo ?? null;
   syncDestinyAnalysisSelection();
 };
 
@@ -2135,6 +2180,8 @@ watch(
     closeNayinModal();
     resetDestinySelection();
     loadDestinyAnalysisCache();
+    // 切换档案或首次进入时，允许重新定位当前大运
+    didInitialDestinyScroll.value = false;
   },
   { immediate: true }
 );
@@ -2196,7 +2243,9 @@ const fetchDestinyAnalysisBatchData = async () => {
   const cacheKey = getDestinyAnalysisBatchCacheKey(props.chart);
   const cached = localStorage.getItem(cacheKey);
   if (cached) {
-    destinyAnalysisMap.value = parseDestinyAnalysisMap(cached);
+    const cache = parseDestinyAnalysisCache(cached);
+    destinyAnalysisMap.value = cache.map;
+    destinyAnalysisDevInfo.value = cache.devInfo ?? null;
     syncDestinyAnalysisSelection();
     return;
   }
@@ -2221,13 +2270,17 @@ const fetchDestinyAnalysisBatchData = async () => {
     const data = (await response.json()) as DestinyAnalysisBatchResult;
     const items = Array.isArray(data?.items) ? data.items : [];
     const map = buildDestinyAnalysisMap(items);
+    const devInfo = data?.dev_info ?? null;
     destinyAnalysisMap.value = map;
-    localStorage.setItem(cacheKey, JSON.stringify(map));
+    destinyAnalysisDevInfo.value = devInfo;
+    const cachePayload: DestinyAnalysisCache = { version: 1, map, devInfo };
+    localStorage.setItem(cacheKey, JSON.stringify(cachePayload));
     syncDestinyAnalysisSelection();
   } catch (error) {
     console.error("获取大运解析失败:", error);
     destinyAnalysisData.value = null;
     destinyAnalysisMap.value = {};
+    destinyAnalysisDevInfo.value = null;
   } finally {
     updateDestinyEstimateMs(Date.now() - requestStartedAt);
     destinyAnalysisLoading.value = false;
@@ -2240,6 +2293,7 @@ const refreshDestinyAnalysis = () => {
   localStorage.removeItem(cacheKey);
   destinyAnalysisData.value = null;
   destinyAnalysisMap.value = {};
+  destinyAnalysisDevInfo.value = null;
   fetchDestinyAnalysisBatchData();
 };
 
@@ -2631,8 +2685,6 @@ const destinyPillarsWithAge = computed(() => {
 const destinyPillarsDisplay = computed(() => {
   return destinyPillarsWithAge.value.slice(0, DESTINY_PILLAR_MAX);
 });
-
-const didInitialDestinyScroll = ref(false);
 
 watch(destinyPillarsDisplay, async (pillars) => {
   if (didInitialDestinyScroll.value) return;

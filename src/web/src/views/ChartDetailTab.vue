@@ -17,5 +17,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'ChartDetailTab' });
+
 // 占位页面，无需逻辑
 </script>

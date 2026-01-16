@@ -10,22 +10,24 @@
               class="mx-auto w-full max-w-[920px] rounded-t-2xl border border-white/10 bg-[rgba(18,20,28,0.96)] shadow-[0_-18px_50px_rgba(0,0,0,0.55)] backdrop-blur-xl md:rounded-2xl"
             >
               <div class="border-b border-[rgba(255,255,255,0.08)]">
-                <div class="flex items-center justify-between gap-3 px-4 py-3 md:px-5">
-                  <div class="min-w-0">
-                    <div class="truncate text-lg font-semibold text-white/90 md:text-xl">
-                      {{ title }}
+                <div class="flex items-center gap-3 px-4 py-3 md:px-5">
+                  <Transition name="header-fade" @after-leave="handleHeaderHidden">
+                    <div v-if="headerVisible" class="min-w-0">
+                      <div class="truncate text-sm font-semibold text-white/90 md:text-lg">
+                        {{ title }}
+                      </div>
+                      <div v-if="description" class="truncate text-[11px] text-white/55">
+                        {{ description }}
+                      </div>
                     </div>
-                    <div v-if="description" class="truncate text-[11px] text-white/55">
-                      {{ description }}
-                    </div>
-                  </div>
+                  </Transition>
 
-                  <div class="flex items-center gap-2">
+                  <div class="ml-auto flex items-center gap-2" :class="searchOpen ? 'flex-1' : ''">
                     <div
-                      class="relative h-9 overflow-hidden rounded-full border border-white/10 bg-white/5 text-white/70 transition-[width,background-color,color] duration-250 ease-out"
+                      class="relative h-9 min-w-0 overflow-hidden rounded-full border border-white/10 bg-white/5 text-white/70"
                       :class="
                         searchOpen
-                          ? 'w-[min(42vw,260px)] bg-white/10 text-white'
+                          ? 'w-full bg-white/10 text-white transition-[width,background-color,color] duration-250 ease-out'
                           : searchQuery.trim().length > 0
                             ? 'w-9 bg-white/10 text-white'
                             : 'w-9 hover:bg-white/10 hover:text-white'
@@ -65,8 +67,9 @@
                         />
                       </div>
                     </div>
-                    <SettingsIconButton aria-label="命盘档案" @click="goToArchives" />
-                    <CloseIconButton @click="close" />
+                    <AddIconButton class="flex-none" aria-label="新建档案" @click="goToNewArchive" />
+                    <SettingsIconButton class="flex-none" aria-label="命盘档案" @click="goToArchives" />
+                    <CloseIconButton class="flex-none" @click="close" />
                   </div>
                 </div>
               </div>
@@ -95,6 +98,7 @@
 import { nextTick, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import ArchiveListPanel from './ArchiveListPanel.vue';
+import AddIconButton from './AddIconButton.vue';
 import CloseIconButton from './CloseIconButton.vue';
 import SettingsIconButton from './SettingsIconButton.vue';
 import type { ArchiveEntry } from '../utils/storage';
@@ -120,11 +124,15 @@ const emit = defineEmits<{
 
 let releaseScrollLock: (() => void) | null = null;
 const searchOpen = ref(false);
+const headerVisible = ref(true);
 const searchQuery = ref('');
 const searchInputRef = ref<HTMLInputElement | null>(null);
+const pendingOpen = ref(false);
 
 const close = () => {
+  pendingOpen.value = false;
   searchOpen.value = false;
+  headerVisible.value = true;
   searchQuery.value = '';
   emit('update:modelValue', false);
 };
@@ -134,20 +142,40 @@ const goToArchives = () => {
   router.push({ name: 'Archives' });
 };
 
+const goToNewArchive = () => {
+  close();
+  router.push({ name: 'BaziForm' });
+};
+
 const handleSelect = (entry: ArchiveEntry) => {
   emit('select', entry);
   close();
 };
 
-const openSearch = async () => {
-  searchOpen.value = true;
-  await nextTick();
-  searchInputRef.value?.focus();
+const openSearch = () => {
+  if (searchOpen.value || pendingOpen.value) return;
+  pendingOpen.value = true;
+  headerVisible.value = false;
 };
 
 const closeSearch = () => {
+  if (pendingOpen.value && !searchOpen.value) {
+    pendingOpen.value = false;
+    headerVisible.value = true;
+    return;
+  }
+  pendingOpen.value = false;
   searchOpen.value = false;
   searchQuery.value = '';
+  headerVisible.value = true;
+};
+
+const handleHeaderHidden = async () => {
+  if (!pendingOpen.value) return;
+  searchOpen.value = true;
+  pendingOpen.value = false;
+  await nextTick();
+  searchInputRef.value?.focus();
 };
 
 watch(
@@ -158,7 +186,9 @@ watch(
       return;
     }
     searchOpen.value = false;
+    headerVisible.value = true;
     searchQuery.value = '';
+    pendingOpen.value = false;
     if (releaseScrollLock) {
       releaseScrollLock();
       releaseScrollLock = null;
@@ -168,6 +198,7 @@ watch(
 );
 
 onUnmounted(() => {
+  pendingOpen.value = false;
   if (releaseScrollLock) {
     releaseScrollLock();
     releaseScrollLock = null;
@@ -193,5 +224,17 @@ onUnmounted(() => {
 .sheet-leave-to {
   transform: translateY(14px) scale(0.98);
   opacity: 0;
+}
+
+.header-fade-enter-active {
+  transition: none;
+}
+.header-fade-leave-active {
+  transition: opacity 180ms ease, transform 220ms ease;
+}
+.header-fade-enter-from,
+.header-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-10px);
 }
 </style>

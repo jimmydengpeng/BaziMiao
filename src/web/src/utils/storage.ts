@@ -15,6 +15,7 @@ const STORAGE_KEYS = {
   ARCHIVE_COUNTER: 'bazi_archive_counter',
   ACTIVE_ARCHIVE_ID: 'bazi_active_archive_id',
   BAZI_VIEW_STATE: 'bazi_view_state', // 命盘解析模块的浏览状态
+  DEV_MODE: 'bazi_dev_mode',
 } as const;
 
 type ReportCacheItemV1 = {
@@ -326,6 +327,25 @@ export const loadActiveArchiveId = (): number | null => {
   }
 };
 
+export const saveDevMode = (enabled: boolean): void => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.DEV_MODE, enabled ? '1' : '0');
+  } catch (error) {
+    console.error('保存开发模式失败:', error);
+  }
+};
+
+export const loadDevMode = (): boolean => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.DEV_MODE);
+    if (raw === null) return false;
+    return raw === '1';
+  } catch (error) {
+    console.error('加载开发模式失败:', error);
+    return false;
+  }
+};
+
 /**
  * 命盘解析模块的浏览状态
  */
@@ -333,7 +353,6 @@ export type BaziViewPage = 'basic' | 'report' | 'detail' | 'verification';
 
 export type BaziViewState = {
   page: BaziViewPage; // 当前浏览的页面
-  scrollPosition: number; // 滚动位置
   chartId: string | number; // 命盘ID
 };
 
@@ -378,15 +397,10 @@ export const loadBaziViewState = (): BaziViewState | null => {
     })();
 
     const chartId = record.chartId;
-    const scrollPosition = record.scrollPosition;
-
     if (!page) return null;
     if (typeof chartId !== 'string' && typeof chartId !== 'number') return null;
 
-    const normalizedScrollPosition =
-      typeof scrollPosition === 'number' && Number.isFinite(scrollPosition) ? scrollPosition : 0;
-
-    return { page, chartId, scrollPosition: normalizedScrollPosition };
+    return { page, chartId };
   } catch (error) {
     console.error('加载浏览状态失败:', error);
     return null;

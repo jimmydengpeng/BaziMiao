@@ -27,7 +27,7 @@ const routes: RouteRecordRaw[] = [
         path: 'basic',
         name: 'ChartBasic',
         component: () => import('../views/ChartBasicTab.vue'),
-        meta: { title: '命盘信息' }
+        meta: { title: '命盘信息', keepAlive: true }
       },
       {
         // 兼容旧链接：/bazi/chart/:id/pillars -> /bazi/chart/:id/basic
@@ -43,13 +43,13 @@ const routes: RouteRecordRaw[] = [
         path: 'report',
         name: 'ChartReport',
         component: () => import('../views/ChartReportTab.vue'),
-        meta: { title: '命理报告' }
+        meta: { title: '命理报告', keepAlive: true }
       },
       {
         path: 'detail',
         name: 'ChartDetail',
         component: () => import('../views/ChartDetailTab.vue'),
-        meta: { title: '专业细盘' }
+        meta: { title: '专业细盘', keepAlive: true }
       },
       {
         // 兼容旧链接：/bazi/chart/:id/pro -> /bazi/chart/:id/detail
@@ -65,7 +65,7 @@ const routes: RouteRecordRaw[] = [
         path: 'verification',
         name: 'ChartVerification',
         component: () => import('../views/ChartVerificationTab.vue'),
-        meta: { title: '前事验盘' }
+        meta: { title: '前事验盘', keepAlive: true }
       }
     ]
   },
@@ -133,14 +133,28 @@ const routes: RouteRecordRaw[] = [
   }
 ];
 
+const scrollPositions = new Map<string, number>();
+
 // 创建路由实例
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
-  // 滚动由 App.vue 的 app-scroll 容器接管，这里只保持默认行为
-  scrollBehavior() {
-    return { top: 0 };
+  scrollBehavior(to, from, savedPosition) {
+    if (to.meta?.overlay === true) return false;
+    if (savedPosition) return savedPosition;
+    const cached = scrollPositions.get(to.fullPath);
+    if (cached !== undefined) {
+      return { top: cached, left: 0 };
+    }
+    return { top: 0, left: 0 };
   },
+});
+
+router.beforeEach((to, from, next) => {
+  if (typeof window !== 'undefined' && from.fullPath && from.meta?.overlay !== true) {
+    scrollPositions.set(from.fullPath, window.scrollY || window.pageYOffset);
+  }
+  next();
 });
 
 // 全局前置守卫 - 设置页面标题

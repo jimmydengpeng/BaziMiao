@@ -7,8 +7,8 @@
       <section class="panel-card p-6 md:p-9">
         <div class="flex flex-col items-center text-center">
           <div class="mb-2 inline-flex items-center gap-2 text-xs uppercase tracking-[0.22em] text-[var(--accent)]">
-            <span class="h-1.5 w-1.5 rounded-full bg-[var(--accent)]"></span>
-            <span>AI × 命理 × 实用工具</span>
+            <!-- <span class="h-1.5 w-1.5 rounded-full bg-[var(--accent)]"></span> -->
+            <span>AI × 命理 × 工具</span>
           </div>
 
           <h1
@@ -25,25 +25,55 @@
             融合最先进的人工智能技术与传统命理体系，用更客观、可解释的方式，帮助你读懂八字命盘、理解术语与推演逻辑。
           </p>
 
-          <blockquote class="mt-6 max-w-[56rem] rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-left md:px-7 md:py-6">
-            <div class="text-[15px] leading-relaxed text-white/75 md:text-base">
-              “不知命，无以为君子。”
+          <blockquote class="mt-6 max-w-[56rem] rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-left md:px-5 md:py-6">
+            <div class="space-y-4">
+              <div class="space-y-1">
+                <div class="text-[15px] leading-relaxed text-white/75 md:text-base">
+                  “不知命，无以为君子。”
+                </div>
+                <div class="text-xs text-white/45 text-right">— 孔子</div>
+              </div>
+              <div class="border-t border-white/10 pt-4 space-y-1">
+                <div class="text-[15px] leading-relaxed text-white/75 md:text-base">
+                  “一个人到了四十岁还不信命，此人悟性太差。”
+                </div>
+                <div class="text-xs text-white/45 text-right">— 复旦大学哲学院教授 王德峰</div>
+              </div>
             </div>
-            <div class="mt-3 text-xs text-white/45 text-right">— 孔子</div>
           </blockquote>
 
-          <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <button class="btn-primary px-6 py-3 text-[15px]" type="button" @click="goToForm">
+          <div class="mt-8 flex w-full flex-col items-center gap-4">
+            <button
+              class="btn-primary w-full max-w-[360px] px-8 py-4 text-base md:text-lg"
+              type="button"
+              @click="goToForm"
+            >
               开始排盘
             </button>
-            <button
-              class="btn-ghost px-6 py-3 text-[15px]"
-              type="button"
-              :disabled="archives.length === 0"
-              @click="openArchivePicker"
-            >
-              选择已有档案
-            </button>
+            <div class="flex flex-wrap items-center justify-center gap-3">
+              <button
+                class="btn-ghost flex items-center gap-1.5 px-3 py-2 text-[14px] text-white/70 opacity-80 transition hover:opacity-100"
+                type="button"
+                :disabled="archives.length === 0"
+                @click="openArchivePicker"
+              >
+                <span>选择已有档案</span>
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+              <button
+                v-if="selectedArchive"
+                class="btn-ghost flex items-center gap-1.5 px-3 py-2 text-[14px] text-white/70 opacity-80 transition hover:opacity-100"
+                type="button"
+                @click="goToLastArchive"
+              >
+                <span>继续浏览：{{ selectedArchive.displayName || selectedArchive.name }}</span>
+                <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           <div class="mt-6 text-xs tracking-[0.15em] text-white/45">
@@ -56,7 +86,6 @@
       <section class="flex flex-col gap-4">
         <div class="flex items-end justify-between gap-3">
           <h2 class="text-lg font-semibold text-white">核心理念</h2>
-          <div class="text-sm text-white/55">把“深奥术语”变成“可理解的推演”</div>
         </div>
         <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
           <FeatureCard>
@@ -101,7 +130,6 @@
       <section class="flex flex-col gap-4">
         <div class="flex items-end justify-between gap-3">
           <h2 class="text-lg font-semibold text-white">核心模块</h2>
-          <div class="text-sm text-white/55">围绕排盘、对比、学习与对话</div>
         </div>
 
         <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -162,7 +190,7 @@
       </section>
 
       <!-- Footer -->
-      <footer class="panel-card p-6">
+      <footer class="p-6">
         <div class="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
           <div class="min-w-0">
             <div class="text-base font-semibold text-white">神机喵算 · BaziMiao</div>
@@ -188,15 +216,24 @@
 </template>
 
 <script setup lang="ts">
-import { inject, onMounted, onUnmounted } from 'vue';
+import { computed, inject, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import FeatureCard from '../components/FeatureCard.vue';
 import { useStore } from '../composables/useStore';
 
 const router = useRouter();
-const { archives } = useStore();
+const { archives, activeArchiveId } = useStore();
 const openArchivePickerInjected = inject<() => void>('openArchivePicker', undefined);
 const currentYear = new Date().getFullYear();
+const selectedArchive = computed(() => {
+  if (activeArchiveId.value === null) return null;
+  return archives.value.find((entry) => entry.id === activeArchiveId.value) ?? null;
+});
+
+const goToLastArchive = () => {
+  if (!selectedArchive.value) return;
+  router.push({ name: 'BaziChart', params: { id: selectedArchive.value.id } });
+};
 
 // 导航到表单页
 const goToForm = () => {

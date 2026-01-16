@@ -290,6 +290,13 @@ export interface SmartEnergyElement {
   description: string;
 }
 
+export interface DevInfo {
+  elapsed_ms: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+}
+
 export interface SmartEnergyResult {
   elements: {
     木: SmartEnergyElement;
@@ -302,6 +309,7 @@ export interface SmartEnergyResult {
   overall?: string;
   temperament?: string;
   health?: string;
+  dev_info?: DevInfo;
 }
 
 export interface DestinyAnalysisResult {
@@ -315,4 +323,5 @@ export interface DestinyAnalysisItem extends DestinyAnalysisResult {
 
 export interface DestinyAnalysisBatchResult {
   items: DestinyAnalysisItem[];
+  dev_info?: DevInfo;
 }

@@ -1,9 +1,9 @@
 <template>
-  <div class="app-root h-[100dvh] overflow-hidden relative">
+  <div class="app-root min-h-[100dvh] overflow-x-hidden relative">
     <!-- 云朵装饰背景 -->
     <CloudDecoration />
 
-    <!-- 首页专属：星宿粒子连线背景（固定在 viewport，不随 app-scroll 滚动） -->
+    <!-- 首页专属：星宿粒子连线背景（固定在 viewport，不随页面滚动） -->
     <div v-if="isHomePage" class="pointer-events-none fixed inset-0 z-0" aria-hidden="true">
       <ConstellationBackground class="absolute inset-0 opacity-35" :particle-count="108" :max-link-distance="150" />
       <!-- 轻微顶部高光：只做氛围，避免滚动时“上方过亮” -->
@@ -25,19 +25,36 @@
       @go-login="goToLogin"
     />
 
-    <!-- 主内容区域：路由视图（滚动由 app-scroll 容器接管） -->
-    <div class="app-content relative z-10 h-full pt-0 md:pt-0 lg:pt-0">
+    <!-- 主内容区域：路由视图（使用 window 滚动） -->
+    <div class="app-content relative z-10 min-h-[100dvh] pt-0 md:pt-0 lg:pt-0">
       <div
-        ref="scrollEl"
-        class="app-scroll h-full overflow-y-auto overscroll-contain"
+        class="app-page-shell"
         :class="
           isHomePage || isLayoutChatPage
             ? ''
             : 'pt-[calc(48px+env(safe-area-inset-top,0px))] md:pt-[calc(56px+env(safe-area-inset-top,0px))] lg:pt-[calc(64px+env(safe-area-inset-top,0px))]'
         "
       >
-        <router-view v-if="!isOverlayRoute" />
-        <router-view v-else-if="backgroundRoute" :route="backgroundRoute" />
+        <router-view v-if="!isOverlayRoute" v-slot="{ Component, route: viewRoute }">
+          <template v-if="viewRoute.meta?.keepAlive">
+            <KeepAlive :include="keepAliveViews">
+              <component :is="Component" />
+            </KeepAlive>
+          </template>
+          <template v-else>
+            <component :is="Component" />
+          </template>
+        </router-view>
+        <router-view v-else-if="backgroundRoute" :route="backgroundRoute" v-slot="{ Component, route: viewRoute }">
+          <template v-if="viewRoute.meta?.keepAlive">
+            <KeepAlive :include="keepAliveViews">
+              <component :is="Component" />
+            </KeepAlive>
+          </template>
+          <template v-else>
+            <component :is="Component" />
+          </template>
+        </router-view>
       </div>
     </div>
 
@@ -89,7 +106,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted, nextTick, provide } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, provide } from 'vue';
 import { useRouter, useRoute, type RouteLocationNormalizedLoaded } from 'vue-router';
 import TopNav from './components/TopNav.vue';
 import CloudDecoration from './components/CloudDecoration.vue';
@@ -109,7 +126,6 @@ const route = useRoute();
 const { isAuthenticated, activeArchiveId, report, chart, archives, analysis } = useStore();
 const { isStreamingActive } = useUnifiedChatStore();
 const reportStream = useBaziReportStream();
-const scrollEl = ref<HTMLElement | null>(null);
 const chatFabRef = ref<InstanceType<typeof ChatFab> | null>(null);
 
 // ========== ChatFab：提示气泡/动效/提醒 ==========
@@ -235,7 +251,6 @@ const backgroundRoute = ref<RouteLocationNormalizedLoaded | null>(null);
 const isOverlayRoute = computed(() => route.meta?.overlay === true);
 const layoutRoute = computed(() => (isOverlayRoute.value && backgroundRoute.value ? backgroundRoute.value : route));
 const isLayoutChatPage = computed(() => layoutRoute.value.path === '/chat');
-const skipNextScrollRestore = ref(false);
 let removeAfterEachHook: (() => void) | null = null;
 const layoutChartId = computed(() => {
   if (!layoutRoute.value.path.startsWith('/bazi/chart/')) return null;
@@ -388,6 +403,8 @@ const canViewReport = computed(() => {
   return !!report.value || !!activeArchiveId.value;
 });
 
+const keepAliveViews = ['ChartBasicTab', 'ChartReportTab', 'ChartDetailTab', 'ChartVerificationTab'];
+
 // 关键：当用户通过“路由/浏览器前进后退/深链接”切换 chartId 时，同步全局档案状态，
 // 并清掉上一个档案的 SSE 流式状态，避免旧的分段内容误显示在新档案下。
 watch(
@@ -534,11 +551,6 @@ const goToLogin = () => {
   router.push('/profile');
 };
 
-const getScrollTop = () => scrollEl.value?.scrollTop ?? 0;
-const setScrollTop = (top: number, behavior: ScrollBehavior = 'auto') => {
-  scrollEl.value?.scrollTo({ top, behavior });
-};
-
 // 更新桌面端状态
 const updateDesktop = () => {
   isDesktop.value = window.matchMedia('(min-width: 1024px)').matches;
@@ -564,71 +576,19 @@ watch(
 watch(
   () => route.path,
   (path) => {
-    // 如果当前在命盘解析模块的页面
-    if (path.startsWith('/bazi/chart/')) {
-      const chartId = route.params.id as string;
-      const page = currentPage.value as 'basic' | 'report' | 'detail' | 'verification';
-
-      // 保存浏览状态（包括当前页面和滚动位置）
-      if (chartId && page) {
-        saveBaziViewState({
-          page,
-          scrollPosition: getScrollTop(),
-          chartId,
-        });
-      }
+    if (!path.startsWith('/bazi/chart/')) return;
+    const chartId = route.params.id as string;
+    const page = currentPage.value as 'basic' | 'report' | 'detail' | 'verification';
+    if (chartId && page) {
+      saveBaziViewState({ page, chartId });
     }
   }
 );
 
-// 监听滚动，实时更新滚动位置（节流处理）
-let scrollTimer: number | null = null;
-const handleScroll = () => {
-  if (scrollTimer) {
-    clearTimeout(scrollTimer);
-  }
-  scrollTimer = window.setTimeout(() => {
-    if (route.path.startsWith('/bazi/chart/')) {
-      const chartId = route.params.id as string;
-      const page = currentPage.value as 'basic' | 'report' | 'detail' | 'verification';
-
-      if (chartId && page) {
-        saveBaziViewState({
-          page,
-          scrollPosition: getScrollTop(),
-          chartId,
-        });
-      }
-    }
-  }, 200); // 200ms 节流
-};
-
-// 路由切换后，恢复滚动位置（由 App 内的滚动容器接管）
 watch(
   () => route.fullPath,
-  async () => {
-    // 路由变化时收起弹窗，避免遮挡
+  () => {
     logoDialogOpen.value = false;
-
-    // overlay 打开/关闭时，不改动背景页滚动；关闭 overlay 后跳过一次滚动恢复
-    if (route.meta?.overlay === true) return;
-    if (skipNextScrollRestore.value) {
-      skipNextScrollRestore.value = false;
-      return;
-    }
-
-    await nextTick();
-    if (!scrollEl.value) return;
-
-    if (route.path.startsWith('/bazi/chart/')) {
-      const viewState = loadBaziViewState();
-      const chartId = route.params.id as string;
-      if (viewState && viewState.chartId === chartId) {
-        setScrollTop(viewState.scrollPosition, 'auto');
-        return;
-      }
-    }
-    setScrollTop(0, 'auto');
   },
   { immediate: true }
 );
@@ -637,24 +597,12 @@ onMounted(() => {
   updateDesktop();
   window.addEventListener('resize', updateDesktop, { passive: true });
 
-  if (scrollEl.value) {
-    scrollEl.value.addEventListener('scroll', handleScroll, { passive: true });
-  }
-
   // 记录 overlay 的背景路由：用于 /chat 退出动画露出上一页
   removeAfterEachHook = router.afterEach((to, from) => {
     if (to.meta?.overlay === true) {
-      // 进入 overlay：记录上一页（非 overlay）
       if (from.meta?.overlay !== true) {
         backgroundRoute.value = from;
       }
-      return;
-    }
-
-    // 退出 overlay：下一次 route.fullPath watch 不要改滚动位置
-    if (from.meta?.overlay === true) {
-      skipNextScrollRestore.value = true;
-      backgroundRoute.value = null;
       return;
     }
 
@@ -668,12 +616,6 @@ onUnmounted(() => {
   if (removeAfterEachHook) {
     removeAfterEachHook();
     removeAfterEachHook = null;
-  }
-  if (scrollEl.value) {
-    scrollEl.value.removeEventListener('scroll', handleScroll);
-  }
-  if (scrollTimer) {
-    clearTimeout(scrollTimer);
   }
   clearChatFabTimers();
 });

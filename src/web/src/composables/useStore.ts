@@ -18,6 +18,8 @@ import {
   saveArchiveCounter,
   loadActiveArchiveId,
   saveActiveArchiveId,
+  loadDevMode,
+  saveDevMode,
 } from '../utils/storage';
 
 // 全局状态（使用单例模式，确保所有组件共享同一份数据）
@@ -28,6 +30,7 @@ const archives = ref<ArchiveEntry[]>([]);
 const archiveCounter = ref(0);
 const activeArchiveId = ref<number | null>(null);
 const isAuthenticated = ref(false);
+const devMode = ref(false);
 
 // 是否已初始化（避免重复加载）
 let initialized = false;
@@ -43,6 +46,7 @@ const initializeStore = () => {
   archives.value = loadArchives();
   archiveCounter.value = loadArchiveCounter();
   activeArchiveId.value = loadActiveArchiveId();
+  devMode.value = loadDevMode();
   if (activeArchiveId.value !== null) {
     const entry = archives.value.find((item) => item.id === activeArchiveId.value) ?? null;
     report.value = entry?.reportState.report ?? null;
@@ -81,6 +85,10 @@ export const useStore = () => {
 
   watch(activeArchiveId, (newId) => {
     saveActiveArchiveId(newId);
+  });
+
+  watch(devMode, (enabled) => {
+    saveDevMode(enabled);
   });
 
   // 计算属性
@@ -144,6 +152,7 @@ export const useStore = () => {
     archiveCounter,
     activeArchiveId,
     isAuthenticated,
+    devMode,
 
     // 计算属性
     canChat,

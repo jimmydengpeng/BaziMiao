@@ -17,5 +17,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'ChartVerificationTab' });
+
 // 占位页面，无逻辑
 </script>

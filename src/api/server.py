@@ -114,6 +114,34 @@ def _estimate_tokens(text: str) -> int:
     return max(1, (len(cleaned) + 3) // 4)
 
 
+def _build_dev_info(
+    usage: Any,
+    elapsed_ms: Optional[int],
+    messages: List[Dict[str, Any]],
+    raw_text: Optional[str],
+) -> Dict[str, Any]:
+    prompt_tokens = usage.get("prompt_tokens") if isinstance(usage, dict) else None
+    completion_tokens = usage.get("completion_tokens") if isinstance(usage, dict) else None
+    total_tokens = usage.get("total_tokens") if isinstance(usage, dict) else None
+
+    prompt_est = _estimate_tokens(json.dumps(messages, ensure_ascii=False))
+    completion_est = _estimate_tokens(raw_text or "")
+
+    if prompt_tokens is None:
+        prompt_tokens = prompt_est
+    if completion_tokens is None:
+        completion_tokens = completion_est
+    if total_tokens is None:
+        total_tokens = (prompt_tokens or 0) + (completion_tokens or 0)
+
+    return {
+        "elapsed_ms": elapsed_ms or 0,
+        "prompt_tokens": int(prompt_tokens),
+        "completion_tokens": int(completion_tokens),
+        "total_tokens": int(total_tokens),
+    }
+
+
 def _truncate_text(text: str, max_chars: int = AI_LOG_MAX_CHARS) -> str:
     if not text:
         return ""
@@ -1221,7 +1249,8 @@ def analyze_energy(payload: EnergyAnalysisRequest):
                 "result": result,
             }
         )
-        return result
+        dev_info = _build_dev_info(usage, elapsed_ms, messages, raw_text)
+        return {**result, "dev_info": dev_info}
     except LLMError as exc:
         elapsed_ms = int((time.perf_counter() - start_time) * 1000) if "start_time" in locals() else None
         energy_logger.error(
@@ -1616,13 +1645,14 @@ def analyze_destiny_batch(payload: DestinyAnalysisBatchRequest):
                 "result": {"items": normalized},
             }
         )
+        dev_info = _build_dev_info(usage, elapsed_ms, messages, raw_text)
 
         if input_years:
             by_year = {item["year"]: item for item in normalized}
             ordered = [by_year[year] for year in input_years if year in by_year]
-            return {"items": ordered or normalized}
+            return {"items": ordered or normalized, "dev_info": dev_info}
 
-        return {"items": normalized}
+        return {"items": normalized, "dev_info": dev_info}
     except LLMError as exc:
         elapsed_ms = int((time.perf_counter() - start_time) * 1000) if "start_time" in locals() else None
         destiny_logger.error(
