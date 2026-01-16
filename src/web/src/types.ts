@@ -234,7 +234,7 @@ export type ReportSseEvent =
     }
   | { type: "section_patch"; report_id: string; section_id: string; patch: Record<string, unknown> }
   | { type: "section_done"; report_id: string; section_id: string }
-  | { type: "report_done"; report_id: string; report?: Report; thinking?: string }
+  | { type: "report_done"; report_id: string; report?: Report; thinking?: string; dev_info?: DevInfo }
   | { type: "error"; report_id?: string; message: string; recoverable?: boolean };
 
 export interface ChartResponse {

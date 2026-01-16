@@ -157,6 +157,10 @@
       </ReportSectionCard>
     </div>
 
+    <div v-if="shouldShowDevInfo && reportDevInfoText" class="px-1 text-[10px] text-white/40">
+      {{ reportDevInfoText }}
+    </div>
+
     <ReportSectionCard v-if="shouldShowDebugPrompt" title="提示词（开发）" :meta="debugPromptCollapsed ? '已折叠' : '已展开'">
       <template #actions>
         <button
@@ -187,7 +191,7 @@ import ReportSectionCard from '../components/ReportSectionCard.vue';
 import ReportSectionStatusCard from '../components/ReportSectionStatusCard.vue';
 import ReportSectionContent from '../components/ReportSectionContent.vue';
 import { useBaziReportStream } from '../composables/useBaziReportStream';
-import type { BaziReportV1, LegacyReport, Report } from '../types';
+import type { BaziReportV1, DevInfo, LegacyReport, Report } from '../types';
 import { normalizeChartForRequest } from '../utils/chart';
 import thinkingIconUrl from '../assets/svg/thinking-tripple-full.svg';
 import sparkleIconUrl from '../assets/sparkles.png';
@@ -223,6 +227,23 @@ const legacyRawPrompt = computed(() => {
 
 const debugPrompt = computed(() => streamState.prompt ?? legacyRawPrompt.value ?? null);
 const shouldShowDebugPrompt = computed(() => devMode.value && ENABLE_DEBUG_PROMPT_PANEL && !!debugPrompt.value);
+const shouldShowDevInfo = computed(() => devMode.value && !!streamState.devInfo);
+
+const formatDevInfo = (devInfo: DevInfo | null) => {
+  if (!devInfo) return '';
+  const elapsedMs = Number.isFinite(devInfo.elapsed_ms) ? devInfo.elapsed_ms : 0;
+  const elapsedText =
+    elapsedMs >= 1000
+      ? `${(elapsedMs / 1000).toFixed(elapsedMs >= 10000 ? 0 : 1)}s`
+      : `${Math.max(0, Math.round(elapsedMs))}ms`;
+  const totalTokens = Number.isFinite(devInfo.total_tokens) ? devInfo.total_tokens : null;
+  if (totalTokens === null) {
+    return `cost: ${elapsedText}`;
+  }
+  return `cost: ${elapsedText} ${totalTokens} tokens`;
+};
+
+const reportDevInfoText = computed(() => formatDevInfo(streamState.devInfo));
 
 const SAMPLE_REPORT = {
   meta: {

@@ -531,9 +531,19 @@ def generate_report_stream(payload: ReportRequest):
                                     "".join(thinking_chunks).strip() if thinking_chunks else "",
                                 )
                                 elapsed_ms = int((time.perf_counter() - stream_start) * 1000)
+                                prompt_tokens_est = _estimate_tokens(prompt_text)
                                 completion_tokens_est = max(
                                     1,
                                     (stream_stats["delta_chars"] + stream_stats["thinking_chars"] + 3) // 4,
+                                )
+                                normalized.setdefault(
+                                    "dev_info",
+                                    {
+                                        "elapsed_ms": elapsed_ms,
+                                        "prompt_tokens": prompt_tokens_est,
+                                        "completion_tokens": completion_tokens_est,
+                                        "total_tokens": prompt_tokens_est + completion_tokens_est,
+                                    },
                                 )
                                 _log_ai_metrics(
                                     {
@@ -548,10 +558,9 @@ def generate_report_stream(payload: ReportRequest):
                                         "timeout": timeout,
                                         "elapsed_ms": elapsed_ms,
                                         "usage": {
-                                            "prompt_tokens_est": _estimate_tokens(prompt_text),
+                                            "prompt_tokens_est": prompt_tokens_est,
                                             "completion_tokens_est": completion_tokens_est,
-                                            "total_tokens_est": _estimate_tokens(prompt_text)
-                                            + completion_tokens_est,
+                                            "total_tokens_est": prompt_tokens_est + completion_tokens_est,
                                         },
                                         "stream": stream_stats,
                                     }
@@ -632,10 +641,20 @@ def generate_report_stream(payload: ReportRequest):
                             "thinking", "".join(thinking_chunks).strip() if thinking_chunks else ""
                         )
                         elapsed_ms = int((time.perf_counter() - stream_start) * 1000)
+                        prompt_tokens_est = _estimate_tokens(prompt_text)
                         completion_tokens_est = max(
                             1,
                             (stream_stats["delta_chars"] + stream_stats["thinking_chars"] + 3)
                             // 4,
+                        )
+                        normalized.setdefault(
+                            "dev_info",
+                            {
+                                "elapsed_ms": elapsed_ms,
+                                "prompt_tokens": prompt_tokens_est,
+                                "completion_tokens": completion_tokens_est,
+                                "total_tokens": prompt_tokens_est + completion_tokens_est,
+                            },
                         )
                         _log_ai_metrics(
                             {
@@ -650,10 +669,9 @@ def generate_report_stream(payload: ReportRequest):
                                 "timeout": timeout,
                                 "elapsed_ms": elapsed_ms,
                                 "usage": {
-                                    "prompt_tokens_est": _estimate_tokens(prompt_text),
+                                    "prompt_tokens_est": prompt_tokens_est,
                                     "completion_tokens_est": completion_tokens_est,
-                                    "total_tokens_est": _estimate_tokens(prompt_text)
-                                    + completion_tokens_est,
+                                    "total_tokens_est": prompt_tokens_est + completion_tokens_est,
                                 },
                                 "stream": stream_stats,
                             }

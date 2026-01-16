@@ -24,14 +24,6 @@
 
     <div v-if="showSample && state === 'idle'" class="space-y-2 pb-3">
       <slot name="sample" />
-      <div class="space-y-2">
-        <div
-          v-for="(bar, idx) in placeholderBarsResolved"
-          :key="`placeholder-sample-${idx}`"
-          class="h-2 rounded bg-white/10"
-          :style="{ width: `${bar}%` }"
-        ></div>
-      </div>
     </div>
     <div v-else class="space-y-2 pb-3">
       <div

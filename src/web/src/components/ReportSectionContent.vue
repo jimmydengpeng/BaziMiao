@@ -23,12 +23,14 @@
     <div
       class="markdown-body report-section-content text-xs leading-relaxed break-words"
       :class="compact ? 'max-h-[7.5rem] overflow-hidden' : ''"
+      :style="compact ? fadeMaskStyle : undefined"
       v-html="renderMarkdown(contentMd)"
     ></div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import ReportTalentRadar from './ReportTalentRadar.vue';
 import ReportStrengthGauge from './ReportStrengthGauge.vue';
 import ReportTrendLine from './ReportTrendLine.vue';
@@ -45,6 +47,18 @@ withDefaults(defineProps<{
   sectionId: undefined,
   structured: undefined,
   compact: false,
+});
+
+const fadeMaskStyle = computed(() => {
+  const gradient = 'linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0.25) 25%, rgba(0,0,0,0.01) 75%, rgba(0,0,0,0) 100%)';
+  return {
+    WebkitMaskImage: gradient,
+    maskImage: gradient,
+    WebkitMaskRepeat: 'no-repeat',
+    maskRepeat: 'no-repeat',
+    WebkitMaskSize: '100% 100%',
+    maskSize: '100% 100%',
+  } as Record<string, string>;
 });
 
 const radarDimensions = (structured: unknown): Array<{ key: string; label: string; score: number }> | null => {

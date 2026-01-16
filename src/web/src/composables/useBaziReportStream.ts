@@ -1,5 +1,5 @@
 import { reactive, ref } from 'vue';
-import type { Analysis, BaziReportInputRefsV1, BaziReportV1, ReportSseEvent } from '../types';
+import type { Analysis, BaziReportInputRefsV1, BaziReportV1, DevInfo, ReportSseEvent } from '../types';
 
 export type SectionStatus = 'idle' | 'generating' | 'done' | 'error';
 
@@ -23,6 +23,7 @@ export interface ReportStreamState {
   error: string;
   finalReport: BaziReportV1 | null;
   analysis: Analysis | null;
+  devInfo: DevInfo | null;
 }
 
 const isBaziReportV1 = (value: unknown): value is BaziReportV1 => {
@@ -132,6 +133,7 @@ const state = reactive<ReportStreamState>({
   error: '',
   finalReport: null,
   analysis: null,
+  devInfo: null,
 });
 
 const isStreaming = ref(false);
@@ -148,6 +150,7 @@ const reset = () => {
   state.error = '';
   state.finalReport = null;
   state.analysis = null;
+  state.devInfo = null;
 };
 
 const abort = () => {
@@ -233,6 +236,7 @@ const handleEvent = (event: ReportSseEvent) => {
   if (event.type === 'report_done') {
     state.done = true;
     if (event.thinking) state.thinking = event.thinking;
+    state.devInfo = event.dev_info ?? null;
     if (event.report && isBaziReportV1(event.report)) {
       state.finalReport = event.report;
       return;
