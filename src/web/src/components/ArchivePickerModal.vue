@@ -65,6 +65,7 @@
                         />
                       </div>
                     </div>
+                    <SettingsIconButton aria-label="命盘档案" @click="goToArchives" />
                     <CloseIconButton @click="close" />
                   </div>
                 </div>
@@ -92,10 +93,14 @@
 
 <script setup lang="ts">
 import { nextTick, onUnmounted, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import ArchiveListPanel from './ArchiveListPanel.vue';
 import CloseIconButton from './CloseIconButton.vue';
+import SettingsIconButton from './SettingsIconButton.vue';
 import type { ArchiveEntry } from '../utils/storage';
 import { lockBackgroundScroll } from '../utils/scroll-lock';
+
+const router = useRouter();
 
 const props = withDefaults(defineProps<{
   modelValue: boolean;
@@ -122,6 +127,11 @@ const close = () => {
   searchOpen.value = false;
   searchQuery.value = '';
   emit('update:modelValue', false);
+};
+
+const goToArchives = () => {
+  close();
+  router.push({ name: 'Archives' });
 };
 
 const handleSelect = (entry: ArchiveEntry) => {

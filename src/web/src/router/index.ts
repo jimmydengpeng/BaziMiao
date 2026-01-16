@@ -21,13 +21,23 @@ const routes: RouteRecordRaw[] = [
     children: [
       {
         path: '',
-        redirect: 'pillars'
+        redirect: 'basic'
       },
       {
+        path: 'basic',
+        name: 'ChartBasic',
+        component: () => import('../views/ChartBasicTab.vue'),
+        meta: { title: '命盘信息' }
+      },
+      {
+        // 兼容旧链接：/bazi/chart/:id/pillars -> /bazi/chart/:id/basic
         path: 'pillars',
-        name: 'ChartPillars',
-        component: () => import('../views/ChartPillarsTab.vue'),
-        meta: { title: '八字命盘' }
+        redirect: (to) => ({
+          name: 'ChartBasic',
+          params: to.params,
+          query: to.query,
+          hash: to.hash,
+        }),
       },
       {
         path: 'report',

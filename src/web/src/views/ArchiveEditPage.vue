@@ -122,7 +122,7 @@ const handleSubmit = async (payload: BirthFormValues) => {
     let updatedEntry = {
       ...entry,
       name,
-      displayName
+      displayName,
     };
 
     if (shouldRechart) {
@@ -146,7 +146,11 @@ const handleSubmit = async (payload: BirthFormValues) => {
         gender: chartData.chart.gender,
         birthLabel: buildBirthLabel(payload),
         pillars: buildPillarsFromChart(chartData.chart),
-        chart: updatedChart
+        chart: updatedChart,
+        reportState: {
+          status: 'idle',
+          report: null,
+        },
       };
     } else {
       const nextChart = {
@@ -157,7 +161,8 @@ const handleSubmit = async (payload: BirthFormValues) => {
       updatedEntry = {
         ...updatedEntry,
         gender: payload.gender,
-        chart: nextChart
+        chart: nextChart,
+        reportState: entry.reportState,
       };
     }
 

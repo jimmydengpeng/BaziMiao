@@ -13,9 +13,9 @@
       <div class="grid gap-2">
         <div class="text-[11px] uppercase tracking-[0.12em] text-white/60">核心功能</div>
         <button
-          :class="[navBtnBase, { [navBtnActive]: currentPage === 'chart' }]"
+          :class="[navBtnBase, { [navBtnActive]: currentPage === 'basic' }]"
           type="button"
-          @click="handleNav('chart')"
+          @click="handleNav('basic')"
         >
           <span :class="navIconClass">
             <img :src="baziChartIconUrl" alt="命盘信息" class="h-6 w-6 object-contain" />
@@ -90,7 +90,7 @@ const { activeArchiveId } = useStore();
 
 // Props
 defineProps<{
-  currentPage: 'chart' | 'report' | 'detail' | 'verification' | 'archive' | 'form';
+  currentPage: 'basic' | 'report' | 'detail' | 'verification' | 'archive' | 'form';
   canViewReport: boolean; // 是否可以查看报告（需要已生成报告）
 }>();
 
@@ -102,12 +102,12 @@ const navBtnActive =
 const navIconClass = 'flex h-10 w-10 items-center justify-center rounded-lg shrink-0';
 
 // 处理导航点击
-const handleNav = (page: 'chart' | 'report' | 'detail' | 'verification' | 'archive' | 'form') => {
+const handleNav = (page: 'basic' | 'report' | 'detail' | 'verification' | 'archive' | 'form') => {
   // 根据页面类型导航到对应路由
   switch (page) {
-    case 'chart': {
+    case 'basic': {
       const chartId = route.params.id || activeArchiveId.value || 'temp';
-      router.push(`/bazi/chart/${chartId}/pillars`);
+      router.push(`/bazi/chart/${chartId}/basic`);
       break;
     }
     case 'report': {

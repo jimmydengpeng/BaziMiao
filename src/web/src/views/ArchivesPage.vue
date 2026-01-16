@@ -124,6 +124,7 @@
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useStore } from '../composables/useStore';
+import { useBaziReportStream } from '../composables/useBaziReportStream';
 import type { ArchiveEntry } from '../utils/storage';
 import ArchiveListPanel from '../components/ArchiveListPanel.vue';
 import successIconUrl from '../assets/success.png';
@@ -132,6 +133,7 @@ import deleteIconUrl from '../assets/archive_delete.png';
 const router = useRouter();
 const route = useRoute();
 const { archives, activeArchiveId, chart, analysis, report } = useStore();
+const reportStream = useBaziReportStream();
 const showCopyModal = ref(false);
 const copyText = ref('');
 const isCopyMode = ref(false);
@@ -160,15 +162,19 @@ const pendingEntryId = computed(() => {
 
 // 打开档案，加载命盘数据并跳转到详情页
 const openArchive = (entry: ArchiveEntry) => {
+  // 从档案列表切换：清掉上一份报告流状态，避免旧分段残留
+  reportStream.abort();
+  reportStream.reset();
+
   activeArchiveId.value = entry.id;
   chart.value = entry.chart;
 
   // 清空分析和报告（需要重新生成）
   analysis.value = null;
-  report.value = null;
+  report.value = entry.reportState.report ?? null;
 
   // 跳转到命盘详情页
-  router.push(`/bazi/chart/${entry.id}/pillars`);
+  router.push(`/bazi/chart/${entry.id}/basic`);
 };
 
 // 跳转到新建表单
@@ -193,7 +199,7 @@ const deleteArchives = (ids: number[]) => {
     activeArchiveId.value = next ? next.id : null;
     chart.value = next ? next.chart : null;
     analysis.value = null;
-    report.value = null;
+    report.value = next ? next.reportState.report ?? null : null;
   }
 };
 

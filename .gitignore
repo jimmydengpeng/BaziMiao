@@ -16,3 +16,7 @@ dist/
 .shared/
 
 .env
+
+# Runtime logs
+logs/
+*.log

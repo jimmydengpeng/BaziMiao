@@ -58,7 +58,7 @@ const handleSubmit = async (payload: BirthFormValues) => {
     const chartId = activeArchiveId.value || 'temp-' + Date.now();
 
     // 跳转到命盘详情页
-    router.push(`/bazi/chart/${chartId}/pillars`);
+    router.push(`/bazi/chart/${chartId}/basic`);
   } catch (err) {
     error.value = err instanceof Error ? err.message : String(err);
   } finally {
@@ -82,7 +82,11 @@ const saveArchive = (formValues: BirthFormValues, chartData: any) => {
     gender: chartData.gender,
     birthLabel,
     pillars,
-    chart: chartData
+    chart: chartData,
+    reportState: {
+      status: 'idle',
+      report: null,
+    },
   };
 
   archives.value.unshift(entry);

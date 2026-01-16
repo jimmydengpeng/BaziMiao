@@ -100,6 +100,7 @@ import LogoDialog from './components/LogoDialog.vue';
 import ArchivePickerModal from './components/ArchivePickerModal.vue';
 import { useStore } from './composables/useStore';
 import { useUnifiedChatStore } from './composables/useUnifiedChatStore';
+import { useBaziReportStream } from './composables/useBaziReportStream';
 import { loadBaziViewState, saveBaziViewState } from './utils/storage';
 import type { ArchiveEntry } from './utils/storage';
 
@@ -107,6 +108,7 @@ const router = useRouter();
 const route = useRoute();
 const { isAuthenticated, activeArchiveId, report, chart, archives, analysis } = useStore();
 const { isStreamingActive } = useUnifiedChatStore();
+const reportStream = useBaziReportStream();
 const scrollEl = ref<HTMLElement | null>(null);
 const chatFabRef = ref<InstanceType<typeof ChatFab> | null>(null);
 
@@ -235,6 +237,12 @@ const layoutRoute = computed(() => (isOverlayRoute.value && backgroundRoute.valu
 const isLayoutChatPage = computed(() => layoutRoute.value.path === '/chat');
 const skipNextScrollRestore = ref(false);
 let removeAfterEachHook: (() => void) | null = null;
+const layoutChartId = computed(() => {
+  if (!layoutRoute.value.path.startsWith('/bazi/chart/')) return null;
+  const raw = layoutRoute.value.params?.id;
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return typeof value === 'string' ? value : null;
+});
 
 // 根据当前路由计算激活的模块
 const activeModule = computed(() => {
@@ -365,20 +373,42 @@ const currentPage = computed(() => {
   if (path.includes('/report')) return 'report';
   if (path.includes('/detail') || path.includes('/pro')) return 'detail';
   if (path.includes('/verification')) return 'verification';
-  if (path.includes('/pillars')) return 'chart';
-  if (path.includes('/chart')) return 'chart';
+  if (path.includes('/basic') || path.includes('/pillars')) return 'basic';
+  if (path.includes('/chart')) return 'basic';
   if (path.includes('/archives')) return 'archive';
   if (path.includes('/chat')) return 'master-chat';
   if (path.includes('/form')) return 'form';
   if (path.includes('/about')) return 'about';
   if (path === '/') return 'home';
-  return 'chart';
+  return 'basic';
 });
 
 // 是否可以查看报告（需要已生成报告）
 const canViewReport = computed(() => {
   return !!report.value || !!activeArchiveId.value;
 });
+
+// 关键：当用户通过“路由/浏览器前进后退/深链接”切换 chartId 时，同步全局档案状态，
+// 并清掉上一个档案的 SSE 流式状态，避免旧的分段内容误显示在新档案下。
+watch(
+  layoutChartId,
+  (nextId, prevId) => {
+    if (!nextId || nextId === prevId) return;
+
+    reportStream.abort();
+    reportStream.reset();
+
+    const parsed = Number(nextId);
+    if (!Number.isFinite(parsed)) return;
+
+    const entry = archives.value.find((item) => item.id === parsed) ?? null;
+    activeArchiveId.value = parsed;
+    chart.value = entry?.chart ?? null;
+    analysis.value = null;
+    report.value = entry?.reportState.report ?? null;
+  },
+  { immediate: true }
+);
 
 // 处理浮动按钮点击
 const handleChatFabClick = () => {
@@ -411,11 +441,22 @@ const openArchivePicker = () => {
 provide('openArchivePicker', openArchivePicker);
 
 const handleArchiveSelect = (entry: ArchiveEntry) => {
+  // 切换档案：先清掉上一份报告流状态，避免“旧分段”残留或旧请求继续写入新档案
+  reportStream.abort();
+  reportStream.reset();
+
   activeArchiveId.value = entry.id;
   chart.value = entry.chart;
   analysis.value = null;
-  report.value = null;
-  router.push(`/bazi/chart/${entry.id}/pillars`);
+  report.value = entry.reportState.report ?? null;
+
+  // 如果当前就在命盘解析模块内，尽量保留用户正在看的 Tab（basic/report/detail/verification）
+  const page = currentPage.value as string;
+  const targetPage =
+    layoutRoute.value.path.startsWith('/bazi/chart/') && ['basic', 'report', 'detail', 'verification'].includes(page)
+      ? page
+      : 'basic';
+  router.push(`/bazi/chart/${entry.id}/${targetPage}`);
 };
 
 // 处理模块导航
@@ -432,11 +473,10 @@ const handleNavigate = (module: 'bazi' | 'compatibility' | 'profile' | 'master' 
         if (chartId) {
           if (viewState && viewState.chartId === chartId) {
             // 有保存的状态，恢复到之前的页面和滚动位置
-            const pagePath = viewState.page === 'chart' ? 'pillars' : viewState.page;
-            router.push(`/bazi/chart/${chartId}/${pagePath}`);
+            router.push(`/bazi/chart/${chartId}/${viewState.page}`);
           } else {
             // 没有保存的状态，跳转到默认页面（命盘信息）
-            router.push(`/bazi/chart/${chartId}/pillars`);
+            router.push(`/bazi/chart/${chartId}/basic`);
           }
         } else {
           // 没有有效的 chartId，跳转到表单页
@@ -527,7 +567,7 @@ watch(
     // 如果当前在命盘解析模块的页面
     if (path.startsWith('/bazi/chart/')) {
       const chartId = route.params.id as string;
-      const page = currentPage.value as 'chart' | 'report' | 'detail' | 'verification';
+      const page = currentPage.value as 'basic' | 'report' | 'detail' | 'verification';
 
       // 保存浏览状态（包括当前页面和滚动位置）
       if (chartId && page) {
@@ -550,7 +590,7 @@ const handleScroll = () => {
   scrollTimer = window.setTimeout(() => {
     if (route.path.startsWith('/bazi/chart/')) {
       const chartId = route.params.id as string;
-      const page = currentPage.value as 'chart' | 'report' | 'detail' | 'verification';
+      const page = currentPage.value as 'basic' | 'report' | 'detail' | 'verification';
 
       if (chartId && page) {
         saveBaziViewState({

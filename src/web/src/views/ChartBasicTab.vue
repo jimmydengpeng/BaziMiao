@@ -1,7 +1,8 @@
 <template>
   <div class="flex flex-col gap-4">
-    <div v-if="!chart" class="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[var(--panel)] p-5 text-[var(--muted)]">
-      生成后会显示命盘信息。
+    <div v-if="!chart" class="chart-info-card flex flex-col gap-3 p-5 text-sm text-[var(--muted)]">
+      <p>未找到命盘数据，请先填写生辰信息。</p>
+      <button class="btn-primary w-fit" type="button" @click="goToForm">去填写</button>
     </div>
     <div v-else class="flex flex-col gap-4 mt-0.5">
       <!-- 基本信息卡片 -->
@@ -114,7 +115,7 @@
       </div>
 
       <!-- 五行能量卡片 -->
-      <div class="panel-card">
+      <div class="chart-info-card">
         <PanelHeader title="五行能量" clickable @header-click="toggleEnergyDetailsExpanded">
           <template #title>
             <div class="flex items-center gap-2">
@@ -575,7 +576,7 @@
       </teleport>
 
       <!-- 八字命盘卡片 -->
-      <div class="panel-card">
+      <div class="chart-info-card">
         <PanelHeader title="八字命盘" clickable @header-click="toggleBaziExtraVisible">
           <template #actions>
             <button
@@ -789,7 +790,7 @@
       </div>
 
       <!-- 大运卡片 -->
-      <div class="panel-card">
+      <div class="chart-info-card">
         <PanelHeader title="大运" clickable @header-click="toggleDestinyListExpanded">
           <template #title>
             <div class="flex items-center gap-3">
@@ -1014,7 +1015,7 @@
       </div>
 
       <!-- 干支关系卡片 -->
-      <div class="panel-card">
+      <div class="chart-info-card">
         <PanelHeader title="干支关系">
           <template #actions>
             <div
@@ -1295,6 +1296,7 @@
 
 <script setup lang="ts">
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, watch } from "vue";
+import { useRouter } from "vue-router";
 import type {
   Chart,
   DestinyAnalysisBatchResult,
@@ -1307,7 +1309,8 @@ import type {
   PillarInfo,
   SmartEnergyResult,
 } from "../types";
-import PanelHeader from "./PanelHeader.vue";
+import PanelHeader from "../components/PanelHeader.vue";
+import { useStore } from "../composables/useStore";
 import { lockBackgroundScroll } from "../utils/scroll-lock";
 import { normalizeChartForRequest } from "../utils/chart";
 // 导入性别图标
@@ -1318,9 +1321,22 @@ import sparkleIconUrl from "../assets/sparkles.png";
 import thinkingIconUrl from "../assets/svg/thinking-tripple-full.svg";
 import switchArchiveIconUrl from "../assets/change-arch.png";
 
-const props = defineProps<{
-  chart: Chart | null;
-}>();
+const router = useRouter();
+const { chart: storeChart } = useStore();
+
+// 保留 `props.chart` 形式，减少历史代码改动；本 Tab 直接读全局 store。
+const props = {
+  get chart(): Chart | null {
+    return storeChart.value;
+  },
+};
+
+// 模板里原本直接用 `chart`（来自 prop）；这里用 computed 继续提供同名变量。
+const chart = computed(() => props.chart);
+
+const goToForm = () => {
+  router.push("/bazi/form");
+};
 
 const openArchivePicker = inject<() => void>("openArchivePicker", undefined);
 

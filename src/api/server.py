@@ -7,7 +7,10 @@ import time
 import urllib.error
 import urllib.request
 from datetime import datetime
-from typing import Any, Dict, Iterator, List, Optional, Union
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
+from typing import Any, Callable, Dict, Iterator, List, Optional, Union
+from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
@@ -32,7 +35,12 @@ from src.llm import LLMError, chat, chat_with_usage, stream_chat_with_reasoning
 from src.models.chart import Chart, GanZhiRelations, PillarInfo
 from src.api.energy_prompt import build_energy_analysis_schema
 from src.api.destiny_prompt import build_destiny_analysis_schema, build_destiny_analysis_batch_schema
-from src.prompt.report_prompt import build_report_prompt
+from src.prompt.report_prompt import (
+    REPORT_SCHEMA_VERSION,
+    REPORT_SECTIONS_PLAN,
+    build_report_prompt,
+    build_report_stream_prompt,
+)
 from src.rules.analysis import evaluate_chart
 
 root_logger = logging.getLogger()
@@ -61,6 +69,76 @@ def _env_flag(name: str, default: bool = False) -> bool:
     if raw is None:
         return default
     return raw.strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+AI_LOG_DIR = os.getenv("AI_LOG_DIR", "logs").strip() or "logs"
+AI_LOG_CONTENT = _env_flag("AI_LOG_CONTENT", True)
+AI_LOG_MAX_CHARS = int(os.getenv("AI_LOG_MAX_CHARS", "20000") or "20000")
+
+
+def _ensure_ai_loggers() -> tuple[logging.Logger, logging.Logger]:
+    log_dir = Path(AI_LOG_DIR)
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    def _make_logger(name: str, filename: str) -> logging.Logger:
+        logger = logging.getLogger(name)
+        logger.setLevel(logging.INFO)
+        logger.propagate = False
+        if logger.handlers:
+            return logger
+        handler = RotatingFileHandler(
+            log_dir / filename,
+            maxBytes=5 * 1024 * 1024,
+            backupCount=3,
+            encoding="utf-8",
+        )
+        handler.setFormatter(logging.Formatter("%(message)s"))
+        logger.addHandler(handler)
+        return logger
+
+    metrics_logger = _make_logger("ai_metrics", "ai-metrics.log")
+    content_logger = _make_logger("ai_content", "ai-content.log")
+    return metrics_logger, content_logger
+
+
+AI_METRICS_LOGGER, AI_CONTENT_LOGGER = _ensure_ai_loggers()
+
+
+def _now_iso() -> str:
+    return datetime.now().isoformat(timespec="seconds")
+
+
+def _estimate_tokens(text: str) -> int:
+    # 没有 tiktoken 时的简易估算：英文约 4 chars/token，中文偏少但先给“量级”参考
+    cleaned = text or ""
+    return max(1, (len(cleaned) + 3) // 4)
+
+
+def _truncate_text(text: str, max_chars: int = AI_LOG_MAX_CHARS) -> str:
+    if not text:
+        return ""
+    if len(text) <= max_chars:
+        return text
+    return text[: max_chars - 20] + f"...(truncated,len={len(text)})"
+
+
+def _log_ai_metrics(event: Dict[str, Any]) -> None:
+    try:
+        payload = {"ts": _now_iso(), **event}
+        AI_METRICS_LOGGER.info(json.dumps(payload, ensure_ascii=False))
+    except Exception:
+        # 不让日志失败影响主流程
+        pass
+
+
+def _log_ai_content(event: Dict[str, Any]) -> None:
+    if not AI_LOG_CONTENT:
+        return
+    try:
+        payload = {"ts": _now_iso(), **event}
+        AI_CONTENT_LOGGER.info(json.dumps(payload, ensure_ascii=False))
+    except Exception:
+        pass
 
 
 def _resolve_llm_provider(requested: Optional[str] = None) -> str:
@@ -172,6 +250,15 @@ def generate_chart(payload: ChartRequest):
 
 @app.post("/api/bazi/report")
 def generate_report(payload: ReportRequest):
+    request_id = str(uuid4())
+    _log_ai_content(
+        {
+            "kind": "request",
+            "endpoint": "/api/bazi/report",
+            "request_id": request_id,
+            "payload": payload.model_dump(mode="json"),
+        }
+    )
     chart, analysis, knowledge, prompt = _prepare_report_context(payload)
     messages = _build_llm_messages(prompt)
 
@@ -181,7 +268,8 @@ def generate_report(payload: ReportRequest):
         temperature = _resolve_llm_temperature("report")
         timeout = _resolve_llm_timeout("report")
         enable_thinking = _resolve_feature_enable_thinking("report", provider)
-        raw_text = chat(
+        start_time = time.perf_counter()
+        raw_text, usage = chat_with_usage(
             messages,
             provider=provider,
             model=model,
@@ -189,10 +277,56 @@ def generate_report(payload: ReportRequest):
             enable_thinking=enable_thinking,
             timeout=timeout,
         )
+        elapsed_ms = int((time.perf_counter() - start_time) * 1000)
     except LLMError as exc:
+        _log_ai_metrics(
+            {
+                "kind": "llm_error",
+                "endpoint": "/api/bazi/report",
+                "request_id": request_id,
+                "provider": provider if "provider" in locals() else None,
+                "model": model if "model" in locals() else None,
+                "message": str(exc),
+            }
+        )
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     report = _normalize_llm_report(raw_text, prompt)
+    prompt_text = json.dumps(messages, ensure_ascii=False)
+    completion_text = raw_text or ""
+    prompt_tokens = usage.get("prompt_tokens") if isinstance(usage, dict) else None
+    completion_tokens = usage.get("completion_tokens") if isinstance(usage, dict) else None
+    total_tokens = usage.get("total_tokens") if isinstance(usage, dict) else None
+    _log_ai_metrics(
+        {
+            "kind": "llm_done",
+            "endpoint": "/api/bazi/report",
+            "request_id": request_id,
+            "provider": provider,
+            "model": model or "default",
+            "enable_thinking": enable_thinking,
+            "temperature": temperature,
+            "timeout": timeout,
+            "elapsed_ms": elapsed_ms if "elapsed_ms" in locals() else None,
+            "usage": {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": total_tokens,
+                "prompt_tokens_est": _estimate_tokens(prompt_text),
+                "completion_tokens_est": _estimate_tokens(completion_text),
+                "total_tokens_est": _estimate_tokens(prompt_text) + _estimate_tokens(completion_text),
+            },
+        }
+    )
+    _log_ai_content(
+        {
+            "kind": "response",
+            "endpoint": "/api/bazi/report",
+            "request_id": request_id,
+            "raw_text": _truncate_text(raw_text or ""),
+            "report": report,
+        }
+    )
     return {
         "chart": chart.model_dump(),
         "analysis": analysis.model_dump(),
@@ -204,6 +338,365 @@ def generate_report(payload: ReportRequest):
 
 @app.post("/api/bazi/report/stream")
 def generate_report_stream(payload: ReportRequest):
+    report_id = str(uuid4())
+    request_id = str(uuid4())
+    _log_ai_content(
+        {
+            "kind": "request",
+            "endpoint": "/api/bazi/report/stream",
+            "request_id": request_id,
+            "report_id": report_id,
+            "payload": payload.model_dump(mode="json"),
+        }
+    )
+    chart, analysis, knowledge, prompt = _prepare_report_context(
+        payload, prompt_builder=lambda c, a, k, f: build_report_stream_prompt(c, a, k, f, report_id)
+    )
+    messages = _build_llm_messages(prompt)
+    provider = _resolve_llm_provider()
+    model = _resolve_llm_model("report", provider)
+    temperature = _resolve_llm_temperature("report")
+    timeout = _resolve_llm_timeout("report")
+    enable_thinking = _resolve_feature_enable_thinking("report", provider)
+
+    def _event_stream() -> Iterator[str]:
+        stream_start = time.perf_counter()
+        prompt_text = json.dumps(messages, ensure_ascii=False)
+        stream_stats = {
+            "thinking_chars": 0,
+            "delta_chars": 0,
+            "events_total": 0,
+            "sections_done": 0,
+            "last_section_id": None,
+        }
+        headers = {
+            "type": "report_start",
+            "report_id": report_id,
+            "schema_version": REPORT_SCHEMA_VERSION,
+            "sections": list(REPORT_SECTIONS_PLAN),
+        }
+        yield _sse_pack(headers)
+
+        # 给前端的元数据（方便落库 / 二次打开时复用 chart/analysis）
+        meta = {
+            "type": "meta",
+            "report_id": report_id,
+            "chart": chart.model_dump(mode="json"),
+            "analysis": analysis.model_dump(mode="json"),
+            "knowledge": [k.model_dump() for k in knowledge],
+            "prompt": prompt,
+        }
+        yield _sse_pack(meta)
+
+        buffer = ""
+        current_section: Optional[str] = None
+        expected_section_index = 0
+        last_seq: Dict[str, int] = {}
+        saw_report_done = False
+        thinking_chunks: List[str] = []
+        try:
+            for chunk in stream_chat_with_reasoning(
+                messages,
+                provider=provider,
+                model=model,
+                temperature=temperature,
+                enable_thinking=enable_thinking,
+                timeout=timeout,
+            ):
+                if chunk.reasoning:
+                    thinking_chunks.append(chunk.reasoning)
+                    stream_stats["thinking_chars"] += len(chunk.reasoning)
+                    yield _sse_pack(
+                        {"type": "thinking_delta", "report_id": report_id, "text": chunk.reasoning}
+                    )
+                if chunk.content:
+                    buffer += chunk.content
+
+                    while True:
+                        newline_index = buffer.find("\n")
+                        if newline_index == -1:
+                            break
+                        line = buffer[:newline_index]
+                        buffer = buffer[newline_index + 1 :]
+
+                        trimmed = line.strip()
+                        if not trimmed:
+                            continue
+
+                        event = _parse_report_event_json_line(trimmed, report_id)
+                        if not event.get("ok"):
+                            _log_ai_metrics(
+                                {
+                                    "kind": "stream_error",
+                                    "endpoint": "/api/bazi/report/stream",
+                                    "request_id": request_id,
+                                    "report_id": report_id,
+                                    "message": str(
+                                        event.get("message") or "模型输出不符合事件协议（非JSON行）"
+                                    ),
+                                }
+                            )
+                            yield _sse_pack(
+                                {
+                                    "type": "error",
+                                    "report_id": report_id,
+                                    "message": str(event.get("message") or "模型输出不符合事件协议"),
+                                    "recoverable": False,
+                                }
+                            )
+                            return
+
+                        data = event["event"]
+                        validated = _validate_and_normalize_report_event(
+                            data=data,
+                            report_id=report_id,
+                            sections_plan=REPORT_SECTIONS_PLAN,
+                            expected_section_index=expected_section_index,
+                            current_section=current_section,
+                            last_seq=last_seq,
+                        )
+                        if not validated.get("ok"):
+                            _log_ai_metrics(
+                                {
+                                    "kind": "stream_error",
+                                    "endpoint": "/api/bazi/report/stream",
+                                    "request_id": request_id,
+                                    "report_id": report_id,
+                                    "message": str(
+                                        validated.get("message") or "模型输出不符合事件协议（字段校验失败）"
+                                    ),
+                                }
+                            )
+                            yield _sse_pack(
+                                {
+                                    "type": "error",
+                                    "report_id": report_id,
+                                    "message": str(
+                                        validated.get("message") or "模型输出不符合事件协议"
+                                    ),
+                                    "recoverable": False,
+                                }
+                            )
+                            return
+
+                        extra_events = validated.get("extra_events") or []
+                        events_to_emit = [*extra_events, validated["event"]]
+
+                        current_section = validated.get("current_section")
+                        expected_section_index = int(validated.get("expected_section_index", 0))
+
+                        for normalized in events_to_emit:
+                            stream_stats["events_total"] += 1
+                            stream_stats["last_section_id"] = normalized.get("section_id")
+
+                            if normalized.get("type") == "section_delta":
+                                delta_text = normalized.get("delta")
+                                if isinstance(delta_text, str):
+                                    stream_stats["delta_chars"] += len(delta_text)
+                            if normalized.get("type") == "section_done":
+                                stream_stats["sections_done"] += 1
+
+                            if normalized.get("type") == "report_done":
+                                saw_report_done = True
+                                normalized.setdefault(
+                                    "thinking",
+                                    "".join(thinking_chunks).strip() if thinking_chunks else "",
+                                )
+                                elapsed_ms = int((time.perf_counter() - stream_start) * 1000)
+                                completion_tokens_est = max(
+                                    1,
+                                    (stream_stats["delta_chars"] + stream_stats["thinking_chars"] + 3) // 4,
+                                )
+                                _log_ai_metrics(
+                                    {
+                                        "kind": "stream_done",
+                                        "endpoint": "/api/bazi/report/stream",
+                                        "request_id": request_id,
+                                        "report_id": report_id,
+                                        "provider": provider,
+                                        "model": model or "default",
+                                        "enable_thinking": enable_thinking,
+                                        "temperature": temperature,
+                                        "timeout": timeout,
+                                        "elapsed_ms": elapsed_ms,
+                                        "usage": {
+                                            "prompt_tokens_est": _estimate_tokens(prompt_text),
+                                            "completion_tokens_est": completion_tokens_est,
+                                            "total_tokens_est": _estimate_tokens(prompt_text)
+                                            + completion_tokens_est,
+                                        },
+                                        "stream": stream_stats,
+                                    }
+                                )
+                                _log_ai_content(
+                                    {
+                                        "kind": "stream_report_done",
+                                        "endpoint": "/api/bazi/report/stream",
+                                        "request_id": request_id,
+                                        "report_id": report_id,
+                                        "report": normalized.get("report"),
+                                    }
+                                )
+                                yield _sse_pack(normalized)
+                                return
+
+                            yield _sse_pack(normalized)
+        except LLMError as exc:
+            _log_ai_metrics(
+                {
+                    "kind": "llm_error",
+                    "endpoint": "/api/bazi/report/stream",
+                    "request_id": request_id,
+                    "report_id": report_id,
+                    "provider": provider,
+                    "model": model or "default",
+                    "message": str(exc),
+                }
+            )
+            yield _sse_pack(
+                {
+                    "type": "error",
+                    "report_id": report_id,
+                    "message": str(exc),
+                    "recoverable": False,
+                }
+            )
+            return
+
+        # 兜底：模型最后一行可能没有换行符（常见），这里把尾巴再按“JSON Lines”处理一次
+        if buffer.strip() and not saw_report_done:
+            for tail_line in [line.strip() for line in buffer.splitlines() if line.strip()]:
+                event = _parse_report_event_json_line(tail_line, report_id)
+                if not event.get("ok"):
+                    break
+
+                validated = _validate_and_normalize_report_event(
+                    data=event["event"],
+                    report_id=report_id,
+                    sections_plan=REPORT_SECTIONS_PLAN,
+                    expected_section_index=expected_section_index,
+                    current_section=current_section,
+                    last_seq=last_seq,
+                )
+                if not validated.get("ok"):
+                    break
+
+                extra_events = validated.get("extra_events") or []
+                events_to_emit = [*extra_events, validated["event"]]
+
+                current_section = validated.get("current_section")
+                expected_section_index = int(validated.get("expected_section_index", 0))
+
+                for normalized in events_to_emit:
+                    stream_stats["events_total"] += 1
+                    stream_stats["last_section_id"] = normalized.get("section_id")
+
+                    if normalized.get("type") == "section_delta":
+                        delta_text = normalized.get("delta")
+                        if isinstance(delta_text, str):
+                            stream_stats["delta_chars"] += len(delta_text)
+                    if normalized.get("type") == "section_done":
+                        stream_stats["sections_done"] += 1
+
+                    if normalized.get("type") == "report_done":
+                        saw_report_done = True
+                        normalized.setdefault(
+                            "thinking", "".join(thinking_chunks).strip() if thinking_chunks else ""
+                        )
+                        elapsed_ms = int((time.perf_counter() - stream_start) * 1000)
+                        completion_tokens_est = max(
+                            1,
+                            (stream_stats["delta_chars"] + stream_stats["thinking_chars"] + 3)
+                            // 4,
+                        )
+                        _log_ai_metrics(
+                            {
+                                "kind": "stream_done",
+                                "endpoint": "/api/bazi/report/stream",
+                                "request_id": request_id,
+                                "report_id": report_id,
+                                "provider": provider,
+                                "model": model or "default",
+                                "enable_thinking": enable_thinking,
+                                "temperature": temperature,
+                                "timeout": timeout,
+                                "elapsed_ms": elapsed_ms,
+                                "usage": {
+                                    "prompt_tokens_est": _estimate_tokens(prompt_text),
+                                    "completion_tokens_est": completion_tokens_est,
+                                    "total_tokens_est": _estimate_tokens(prompt_text)
+                                    + completion_tokens_est,
+                                },
+                                "stream": stream_stats,
+                            }
+                        )
+                        _log_ai_content(
+                            {
+                                "kind": "stream_report_done",
+                                "endpoint": "/api/bazi/report/stream",
+                                "request_id": request_id,
+                                "report_id": report_id,
+                                "report": normalized.get("report"),
+                            }
+                        )
+                        yield _sse_pack(normalized)
+                        return
+
+                    yield _sse_pack(normalized)
+
+        # 流结束但没收到 report_done：按协议兜底为 error（避免前端一直等待）
+        if buffer.strip() and not saw_report_done:
+            _log_ai_metrics(
+                {
+                    "kind": "stream_error",
+                    "endpoint": "/api/bazi/report/stream",
+                    "request_id": request_id,
+                    "report_id": report_id,
+                    "message": "模型输出未按 JSON Lines 完整结束（存在未解析残留文本）",
+                }
+            )
+            yield _sse_pack(
+                {
+                    "type": "error",
+                    "report_id": report_id,
+                    "message": "模型输出未按 JSON Lines 完整结束（存在未解析残留文本）",
+                    "recoverable": False,
+                }
+            )
+            return
+
+        if not saw_report_done:
+            _log_ai_metrics(
+                {
+                    "kind": "stream_error",
+                    "endpoint": "/api/bazi/report/stream",
+                    "request_id": request_id,
+                    "report_id": report_id,
+                    "message": "流式生成结束但未收到 report_done 事件",
+                }
+            )
+            yield _sse_pack(
+                {
+                    "type": "error",
+                    "report_id": report_id,
+                    "message": "流式生成结束但未收到 report_done 事件",
+                    "recoverable": False,
+                }
+            )
+
+    return StreamingResponse(
+        _event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@app.post("/api/bazi/report/stream-ndjson")
+def generate_report_stream_ndjson(payload: ReportRequest):
+    """兼容旧版 NDJSON 协议（meta/delta/thinking/done）。"""
     chart, analysis, knowledge, prompt = _prepare_report_context(payload)
     messages = _build_llm_messages(prompt)
     provider = _resolve_llm_provider()
@@ -240,7 +733,9 @@ def generate_report_stream(payload: ReportRequest):
                     ) + "\n"
                 if chunk.content:
                     chunks.append(chunk.content)
-                    yield json.dumps({"type": "delta", "text": chunk.content}, ensure_ascii=False) + "\n"
+                    yield json.dumps(
+                        {"type": "delta", "text": chunk.content}, ensure_ascii=False
+                    ) + "\n"
         except LLMError as exc:
             yield json.dumps({"type": "error", "message": str(exc)}, ensure_ascii=False) + "\n"
             return
@@ -260,14 +755,25 @@ def generate_report_stream(payload: ReportRequest):
 
 @app.post("/api/bazi/chat")
 def chat_with_chart(payload: ChatRequest):
+    request_id = str(uuid4())
     prompt = _build_chat_prompt(payload)
+    _log_ai_content(
+        {
+            "kind": "request",
+            "endpoint": "/api/bazi/chat",
+            "request_id": request_id,
+            "payload": payload.model_dump(mode="json"),
+            "prompt": prompt,
+        }
+    )
     try:
         provider = _resolve_llm_provider()
         model = _resolve_llm_model("chat", provider)
         temperature = _resolve_llm_temperature("chat")
         timeout = _resolve_llm_timeout("chat")
         enable_thinking = _resolve_feature_enable_thinking("chat", provider)
-        raw_text = chat(
+        start_time = time.perf_counter()
+        raw_text, usage = chat_with_usage(
             _build_llm_messages(prompt),
             provider=provider,
             model=model,
@@ -275,10 +781,53 @@ def chat_with_chart(payload: ChatRequest):
             enable_thinking=enable_thinking,
             timeout=timeout,
         )
+        elapsed_ms = int((time.perf_counter() - start_time) * 1000)
     except LLMError as exc:
+        _log_ai_metrics(
+            {
+                "kind": "llm_error",
+                "endpoint": "/api/bazi/chat",
+                "request_id": request_id,
+                "provider": provider if "provider" in locals() else None,
+                "model": model if "model" in locals() else None,
+                "message": str(exc),
+            }
+        )
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     reply = _normalize_llm_report(raw_text, prompt)
+    prompt_text = json.dumps(_build_llm_messages(prompt), ensure_ascii=False)
+    completion_text = raw_text or ""
+    _log_ai_metrics(
+        {
+            "kind": "llm_done",
+            "endpoint": "/api/bazi/chat",
+            "request_id": request_id,
+            "provider": provider,
+            "model": model or "default",
+            "enable_thinking": enable_thinking,
+            "temperature": temperature,
+            "timeout": timeout,
+            "elapsed_ms": elapsed_ms,
+            "usage": {
+                "prompt_tokens": usage.get("prompt_tokens") if isinstance(usage, dict) else None,
+                "completion_tokens": usage.get("completion_tokens") if isinstance(usage, dict) else None,
+                "total_tokens": usage.get("total_tokens") if isinstance(usage, dict) else None,
+                "prompt_tokens_est": _estimate_tokens(prompt_text),
+                "completion_tokens_est": _estimate_tokens(completion_text),
+                "total_tokens_est": _estimate_tokens(prompt_text) + _estimate_tokens(completion_text),
+            },
+        }
+    )
+    _log_ai_content(
+        {
+            "kind": "response",
+            "endpoint": "/api/bazi/chat",
+            "request_id": request_id,
+            "raw_text": _truncate_text(raw_text or ""),
+            "reply": reply,
+        }
+    )
     return {"reply": reply, "prompt": prompt}
 
 
@@ -286,6 +835,15 @@ def chat_with_chart(payload: ChatRequest):
 def chat_with_chart_stream(payload: ChatRequest):
     prompt = _build_chat_prompt(payload)
     messages = _build_llm_messages(prompt)
+    request_id = str(uuid4())
+    _log_ai_content(
+        {
+            "kind": "request",
+            "endpoint": "/api/bazi/chat/stream",
+            "request_id": request_id,
+            "payload": payload.model_dump(mode="json"),
+        }
+    )
     provider = _resolve_llm_provider()
     model = _resolve_llm_model("chat", provider)
     temperature = _resolve_llm_temperature("chat")
@@ -293,6 +851,7 @@ def chat_with_chart_stream(payload: ChatRequest):
     enable_thinking = _resolve_feature_enable_thinking("chat", provider)
 
     def _event_stream() -> Iterator[str]:
+        start_time = time.perf_counter()
         chunks: List[str] = []
         thinking_chunks: List[str] = []
         try:
@@ -313,12 +872,52 @@ def chat_with_chart_stream(payload: ChatRequest):
                     chunks.append(chunk.content)
                     yield json.dumps({"type": "delta", "text": chunk.content}, ensure_ascii=False) + "\n"
         except LLMError as exc:
+            _log_ai_metrics(
+                {
+                    "kind": "llm_error",
+                    "endpoint": "/api/bazi/chat/stream",
+                    "request_id": request_id,
+                    "provider": provider,
+                    "model": model or "default",
+                    "message": str(exc),
+                }
+            )
             yield json.dumps({"type": "error", "message": str(exc)}, ensure_ascii=False) + "\n"
             return
 
         reply_text = "".join(chunks).strip()
         if not reply_text:
             reply_text = "已收到。"
+        elapsed_ms = int((time.perf_counter() - start_time) * 1000)
+        prompt_text = json.dumps(messages, ensure_ascii=False)
+        completion_text = reply_text + ("".join(thinking_chunks) if thinking_chunks else "")
+        _log_ai_metrics(
+            {
+                "kind": "llm_done",
+                "endpoint": "/api/bazi/chat/stream",
+                "request_id": request_id,
+                "provider": provider,
+                "model": model or "default",
+                "enable_thinking": enable_thinking,
+                "temperature": temperature,
+                "timeout": timeout,
+                "elapsed_ms": elapsed_ms,
+                "usage": {
+                    "prompt_tokens_est": _estimate_tokens(prompt_text),
+                    "completion_tokens_est": _estimate_tokens(completion_text),
+                    "total_tokens_est": _estimate_tokens(prompt_text) + _estimate_tokens(completion_text),
+                },
+            }
+        )
+        _log_ai_content(
+            {
+                "kind": "response",
+                "endpoint": "/api/bazi/chat/stream",
+                "request_id": request_id,
+                "reply_text": _truncate_text(reply_text),
+                "thinking": _truncate_text("".join(thinking_chunks).strip()),
+            }
+        )
         yield json.dumps(
             {"type": "done", "reply": reply_text, "thinking": "".join(thinking_chunks).strip()},
             ensure_ascii=False,
@@ -330,6 +929,7 @@ def chat_with_chart_stream(payload: ChatRequest):
 @app.post("/api/bazi/general-chat/stream")
 def general_chat_stream(payload: GeneralChatRequest):
     """通用聊天接口（无需命盘），用于喵大师等场景"""
+    request_id = str(uuid4())
     default_system = (
         "你是神机喵算的AI助手「喵大师」，精通中国传统八字命理学。"
         "你的回答应该：1）专业且易懂，用现代语言解释传统命理概念；"
@@ -358,8 +958,18 @@ def general_chat_stream(payload: GeneralChatRequest):
     messages = [{"role": "system", "content": system_prompt}]
     for turn in payload.history:
         messages.append({"role": turn.role, "content": turn.content})
+    _log_ai_content(
+        {
+            "kind": "request",
+            "endpoint": "/api/bazi/general-chat/stream",
+            "request_id": request_id,
+            "payload": payload.model_dump(mode="json"),
+            "messages": messages,
+        }
+    )
 
     def _event_stream() -> Iterator[str]:
+        start_time = time.perf_counter()
         chunks: List[str] = []
         thinking_chunks: List[str] = []
         try:
@@ -380,12 +990,52 @@ def general_chat_stream(payload: GeneralChatRequest):
                     chunks.append(chunk.content)
                     yield json.dumps({"type": "delta", "text": chunk.content}, ensure_ascii=False) + "\n"
         except LLMError as exc:
+            _log_ai_metrics(
+                {
+                    "kind": "llm_error",
+                    "endpoint": "/api/bazi/general-chat/stream",
+                    "request_id": request_id,
+                    "provider": provider,
+                    "model": model or "default",
+                    "message": str(exc),
+                }
+            )
             yield json.dumps({"type": "error", "message": str(exc)}, ensure_ascii=False) + "\n"
             return
 
         reply_text = "".join(chunks).strip()
         if not reply_text:
             reply_text = "我明白了，请问还有什么想了解的吗？"
+        elapsed_ms = int((time.perf_counter() - start_time) * 1000)
+        prompt_text = json.dumps(messages, ensure_ascii=False)
+        completion_text = reply_text + ("".join(thinking_chunks) if thinking_chunks else "")
+        _log_ai_metrics(
+            {
+                "kind": "llm_done",
+                "endpoint": "/api/bazi/general-chat/stream",
+                "request_id": request_id,
+                "provider": provider,
+                "model": model or "default",
+                "enable_thinking": enable_thinking,
+                "temperature": temperature,
+                "timeout": timeout,
+                "elapsed_ms": elapsed_ms,
+                "usage": {
+                    "prompt_tokens_est": _estimate_tokens(prompt_text),
+                    "completion_tokens_est": _estimate_tokens(completion_text),
+                    "total_tokens_est": _estimate_tokens(prompt_text) + _estimate_tokens(completion_text),
+                },
+            }
+        )
+        _log_ai_content(
+            {
+                "kind": "response",
+                "endpoint": "/api/bazi/general-chat/stream",
+                "request_id": request_id,
+                "reply_text": _truncate_text(reply_text),
+                "thinking": _truncate_text("".join(thinking_chunks).strip()),
+            }
+        )
         yield json.dumps(
             {"type": "done", "reply": reply_text, "thinking": "".join(thinking_chunks).strip()},
             ensure_ascii=False,
@@ -467,6 +1117,15 @@ def analyze_energy(payload: EnergyAnalysisRequest):
     """
     from src.api.energy_prompt import build_energy_analysis_prompt
 
+    request_id = str(uuid4())
+    _log_ai_content(
+        {
+            "kind": "request",
+            "endpoint": "/api/bazi/energy-analysis",
+            "request_id": request_id,
+            "payload": payload.model_dump(mode="json"),
+        }
+    )
     try:
         chart_data = payload.chart
         prompt_text = build_energy_analysis_prompt(chart_data)
@@ -531,6 +1190,37 @@ def analyze_energy(payload: EnergyAnalysisRequest):
             # 解析失败，返回错误信息
             raise HTTPException(status_code=502, detail="AI 返回格式解析失败")
 
+        _log_ai_metrics(
+            {
+                "kind": "llm_done",
+                "endpoint": "/api/bazi/energy-analysis",
+                "request_id": request_id,
+                "provider": provider,
+                "model": model or "default",
+                "enable_thinking": enable_thinking,
+                "temperature": temperature,
+                "timeout": timeout,
+                "elapsed_ms": elapsed_ms,
+                "usage": {
+                    "prompt_tokens": usage.get("prompt_tokens") if isinstance(usage, dict) else None,
+                    "completion_tokens": usage.get("completion_tokens") if isinstance(usage, dict) else None,
+                    "total_tokens": usage.get("total_tokens") if isinstance(usage, dict) else None,
+                    "prompt_tokens_est": _estimate_tokens(json.dumps(messages, ensure_ascii=False)),
+                    "completion_tokens_est": _estimate_tokens(raw_text or ""),
+                    "total_tokens_est": _estimate_tokens(json.dumps(messages, ensure_ascii=False))
+                    + _estimate_tokens(raw_text or ""),
+                },
+            }
+        )
+        _log_ai_content(
+            {
+                "kind": "response",
+                "endpoint": "/api/bazi/energy-analysis",
+                "request_id": request_id,
+                "raw_text": _truncate_text(raw_text or ""),
+                "result": result,
+            }
+        )
         return result
     except LLMError as exc:
         elapsed_ms = int((time.perf_counter() - start_time) * 1000) if "start_time" in locals() else None
@@ -539,6 +1229,17 @@ def analyze_energy(payload: EnergyAnalysisRequest):
             elapsed_ms,
             str(exc),
         )
+        _log_ai_metrics(
+            {
+                "kind": "llm_error",
+                "endpoint": "/api/bazi/energy-analysis",
+                "request_id": request_id,
+                "provider": provider if "provider" in locals() else None,
+                "model": model if "model" in locals() else None,
+                "elapsed_ms": elapsed_ms,
+                "message": str(exc),
+            }
+        )
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception as exc:
         elapsed_ms = int((time.perf_counter() - start_time) * 1000) if "start_time" in locals() else None
@@ -546,6 +1247,15 @@ def analyze_energy(payload: EnergyAnalysisRequest):
             "energy_analysis error elapsed_ms=%s message=%s",
             elapsed_ms,
             str(exc),
+        )
+        _log_ai_metrics(
+            {
+                "kind": "error",
+                "endpoint": "/api/bazi/energy-analysis",
+                "request_id": request_id,
+                "elapsed_ms": elapsed_ms,
+                "message": str(exc),
+            }
         )
         raise HTTPException(status_code=400, detail=f"分析失败: {exc}") from exc
 
@@ -617,6 +1327,15 @@ def analyze_destiny(payload: DestinyAnalysisRequest):
     """大运智能解析接口"""
     from src.api.destiny_prompt import build_destiny_analysis_prompt
 
+    request_id = str(uuid4())
+    _log_ai_content(
+        {
+            "kind": "request",
+            "endpoint": "/api/bazi/destiny-analysis",
+            "request_id": request_id,
+            "payload": payload.model_dump(mode="json"),
+        }
+    )
     try:
         chart_data = payload.chart
         chart = Chart.model_validate(chart_data)
@@ -686,6 +1405,37 @@ def analyze_destiny(payload: DestinyAnalysisRequest):
         if not result or "summary" not in result or "tips" not in result:
             raise HTTPException(status_code=502, detail="AI 返回格式解析失败")
 
+        _log_ai_metrics(
+            {
+                "kind": "llm_done",
+                "endpoint": "/api/bazi/destiny-analysis",
+                "request_id": request_id,
+                "provider": provider,
+                "model": model or "default",
+                "enable_thinking": enable_thinking,
+                "temperature": temperature,
+                "timeout": timeout,
+                "elapsed_ms": elapsed_ms,
+                "usage": {
+                    "prompt_tokens": usage.get("prompt_tokens") if isinstance(usage, dict) else None,
+                    "completion_tokens": usage.get("completion_tokens") if isinstance(usage, dict) else None,
+                    "total_tokens": usage.get("total_tokens") if isinstance(usage, dict) else None,
+                    "prompt_tokens_est": _estimate_tokens(json.dumps(messages, ensure_ascii=False)),
+                    "completion_tokens_est": _estimate_tokens(raw_text or ""),
+                    "total_tokens_est": _estimate_tokens(json.dumps(messages, ensure_ascii=False))
+                    + _estimate_tokens(raw_text or ""),
+                },
+            }
+        )
+        _log_ai_content(
+            {
+                "kind": "response",
+                "endpoint": "/api/bazi/destiny-analysis",
+                "request_id": request_id,
+                "raw_text": _truncate_text(raw_text or ""),
+                "result": result,
+            }
+        )
         return result
     except LLMError as exc:
         elapsed_ms = int((time.perf_counter() - start_time) * 1000) if "start_time" in locals() else None
@@ -693,6 +1443,17 @@ def analyze_destiny(payload: DestinyAnalysisRequest):
             "destiny_analysis llm_error elapsed_ms=%s message=%s",
             elapsed_ms,
             str(exc),
+        )
+        _log_ai_metrics(
+            {
+                "kind": "llm_error",
+                "endpoint": "/api/bazi/destiny-analysis",
+                "request_id": request_id,
+                "provider": provider if "provider" in locals() else None,
+                "model": model if "model" in locals() else None,
+                "elapsed_ms": elapsed_ms,
+                "message": str(exc),
+            }
         )
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception as exc:
@@ -702,6 +1463,15 @@ def analyze_destiny(payload: DestinyAnalysisRequest):
             elapsed_ms,
             str(exc),
         )
+        _log_ai_metrics(
+            {
+                "kind": "error",
+                "endpoint": "/api/bazi/destiny-analysis",
+                "request_id": request_id,
+                "elapsed_ms": elapsed_ms,
+                "message": str(exc),
+            }
+        )
         raise HTTPException(status_code=400, detail=f"分析失败: {exc}") from exc
 
 
@@ -710,6 +1480,15 @@ def analyze_destiny_batch(payload: DestinyAnalysisBatchRequest):
     """多条大运智能解析接口"""
     from src.api.destiny_prompt import build_destiny_analysis_batch_prompt
 
+    request_id = str(uuid4())
+    _log_ai_content(
+        {
+            "kind": "request",
+            "endpoint": "/api/bazi/destiny-analysis-batch",
+            "request_id": request_id,
+            "payload": payload.model_dump(mode="json"),
+        }
+    )
     try:
         chart_data = payload.chart
         chart = Chart.model_validate(chart_data)
@@ -806,6 +1585,38 @@ def analyze_destiny_batch(payload: DestinyAnalysisBatchRequest):
         if not normalized:
             raise HTTPException(status_code=502, detail="AI 返回格式解析失败")
 
+        _log_ai_metrics(
+            {
+                "kind": "llm_done",
+                "endpoint": "/api/bazi/destiny-analysis-batch",
+                "request_id": request_id,
+                "provider": provider,
+                "model": model or "default",
+                "enable_thinking": enable_thinking,
+                "temperature": temperature,
+                "timeout": timeout,
+                "elapsed_ms": elapsed_ms,
+                "usage": {
+                    "prompt_tokens": usage.get("prompt_tokens") if isinstance(usage, dict) else None,
+                    "completion_tokens": usage.get("completion_tokens") if isinstance(usage, dict) else None,
+                    "total_tokens": usage.get("total_tokens") if isinstance(usage, dict) else None,
+                    "prompt_tokens_est": _estimate_tokens(json.dumps(messages, ensure_ascii=False)),
+                    "completion_tokens_est": _estimate_tokens(raw_text or ""),
+                    "total_tokens_est": _estimate_tokens(json.dumps(messages, ensure_ascii=False))
+                    + _estimate_tokens(raw_text or ""),
+                },
+            }
+        )
+        _log_ai_content(
+            {
+                "kind": "response",
+                "endpoint": "/api/bazi/destiny-analysis-batch",
+                "request_id": request_id,
+                "raw_text": _truncate_text(raw_text or ""),
+                "result": {"items": normalized},
+            }
+        )
+
         if input_years:
             by_year = {item["year"]: item for item in normalized}
             ordered = [by_year[year] for year in input_years if year in by_year]
@@ -819,6 +1630,17 @@ def analyze_destiny_batch(payload: DestinyAnalysisBatchRequest):
             elapsed_ms,
             str(exc),
         )
+        _log_ai_metrics(
+            {
+                "kind": "llm_error",
+                "endpoint": "/api/bazi/destiny-analysis-batch",
+                "request_id": request_id,
+                "provider": provider if "provider" in locals() else None,
+                "model": model if "model" in locals() else None,
+                "elapsed_ms": elapsed_ms,
+                "message": str(exc),
+            }
+        )
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception as exc:
         elapsed_ms = int((time.perf_counter() - start_time) * 1000) if "start_time" in locals() else None
@@ -827,10 +1649,22 @@ def analyze_destiny_batch(payload: DestinyAnalysisBatchRequest):
             elapsed_ms,
             str(exc),
         )
+        _log_ai_metrics(
+            {
+                "kind": "error",
+                "endpoint": "/api/bazi/destiny-analysis-batch",
+                "request_id": request_id,
+                "elapsed_ms": elapsed_ms,
+                "message": str(exc),
+            }
+        )
         raise HTTPException(status_code=400, detail=f"分析失败: {exc}") from exc
 
 
-def _prepare_report_context(payload: ReportRequest):
+def _prepare_report_context(
+    payload: ReportRequest,
+    prompt_builder: Callable[[Chart, Any, List[Any], List[str]], Dict[str, Any]] = build_report_prompt,
+):
     if payload.chart:
         try:
             chart = Chart.model_validate(payload.chart)
@@ -857,8 +1691,161 @@ def _prepare_report_context(payload: ReportRequest):
     knowledge = retrieve_knowledge(
         pattern_tags=analysis.pattern_tags, yi_yong_shen=analysis.yi_yong_shen, focus=payload.focus
     )
-    prompt = build_report_prompt(chart, analysis, knowledge, payload.focus)
+    prompt = prompt_builder(chart, analysis, knowledge, payload.focus)
     return chart, analysis, knowledge, prompt
+
+
+def _sse_pack(data: Dict[str, Any]) -> str:
+    return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+def _parse_report_event_json_line(line: str, report_id: str) -> Dict[str, Any]:
+    try:
+        parsed = json.loads(line)
+    except json.JSONDecodeError:
+        return {"ok": False, "message": f"非 JSON 行：{line[:80]}..."}
+    if not isinstance(parsed, dict):
+        return {"ok": False, "message": "事件必须是 JSON object"}
+    parsed.setdefault("report_id", report_id)
+    return {"ok": True, "event": parsed}
+
+
+def _validate_and_normalize_report_event(
+    *,
+    data: Dict[str, Any],
+    report_id: str,
+    sections_plan: List[Dict[str, str]],
+    expected_section_index: int,
+    current_section: Optional[str],
+    last_seq: Dict[str, int],
+) -> Dict[str, Any]:
+    event_type = str(data.get("type") or "").strip()
+    if not event_type:
+        return {"ok": False, "message": "缺少 type 字段"}
+
+    allowed = {"section_start", "section_delta", "section_patch", "section_done", "report_done"}
+    if event_type not in allowed:
+        return {"ok": False, "message": f"不支持的事件 type：{event_type}"}
+
+    data["report_id"] = report_id
+
+    section_ids = [item.get("section_id") for item in sections_plan]
+    section_titles = {item.get("section_id"): item.get("title") for item in sections_plan}
+
+    if event_type == "report_done":
+        # 新协议：report_done 仅表示流式生成结束，不再要求附带完整 report JSON。
+        # 兼容旧协议：如果模型仍返回 report 对象，则透传；但若类型不对则丢弃，避免污染前端状态。
+        report = data.get("report")
+        if report is not None and not isinstance(report, dict):
+            data.pop("report", None)
+        return {
+            "ok": True,
+            "event": data,
+            "current_section": current_section,
+            "expected_section_index": expected_section_index,
+        }
+
+    section_id = str(data.get("section_id") or "").strip()
+    if not section_id:
+        return {"ok": False, "message": f"{event_type} 缺少 section_id"}
+    if section_id not in section_titles:
+        return {"ok": False, "message": f"未知 section_id：{section_id}"}
+    data.setdefault("title", section_titles.get(section_id))
+
+    expected_section_id = section_ids[expected_section_index] if expected_section_index < len(
+        section_ids
+    ) else None
+
+    if event_type == "section_start":
+        if current_section is not None:
+            # 容错：模型偶发漏发上一段的 section_done，直接开始下一段的 section_start。
+            # 当且仅当“当前段 == 期望段”且“收到的 section_id == 下一期望段”时，自动补一个 section_done。
+            next_expected = (
+                section_ids[expected_section_index + 1]
+                if expected_section_index + 1 < len(section_ids)
+                else None
+            )
+            if (
+                expected_section_id
+                and next_expected
+                and current_section == expected_section_id
+                and section_id == next_expected
+            ):
+                synthetic_done = {
+                    "type": "section_done",
+                    "report_id": report_id,
+                    "section_id": current_section,
+                }
+                synthetic_done.setdefault("title", section_titles.get(current_section))
+                return {
+                    "ok": True,
+                    "extra_events": [synthetic_done],
+                    "event": data,
+                    "current_section": section_id,
+                    "expected_section_index": expected_section_index + 1,
+                }
+
+            return {
+                "ok": False,
+                "message": f"section_start 发生在上一段未结束时（当前段：{current_section}）",
+            }
+        if expected_section_id and section_id != expected_section_id:
+            return {
+                "ok": False,
+                "message": f"section_start 顺序错误，期望 {expected_section_id}，但收到 {section_id}",
+            }
+        return {
+            "ok": True,
+            "event": data,
+            "current_section": section_id,
+            "expected_section_index": expected_section_index,
+        }
+
+    if current_section != section_id:
+        return {
+            "ok": False,
+            "message": f"{event_type} 的 section_id 与当前生成段不一致：{section_id}",
+        }
+
+    if event_type == "section_delta":
+        seq = data.get("seq")
+        if not isinstance(seq, int):
+            return {"ok": False, "message": "section_delta 缺少/非法 seq（必须是 int）"}
+        delta = data.get("delta")
+        if not isinstance(delta, str):
+            return {"ok": False, "message": "section_delta 缺少/非法 delta（必须是 string）"}
+        prev = last_seq.get(section_id, 0)
+        if seq <= prev:
+            return {"ok": False, "message": f"section_delta seq 非递增：{seq} <= {prev}"}
+        last_seq[section_id] = seq
+        return {
+            "ok": True,
+            "event": data,
+            "current_section": current_section,
+            "expected_section_index": expected_section_index,
+        }
+
+    if event_type == "section_patch":
+        patch = data.get("patch")
+        if not isinstance(patch, dict):
+            return {"ok": False, "message": "section_patch 缺少/非法 patch（必须是 object）"}
+        return {
+            "ok": True,
+            "event": data,
+            "current_section": current_section,
+            "expected_section_index": expected_section_index,
+        }
+
+    if event_type == "section_done":
+        next_index = expected_section_index + 1
+        return {
+            "ok": True,
+            "event": data,
+            "current_section": None,
+            "expected_section_index": next_index,
+        }
+
+    return {"ok": False, "message": "未知校验分支"}
 
 
 def _build_chat_prompt(payload: ChatRequest) -> Dict[str, Any]:

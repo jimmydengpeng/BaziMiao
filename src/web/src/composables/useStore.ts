@@ -7,14 +7,13 @@ import { ref, computed, watch } from 'vue';
 import type { Chart, Analysis, Report } from '../types';
 import {
   type ArchiveEntry,
+  type ArchiveReportState,
   loadArchives,
   saveArchives,
   loadCurrentChart,
   saveCurrentChart,
   loadCurrentAnalysis,
   saveCurrentAnalysis,
-  loadCurrentReport,
-  saveCurrentReport,
   loadArchiveCounter,
   saveArchiveCounter,
   loadActiveArchiveId,
@@ -41,10 +40,15 @@ const initializeStore = () => {
 
   chart.value = loadCurrentChart();
   analysis.value = loadCurrentAnalysis();
-  report.value = loadCurrentReport();
   archives.value = loadArchives();
   archiveCounter.value = loadArchiveCounter();
   activeArchiveId.value = loadActiveArchiveId();
+  if (activeArchiveId.value !== null) {
+    const entry = archives.value.find((item) => item.id === activeArchiveId.value) ?? null;
+    report.value = entry?.reportState.report ?? null;
+  } else {
+    report.value = null;
+  }
 
   initialized = true;
 };
@@ -67,10 +71,6 @@ export const useStore = () => {
     saveCurrentAnalysis(newAnalysis);
   }, { deep: true });
 
-  watch(report, (newReport) => {
-    saveCurrentReport(newReport);
-  }, { deep: true });
-
   watch(archives, (newArchives) => {
     saveArchives(newArchives);
   }, { deep: true });
@@ -85,7 +85,55 @@ export const useStore = () => {
 
   // 计算属性
   const canChat = computed(() => !!chart.value && !!analysis.value);
-  const canViewReport = computed(() => !!report.value);
+  const updateActiveArchiveReportState = (partial: Partial<ArchiveReportState>) => {
+    const activeId = activeArchiveId.value;
+    if (activeId === null) return;
+
+    const index = archives.value.findIndex((entry) => entry.id === activeId);
+    if (index < 0) return;
+
+    const current = archives.value[index];
+    const currentState = current.reportState ?? { status: 'idle', report: null };
+
+    const nextReport =
+      Object.prototype.hasOwnProperty.call(partial, 'report') ? partial.report ?? null : currentState.report;
+    const nextState: ArchiveReportState = {
+      ...currentState,
+      ...partial,
+      report: nextReport,
+      status: nextReport ? 'generated' : 'idle',
+    };
+
+    if (
+      nextState.report === currentState.report &&
+      nextState.status === currentState.status &&
+      nextState.debugPrompt === currentState.debugPrompt &&
+      nextState.updatedAt === currentState.updatedAt
+    ) {
+      return;
+    }
+
+    archives.value = [
+      ...archives.value.slice(0, index),
+      { ...current, reportState: nextState },
+      ...archives.value.slice(index + 1),
+    ];
+  };
+
+  const canViewReport = computed(() => !!activeArchiveId.value || !!report.value);
+
+  watch(activeArchiveId, (newId) => {
+    if (newId === null) {
+      report.value = null;
+      return;
+    }
+    const entry = archives.value.find((item) => item.id === newId) ?? null;
+    report.value = entry?.reportState.report ?? null;
+  });
+
+  watch(report, (newReport) => {
+    updateActiveArchiveReportState({ report: newReport ?? null });
+  }, { deep: true });
 
   return {
     // 状态
@@ -100,5 +148,6 @@ export const useStore = () => {
     // 计算属性
     canChat,
     canViewReport,
+    updateActiveArchiveReportState,
   };
 };

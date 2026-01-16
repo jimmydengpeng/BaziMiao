@@ -48,7 +48,7 @@ import detailChartIconUrl from '../assets/pages.png';
 import verifyChartIconUrl from  '../assets/check-list-1.png';
 
 const route = useRoute();
-const { report } = useStore();
+const { canViewReport } = useStore();
 
 // 当前命盘 ID
 const chartId = computed(() => route.params.id as string);
@@ -56,11 +56,11 @@ const chartId = computed(() => route.params.id as string);
 // 根据当前路由计算当前页面（用于 SideNav 高亮）
 const currentPage = computed(() => {
   const path = route.path;
-  if (path.includes('/pillars')) return 'chart';
+  if (path.includes('/basic') || path.includes('/pillars')) return 'basic';
   if (path.includes('/report')) return 'report';
   if (path.includes('/detail') || path.includes('/pro')) return 'detail';
   if (path.includes('/verification')) return 'verification';
-  return 'chart';
+  return 'basic';
 });
 
 // 底部 Tab Bar 配置，复用统一的样式
@@ -68,11 +68,11 @@ const tabItems = computed(() => {
   const id = chartId.value;
   return [
     {
-      key: 'chart',
+      key: 'basic',
       label: '命盘信息',
       icon: baziChartIconUrl,
-      to: `/bazi/chart/${id}/pillars`,
-      active: currentPage.value === 'chart'
+      to: `/bazi/chart/${id}/basic`,
+      active: currentPage.value === 'basic'
     },
     {
       key: 'report',
@@ -99,7 +99,5 @@ const tabItems = computed(() => {
 });
 
 // 是否可以查看报告
-const canViewReport = computed(() => !!report.value);
-
 // 页面样式由 App.vue 统一控制，避免路由切换时误删全局类名
 </script>

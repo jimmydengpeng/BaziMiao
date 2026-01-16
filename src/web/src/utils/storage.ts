@@ -11,10 +11,101 @@ const STORAGE_KEYS = {
   CURRENT_CHART: 'bazi_current_chart',
   CURRENT_ANALYSIS: 'bazi_current_analysis',
   CURRENT_REPORT: 'bazi_current_report',
+  REPORT_CACHE_V1: 'bazi_report_cache_v1',
   ARCHIVE_COUNTER: 'bazi_archive_counter',
   ACTIVE_ARCHIVE_ID: 'bazi_active_archive_id',
   BAZI_VIEW_STATE: 'bazi_view_state', // 命盘解析模块的浏览状态
 } as const;
+
+type ReportCacheItemV1 = {
+  savedAt: number;
+  report: Report;
+};
+
+type ReportCacheStoreV1 = {
+  version: 1;
+  order: string[];
+  items: Record<string, ReportCacheItemV1>;
+};
+
+const MAX_REPORT_CACHE_ITEMS = 12;
+
+const normalizeChartId = (chartId: string | number) => String(chartId);
+
+const loadReportCacheStoreV1 = (): ReportCacheStoreV1 => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.REPORT_CACHE_V1);
+    if (!raw) return { version: 1, order: [], items: {} };
+
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== 'object') return { version: 1, order: [], items: {} };
+
+    const record = parsed as Partial<ReportCacheStoreV1>;
+    if (record.version !== 1) return { version: 1, order: [], items: {} };
+
+    const order = Array.isArray(record.order) ? record.order.filter((id) => typeof id === 'string') : [];
+    const items = record.items && typeof record.items === 'object' ? (record.items as ReportCacheStoreV1['items']) : {};
+
+    return { version: 1, order, items };
+  } catch (error) {
+    console.error('加载报告缓存失败:', error);
+    return { version: 1, order: [], items: {} };
+  }
+};
+
+const saveReportCacheStoreV1 = (store: ReportCacheStoreV1): void => {
+  try {
+    localStorage.setItem(STORAGE_KEYS.REPORT_CACHE_V1, JSON.stringify(store));
+  } catch (error) {
+    console.error('保存报告缓存失败:', error);
+  }
+};
+
+/**
+ * 保存某个 chartId 对应的报告（用于多档案切换/刷新恢复）
+ */
+export const saveReportForChartId = (chartId: string | number, report: Report | null): void => {
+  try {
+    const key = normalizeChartId(chartId);
+    const store = loadReportCacheStoreV1();
+
+    if (!report) {
+      delete store.items[key];
+      store.order = store.order.filter((id) => id !== key);
+      saveReportCacheStoreV1(store);
+      return;
+    }
+
+    store.items[key] = { savedAt: Date.now(), report };
+    store.order = [key, ...store.order.filter((id) => id !== key)];
+
+    // 简单 LRU：只保留最近 N 份报告
+    while (store.order.length > MAX_REPORT_CACHE_ITEMS) {
+      const tail = store.order.pop();
+      if (!tail) break;
+      delete store.items[tail];
+    }
+
+    saveReportCacheStoreV1(store);
+  } catch (error) {
+    console.error('保存报告缓存失败:', error);
+  }
+};
+
+/**
+ * 加载某个 chartId 对应的报告
+ */
+export const loadReportForChartId = (chartId: string | number): Report | null => {
+  try {
+    const key = normalizeChartId(chartId);
+    const store = loadReportCacheStoreV1();
+    const hit = store.items[key];
+    return hit?.report ?? null;
+  } catch (error) {
+    console.error('加载报告缓存失败:', error);
+    return null;
+  }
+};
 
 // 档案条目类型定义
 export type ArchivePillar = {
@@ -32,6 +123,37 @@ export type ArchiveEntry = {
   birthLabel: string;
   pillars: ArchivePillar[];
   chart: Chart;
+  reportState: ArchiveReportState;
+};
+
+export type ArchiveReportState = {
+  status: 'idle' | 'generated';
+  report: Report | null;
+  debugPrompt?: unknown;
+  updatedAt?: number;
+};
+
+const normalizeArchiveReportState = (
+  value: unknown,
+  fallbackReport: Report | null
+): ArchiveReportState => {
+  if (!value || typeof value !== 'object') {
+    return {
+      status: fallbackReport ? 'generated' : 'idle',
+      report: fallbackReport ?? null,
+      updatedAt: fallbackReport ? Date.now() : undefined,
+    };
+  }
+
+  const record = value as Partial<ArchiveReportState>;
+  const report = record.report ?? fallbackReport ?? null;
+
+  return {
+    status: report ? 'generated' : 'idle',
+    report,
+    debugPrompt: record.debugPrompt,
+    updatedAt: record.updatedAt,
+  };
 };
 
 /**
@@ -51,7 +173,17 @@ export const saveArchives = (archives: ArchiveEntry[]): void => {
 export const loadArchives = (): ArchiveEntry[] => {
   try {
     const data = localStorage.getItem(STORAGE_KEYS.ARCHIVES);
-    return data ? JSON.parse(data) : [];
+    const parsed = data ? (JSON.parse(data) as unknown) : [];
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed.map((entry) => {
+      const record = entry as ArchiveEntry;
+      const cachedReport = record?.id ? loadReportForChartId(record.id) : null;
+      return {
+        ...record,
+        reportState: normalizeArchiveReportState(record.reportState, cachedReport),
+      };
+    });
   } catch (error) {
     console.error('加载档案失败:', error);
     return [];
@@ -197,7 +329,7 @@ export const loadActiveArchiveId = (): number | null => {
 /**
  * 命盘解析模块的浏览状态
  */
-export type BaziViewPage = 'chart' | 'report' | 'detail' | 'verification';
+export type BaziViewPage = 'basic' | 'report' | 'detail' | 'verification';
 
 export type BaziViewState = {
   page: BaziViewPage; // 当前浏览的页面
@@ -236,7 +368,9 @@ export const loadBaziViewState = (): BaziViewState | null => {
     // 兼容旧值 pro -> detail
     const page: BaziViewPage | null = (() => {
       if (rawPage === 'pro') return 'detail';
-      if (rawPage === 'chart') return 'chart';
+      // 兼容旧值 chart -> basic
+      if (rawPage === 'chart') return 'basic';
+      if (rawPage === 'basic') return 'basic';
       if (rawPage === 'report') return 'report';
       if (rawPage === 'detail') return 'detail';
       if (rawPage === 'verification') return 'verification';

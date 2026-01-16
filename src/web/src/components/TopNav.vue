@@ -114,7 +114,7 @@
       <!-- 非 Home：登录/个人入口 -->
       <template v-else>
         <button
-          v-if="activeModule === 'bazi' && currentPage !== 'chart'"
+          v-if="activeModule === 'bazi' && currentPage !== 'basic'"
           class="hidden h-9 w-9 items-center justify-center rounded-lg text-white/80 transition hover:bg-white/10 md:flex md:h-10 md:w-10"
           type="button"
           @click="handleArchiveClick"
@@ -317,7 +317,7 @@ const props = defineProps<{
   activeModule: 'bazi' | 'compatibility' | 'profile' | 'master' | 'encyclopedia';
   isHome?: boolean; // 是否在 home 页面
   isAuthenticated?: boolean; // 登录态
-  currentPage?: 'chart' | 'report' | 'detail' | 'verification' | 'archive' | 'master-chat' | 'form' | 'home' | 'about'; // 当前页面
+  currentPage?: 'basic' | 'report' | 'detail' | 'verification' | 'archive' | 'master-chat' | 'form' | 'home' | 'about'; // 当前页面
   canViewReport?: boolean; // 是否可以查看报告
 }>();
 

@@ -139,13 +139,52 @@ export interface Analysis {
   }[];
 }
 
-export interface Report {
+export interface LegacyReport {
   overall_tone: string;
   sections: { title: string; content: string }[];
   raw_prompt?: unknown;
   energy_chart?: string;
   facts_ref?: string[];
 }
+
+export interface BaziReportMetaV1 {
+  version: string;
+  generated_at: string;
+  language: string;
+  tone: string;
+  disclaimer: string;
+}
+
+export interface BaziReportInputRefsV1 {
+  solar_date: string;
+  lunar_date: string;
+  birth_time: string;
+  bazi_str: string;
+  gender: string;
+  cur_dayun: string;
+  cur_liunian: string;
+  day_master: string;
+  five_elements_count: string;
+  pattern_tags: string[];
+  yong_shen: string[];
+  ji_shen: string[];
+}
+
+export interface BaziReportSectionV1 {
+  id: string;
+  title: string;
+  summary?: string;
+  content_md: string;
+  structured?: unknown;
+}
+
+export interface BaziReportV1 {
+  meta: BaziReportMetaV1;
+  input_refs: BaziReportInputRefsV1;
+  sections: BaziReportSectionV1[];
+}
+
+export type Report = LegacyReport | BaziReportV1;
 
 export interface ReportResponse {
   chart: Chart;
@@ -167,6 +206,36 @@ export type ReportStreamEvent =
   | { type: "delta"; text: string }
   | { type: "done"; report: Report; analysis?: Analysis; thinking?: string }
   | { type: "error"; message: string };
+
+export type ReportSseEvent =
+  | {
+      type: "report_start";
+      report_id: string;
+      schema_version: string;
+      sections: Array<{ section_id: string; title: string }>;
+    }
+  | {
+      type: "meta";
+      report_id: string;
+      chart: Chart;
+      analysis: Analysis;
+      knowledge: Array<{ source: string; topic: string; summary: string }>;
+      prompt: unknown;
+    }
+  | { type: "thinking_delta"; report_id: string; text: string }
+  | { type: "section_start"; report_id: string; section_id: string; title?: string }
+  | {
+      type: "section_delta";
+      report_id: string;
+      section_id: string;
+      seq: number;
+      delta: string;
+      title?: string;
+    }
+  | { type: "section_patch"; report_id: string; section_id: string; patch: Record<string, unknown> }
+  | { type: "section_done"; report_id: string; section_id: string }
+  | { type: "report_done"; report_id: string; report?: Report; thinking?: string }
+  | { type: "error"; report_id?: string; message: string; recoverable?: boolean };
 
 export interface ChartResponse {
   chart: Chart;

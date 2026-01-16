@@ -25,6 +25,24 @@
     backdrop-filter: blur(16px);
   }
 
+  /* 命盘信息页（basic tab）专用卡片：先与 panel-card 保持一致，后续可单独调整 */
+  .chart-info-card {
+    @apply rounded-2xl border px-2 py-2;
+    background: var(--surface-card);
+    border-color: var(--border);
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(16px);
+  }
+
+  /* 报告页（report tab）专用卡片：先与 chart-info-card 保持一致，后续可单独调整 */
+  .report-section-card {
+    @apply rounded-2xl border px-2 py-2;
+    background: var(--surface-card);
+    border-color: var(--border);
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(16px);
+  }
+
   .panel-tag {
     @apply rounded-[10px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.04)] px-2 py-1 text-xs text-[var(--muted)];
   }
@@ -321,6 +339,16 @@
     margin: 0 0 10px;
   }
 
+  .report-section-content p {
+    text-indent: 1.5em;
+  }
+
+  /* 报告页：每段内容的第 1 段（内容1）更突出，且不做段前缩进 */
+  .report-section-content p:first-of-type {
+    text-indent: 0;
+    font-size: 13px;
+  }
+
   .markdown-body ul,
   .markdown-body ol {
     margin: 0 0 10px;
@@ -344,6 +372,13 @@
   .markdown-body h4 {
     margin: 10px 0 8px;
     font-size: 12px;
+  }
+
+  .markdown-body strong,
+  .markdown-body em {
+    color: var(--accent-2);
+    font-weight: 600;
+    font-style: normal;
   }
 
   .summary-markdown strong,
