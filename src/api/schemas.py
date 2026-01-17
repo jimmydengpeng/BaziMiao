@@ -67,6 +67,9 @@ class GeneralChatRequest(BaseModel):
     subject_enabled: bool = Field(False, description="是否启用命主上下文")
     subject_name: Optional[str] = Field(None, description="命主姓名（简化：仅姓名）")
     subject_birth: Optional[str] = Field(None, description="命主出生日期文本（简化：一段字符串即可）")
+    subject_gender: Optional[str] = Field(None, description="命主性别（简化：男/女/其他）")
+    subject_destiny: Optional[str] = Field(None, description="十年大运列表（简化：年份 + 干支）")
+    subject_chart: Optional[Dict] = Field(None, description="命盘原始数据（前端档案）")
     # 可选：思考模式（云端 OpenAI 兼容：enable_thinking；本地默认开启，忽略该开关）
     deep_think: bool = Field(False, description="是否启用思考模式（openai 有效；本地默认开启）")
 

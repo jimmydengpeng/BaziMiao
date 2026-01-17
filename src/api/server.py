@@ -989,12 +989,92 @@ def general_chat_stream(payload: GeneralChatRequest):
     timeout = _resolve_llm_timeout("chat")
     enable_thinking = _resolve_feature_enable_thinking("chat", provider, payload.deep_think)
 
-    # 可选：命主上下文（前端只传姓名 + 出生日期文本，后端用提示词方式注入，避免改动更大结构）
-    if payload.subject_enabled and payload.subject_name:
+    def _format_hidden_stems(stems: List[Any]) -> str:
+        if not stems:
+            return "无"
+        parts = []
+        for stem in stems:
+            name = getattr(stem, "name", "") or ""
+            element = getattr(stem, "element", "") or ""
+            yinyang = getattr(stem, "yinyang", "") or ""
+            ten_god = getattr(stem, "ten_god", "") or ""
+            label = f"{name}"
+            detail = " ".join([item for item in [element, yinyang, ten_god] if item])
+            if detail:
+                label = f"{label}({detail})"
+            parts.append(label)
+        return "、".join(parts) if parts else "无"
+
+    def _format_pillar(label: str, pillar: PillarInfo) -> str:
+        hs = pillar.heaven_stem
+        eb = pillar.earth_branch
+        stem_desc = f"{hs.name}({hs.element}{hs.yinyang} {hs.ten_god})".strip()
+        branch_desc = f"{eb.name}({eb.element}{eb.yinyang})".strip()
+        hidden_desc = _format_hidden_stems(eb.hidden_stems)
+        return f"{label}：{hs.name}{eb.name}｜天干{stem_desc}｜地支{branch_desc}｜藏干{hidden_desc}"
+
+    # 可选：命主上下文（前端简化传参，后端用提示词方式注入，避免改动更大结构）
+    if payload.subject_enabled and (
+        payload.subject_name
+        or payload.subject_birth
+        or payload.subject_gender
+        or payload.subject_destiny
+        or payload.subject_chart
+    ):
         birth = payload.subject_birth or ""
+        raw_gender = (payload.subject_gender or "").strip().lower()
+        if raw_gender in ("male", "m", "man", "男"):
+            gender_label = "男"
+        elif raw_gender in ("female", "f", "woman", "女"):
+            gender_label = "女"
+        elif raw_gender:
+            gender_label = payload.subject_gender or ""
+        else:
+            gender_label = ""
+        subject_chart = None
+        if payload.subject_chart:
+            try:
+                subject_chart = Chart.model_validate(payload.subject_chart)
+            except Exception as exc:
+                root_logger.warning("命主档案解析失败，已跳过: %s", exc)
+                subject_chart = None
+        current_year_pillar = None
+        try:
+            day_stem = (
+                subject_chart.day_pillar.heaven_stem.name if subject_chart else None
+            )
+            current_year_pillar = engine.get_current_year_pillar(day_stem=day_stem)
+        except Exception as exc:
+            root_logger.warning("流年计算失败，已跳过: %s", exc)
+            current_year_pillar = None
+        system_prompt += "\n\n【当前对话命主信息】\n"
+        system_prompt += f"- 姓名：{payload.subject_name or ''}\n"
+        if gender_label:
+            system_prompt += f"- 性别：{gender_label}\n"
+        if current_year_pillar:
+            system_prompt += (
+                f"- 当前流年：{current_year_pillar.heaven_stem.name}"
+                f"{current_year_pillar.earth_branch.name}\n"
+            )
+        if payload.subject_destiny:
+            system_prompt += f"- 十年大运：{payload.subject_destiny}\n"
+        if subject_chart:
+            system_prompt += (
+                "【八字四柱】\n"
+                f"{_format_pillar('年柱', subject_chart.year_pillar)}\n"
+                f"{_format_pillar('月柱', subject_chart.month_pillar)}\n"
+                f"{_format_pillar('日柱', subject_chart.day_pillar)}\n"
+                f"{_format_pillar('时柱', subject_chart.hour_pillar)}\n"
+            )
+            if subject_chart.destiny_cycle and subject_chart.destiny_cycle.destiny_pillars:
+                destiny_lines = []
+                for pillar in subject_chart.destiny_cycle.destiny_pillars:
+                    label = f"{pillar.year} {pillar.heaven_stem.name}{pillar.earth_branch.name}"
+                    if pillar.is_current:
+                        label += "(当前)"
+                    destiny_lines.append(label)
+                system_prompt += f"【十年大运】\n{'；'.join(destiny_lines)}\n"
         system_prompt += (
-            "\n\n【当前对话命主信息】\n"
-            f"- 姓名：{payload.subject_name}\n"
             f"- 出生：{birth}\n"
             "当用户的问题与命理分析相关时，请结合以上命主信息进行推演；"
             "当问题与命理无关时，正常回答即可。"

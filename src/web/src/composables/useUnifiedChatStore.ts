@@ -28,6 +28,7 @@ export type ChatSession = {
   messages: Message[];
   createdAt: Date;
   updatedAt: Date;
+  archiveId?: number | null;
   // draft 会话：空对话占位，不写入 localStorage，也不出现在历史列表
   isDraft?: boolean;
 };
@@ -35,6 +36,9 @@ export type ChatSession = {
 export type ChatSubject = {
   name: string;
   birth: string;
+  gender?: string;
+  destiny?: string;
+  chart?: unknown;
 };
 
 export type SendMessageOptions = {
@@ -146,7 +150,7 @@ const generateSessionId = () =>
 const generateMessageId = () =>
   `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
-const createNewSession = (options?: { isDraft?: boolean }): ChatSession => {
+const createNewSession = (options?: { isDraft?: boolean; archiveId?: number | null }): ChatSession => {
   const session: ChatSession = {
     id: generateSessionId(),
     title: "",
@@ -154,6 +158,7 @@ const createNewSession = (options?: { isDraft?: boolean }): ChatSession => {
     messages: [],
     createdAt: new Date(),
     updatedAt: new Date(),
+    archiveId: options?.archiveId ?? null,
     isDraft: options?.isDraft ?? false,
   };
   chatSessions.value.unshift(session);
@@ -195,6 +200,16 @@ const updateCurrentSessionMessages = (messages: Message[]) => {
     session.preview = lastMsg.content.slice(0, 50) + (lastMsg.content.length > 50 ? "..." : "");
   }
 
+  schedulePersist();
+  bumpMutation();
+};
+
+const setCurrentSessionArchiveId = (archiveId: number | null) => {
+  const session = currentSession.value;
+  if (!session) return;
+  if (session.archiveId === archiveId) return;
+  session.archiveId = archiveId;
+  session.updatedAt = new Date();
   schedulePersist();
   bumpMutation();
 };
@@ -381,6 +396,9 @@ const sendMessage = async (content: string, options?: SendMessageOptions) => {
         subject_enabled: Boolean(options?.subject),
         subject_name: options?.subject?.name ?? undefined,
         subject_birth: options?.subject?.birth ?? undefined,
+        subject_gender: options?.subject?.gender ?? undefined,
+        subject_destiny: options?.subject?.destiny ?? undefined,
+        subject_chart: options?.subject?.chart ?? undefined,
         deep_think: Boolean(options?.deepThinking),
       }),
       signal: abortController.signal,
@@ -560,6 +578,7 @@ export const useUnifiedChatStore = () => {
 
     // actions
     createNewSession,
+    setCurrentSessionArchiveId,
     switchSession,
     deleteSession,
     newChat,

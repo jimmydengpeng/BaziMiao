@@ -36,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import SideNav from '../components/SideNav.vue';
 import TabBar from '../components/TabBar.vue';
@@ -48,10 +48,27 @@ import detailChartIconUrl from '../assets/pages.png';
 import verifyChartIconUrl from  '../assets/check-list-1.png';
 
 const route = useRoute();
-const { canViewReport } = useStore();
+const { canViewReport, archives, activeArchiveId, chart, analysis, report } = useStore();
 
 // 当前命盘 ID
 const chartId = computed(() => route.params.id as string);
+
+// 兜底：进入命盘页时确保全局命盘状态已同步，避免内容为空。
+watch(
+  chartId,
+  (nextId) => {
+    const parsed = Number(nextId);
+    if (!Number.isFinite(parsed)) return;
+    const entry = archives.value.find((item) => item.id === parsed) ?? null;
+    if (!entry) return;
+    if (activeArchiveId.value === entry.id && chart.value) return;
+    activeArchiveId.value = entry.id;
+    chart.value = entry.chart;
+    analysis.value = null;
+    report.value = entry.reportState.report ?? null;
+  },
+  { immediate: true }
+);
 
 // 根据当前路由计算当前页面（用于 SideNav 高亮）
 const currentPage = computed(() => {

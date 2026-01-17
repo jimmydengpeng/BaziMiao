@@ -57,7 +57,7 @@
                 :disabled="archives.length === 0"
                 @click="openArchivePicker"
               >
-                <span>选择已有档案</span>
+                <span>选择档案</span>
                 <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
@@ -222,7 +222,7 @@ import FeatureCard from '../components/FeatureCard.vue';
 import { useStore } from '../composables/useStore';
 
 const router = useRouter();
-const { archives, activeArchiveId } = useStore();
+const { archives, activeArchiveId, chart, analysis, report } = useStore();
 const openArchivePickerInjected = inject<() => void>('openArchivePicker', undefined);
 const currentYear = new Date().getFullYear();
 const selectedArchive = computed(() => {
@@ -232,7 +232,11 @@ const selectedArchive = computed(() => {
 
 const goToLastArchive = () => {
   if (!selectedArchive.value) return;
-  router.push({ name: 'BaziChart', params: { id: selectedArchive.value.id } });
+  activeArchiveId.value = selectedArchive.value.id;
+  chart.value = selectedArchive.value.chart;
+  analysis.value = null;
+  report.value = selectedArchive.value.reportState.report ?? null;
+  router.push({ name: 'ChartBasic', params: { id: selectedArchive.value.id } });
 };
 
 // 导航到表单页

@@ -300,7 +300,7 @@
 	              @click="toggleLlmProvider"
 	              aria-label="选择模型"
 	            >
-	              {{ selectedLlmProvider === 'openai' ? '云端兼容' : '本地' }}
+	              {{ selectedLlmProvider === 'openai' ? '大师本尊' : '见习小喵' }}
 	            </button>
 
 	            <!-- 4. 深度思考（仅云端兼容可切换；本地默认开启） -->
@@ -317,7 +317,7 @@
 	              :aria-pressed="effectiveDeepThinkingEnabled"
 	              :disabled="selectedLlmProvider === 'local'"
 	            >
-	              深度思考
+	              灵批秘算
 	            </button>
 	          </div>
 
@@ -492,12 +492,15 @@ const emit = defineEmits<{
 
 const {
   historySessions,
+  currentSession,
   currentMessages,
   currentSessionId,
   isThinking,
   isStreamingActive,
   mutationTick,
+  createNewSession,
   newChat: newChatInStore,
+  setCurrentSessionArchiveId,
   switchSession: switchSessionInStore,
   deleteSession: deleteSessionInStore,
   sendMessage: sendMessageInStore,
@@ -565,6 +568,7 @@ const selectArchiveForChat = (entry: ArchiveEntry) => {
   selectedArchiveId.value = entry.id;
   archiveSelectionMode.value = "manual";
   subjectEnabled.value = true;
+  setCurrentSessionArchiveId(entry.id);
 };
 
 const toggleSubjectEnabled = () => {
@@ -719,10 +723,27 @@ const newChat = () => {
   if (!result.ok) showToast(result.reason);
   showHistoryPanel.value = false;
   autoScrollEnabled.value = true;
+  setCurrentSessionArchiveId(selectedArchiveId.value);
   nextTick(() => {
     scrollToBottom();
     inputTextarea.value?.focus();
   });
+};
+
+const resolveArchiveId = (archiveId?: number | null) => {
+  if (archiveId == null) return null;
+  return archives.value.some((entry) => entry.id === archiveId) ? archiveId : null;
+};
+
+const syncSelectedArchiveFromSession = (sessionId: string) => {
+  const session = historySessions.value.find((item) => item.id === sessionId)
+    ?? currentSession.value
+    ?? null;
+  if (!session) return;
+  const resolvedId = resolveArchiveId(session.archiveId);
+  selectedArchiveId.value = resolvedId;
+  archiveSelectionMode.value = "manual";
+  subjectEnabled.value = resolvedId !== null;
 };
 
 const switchSession = (sessionId: string) => {
@@ -733,6 +754,7 @@ const switchSession = (sessionId: string) => {
   }
   showHistoryPanel.value = false;
   autoScrollEnabled.value = true;
+  syncSelectedArchiveFromSession(sessionId);
   nextTick(() => {
     scrollToBottom();
   });
@@ -757,9 +779,26 @@ const sendMessage = async () => {
   // 用户主动发送时：强制启用自动滚动，确保 AI 回复期间始终贴底
   autoScrollEnabled.value = true;
 
-  // 命主信息：只有 subjectEnabled 为 true 时才随消息发送（目前只传姓名 + 出生日期文本，简化后端处理）
+  // 命主信息：只有 subjectEnabled 为 true 时才随消息发送（简化后端处理）
+  const subjectGender = selectedArchive.value?.gender ?? selectedArchive.value?.chart?.gender;
+  const subjectDestinyPillars = selectedArchive.value?.chart?.destiny_cycle?.destiny_pillars ?? [];
+  const subjectDestinyText = subjectDestinyPillars
+    .map((pillar) => {
+      const ganZhi = `${pillar.heaven_stem?.name ?? ""}${pillar.earth_branch?.name ?? ""}`.trim();
+      const yearText = pillar.year ? String(pillar.year) : "";
+      if (yearText && ganZhi) return `${yearText} ${ganZhi}`;
+      return yearText || ganZhi;
+    })
+    .filter((item) => item.length > 0)
+    .join("；");
   const subject = subjectEnabled.value && selectedArchive.value
-    ? { name: selectedArchive.value.displayName, birth: selectedArchive.value.birthLabel }
+    ? {
+      name: selectedArchive.value.displayName,
+      birth: selectedArchive.value.birthLabel,
+      gender: subjectGender ?? "",
+      destiny: subjectDestinyText,
+      chart: selectedArchive.value.chart,
+    }
     : null;
 
   sendMessageInStore(text, {
@@ -898,6 +937,49 @@ const isMobile = () => {
   return window.matchMedia('(max-width: 1023px)').matches;
 };
 
+const findLatestSessionByArchiveId = (archiveId: number) => {
+  let latestSession = null as typeof historySessions.value[number] | null;
+  for (const session of historySessions.value) {
+    if (session.archiveId !== archiveId) continue;
+    if (!latestSession || session.updatedAt.getTime() > latestSession.updatedAt.getTime()) {
+      latestSession = session;
+    }
+  }
+  return latestSession;
+};
+
+const alignSessionWithSelectedArchive = () => {
+  if (archiveSelectionMode.value !== "auto") return;
+  if (isThinking.value || isStreamingActive.value) return;
+  const archiveId = selectedArchiveId.value;
+  if (archiveId == null) return;
+  const currentArchiveId = currentSession.value?.archiveId ?? null;
+  if (currentArchiveId === archiveId) {
+    nextTick(() => {
+      scrollToBottom();
+    });
+    return;
+  }
+
+  const matchingSession = findLatestSessionByArchiveId(archiveId);
+  if (matchingSession) {
+    const result = switchSessionInStore(matchingSession.id);
+    if (!result.ok) {
+      showToast(result.reason);
+      return;
+    }
+    nextTick(() => {
+      scrollToBottom();
+    });
+    return;
+  }
+
+  createNewSession({ isDraft: true, archiveId });
+  nextTick(() => {
+    scrollToBottom();
+  });
+};
+
 // 让聊天“命主上下文”默认跟随当前正在查看的档案（activeArchiveId），用户手动选中后则不再自动跟随
 watch([archives, activeArchiveId], ([nextArchives, nextActiveId]) => {
   // 当前选中的档案不存在了（被删除等），则回退到 auto 模式
@@ -928,6 +1010,10 @@ watch([archives, activeArchiveId], ([nextArchives, nextActiveId]) => {
   if (selectedArchiveId.value === null) {
     subjectEnabled.value = false;
   }
+
+  if (archiveSelectionMode.value === "auto") {
+    alignSessionWithSelectedArchive();
+  }
 }, { immediate: true, deep: true });
 
 // ========== 生命周期 ==========
@@ -952,6 +1038,8 @@ onMounted(() => {
       scrollToBottom();
     });
   }
+
+  alignSessionWithSelectedArchive();
 });
 
 onActivated(() => {
@@ -964,6 +1052,8 @@ onActivated(() => {
   nextTick(() => {
     scrollToBottom();
   });
+
+  alignSessionWithSelectedArchive();
 });
 
 watch(mutationTick, () => {
