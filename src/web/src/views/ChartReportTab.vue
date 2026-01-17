@@ -157,6 +157,12 @@
       </ReportSectionCard>
     </div>
 
+    <div v-if="report" class="flex justify-end px-1 pt-2">
+      <div class="rounded-full border border-dashed border-[rgba(214,160,96,0.45)] bg-[rgba(214,160,96,0.12)] px-3 py-1 text-[11px] text-[var(--accent-2)]">
+        本次解读由 喵道长 推演完成
+      </div>
+    </div>
+
     <div v-if="shouldShowDevInfo && reportDevInfoText" class="px-1 text-[10px] text-white/40">
       {{ reportDevInfoText }}
     </div>

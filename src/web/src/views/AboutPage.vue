@@ -66,7 +66,11 @@ const contentMap: Record<TabKey, { title: string; description: string; items?: s
     title: '关于神机喵算',
     description:
       '神机喵算是一个融合 AI 与传统命理的工具型 MVP：目标是让排盘、术语理解、推演逻辑与复盘都更直观。',
-    items: ['定位：命理爱好者的学习助手 / 专业命理师的参考工具', '阶段：MVP 快速迭代中，欢迎提出需求'],
+    items: [
+      '神机喵算并非一言定命，而是因问而推，因心而算。小喵道童观其象，喵道长入其局。',
+      '定位：命理爱好者的学习助手 / 专业命理师的参考工具',
+      '阶段：MVP 快速迭代中，欢迎提出需求',
+    ],
   },
   contact: {
     title: '联系我们',

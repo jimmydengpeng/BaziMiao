@@ -416,6 +416,11 @@
             </div>
           </div>
         </div>
+        <div v-if="energyMode === 'smart' && hasSmartEnergyData" class="px-3 pb-3 pt-2">
+          <div class="inline-flex rounded-full border border-dashed border-[rgba(214,160,96,0.45)] bg-[rgba(214,160,96,0.12)] px-3 py-1 text-[11px] text-[var(--accent-2)]">
+            本卡片采用：喵道长 · 灵批推演
+          </div>
+        </div>
         <div v-if="shouldShowDevInfo && smartEnergyDevInfoText" class="px-3 pb-3 text-[10px] text-white/40">
           {{ smartEnergyDevInfoText }}
         </div>

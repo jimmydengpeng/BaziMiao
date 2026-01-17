@@ -392,7 +392,7 @@ const sendMessage = async (content: string, options?: SendMessageOptions) => {
       body: JSON.stringify({
         history,
         system_prompt: options?.systemPrompt ?? undefined,
-        llm_provider: options?.llmProvider ?? "local",
+        llm_provider: options?.llmProvider ?? "openai",
         subject_enabled: Boolean(options?.subject),
         subject_name: options?.subject?.name ?? undefined,
         subject_birth: options?.subject?.birth ?? undefined,

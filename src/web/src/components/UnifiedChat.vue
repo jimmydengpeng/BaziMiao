@@ -208,8 +208,11 @@
 
         <!-- 正在思考指示器：渐变闪烁文字 -->
         <div v-if="isThinking" class="animate-[messageSlideIn_0.3s_ease]">
-          <div class="thinking-text text-sm py-2">
-            {{ displayedThinkingText }}...
+          <div class="thinking-text text-sm py-1">
+            {{ thinkingPrimaryText }}
+          </div>
+          <div v-if="displayedThinkingText" class="mt-1 text-xs text-white/60">
+            {{ displayedThinkingText }}
           </div>
         </div>
       </div>
@@ -239,6 +242,58 @@
           >
             {{ question }}
           </button>
+        </div>
+      </div>
+
+      <!-- 模式状态提示 -->
+      <div class="mb-3 px-1">
+        <div class="rounded-2xl border border-white/10 bg-[rgba(18,20,28,0.7)] px-4 py-3 text-sm text-white/85 backdrop-blur-xl">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1">
+              <div class="text-[11px] uppercase tracking-[0.2em] text-white/45">
+                {{ deepThinkingEnabled ? '思考模式（精批）' : '默认状态（不思考模式）' }}
+              </div>
+              <div class="mt-1 text-sm text-white/90">
+                当前状态：{{ deepThinkingEnabled ? '喵道长' : '小喵道童' }}
+              </div>
+            </div>
+            <div class="relative">
+              <button
+                class="group flex h-7 w-7 items-center justify-center rounded-full border border-white/15 text-[11px] text-white/70 transition hover:text-white"
+                type="button"
+                aria-label="状态说明"
+              >
+                i
+                <span
+                  class="pointer-events-none absolute right-0 top-full z-20 mt-2 w-[220px] origin-top-right rounded-xl border border-white/10 bg-[rgba(18,20,28,0.95)] p-3 text-[11px] leading-relaxed text-white/70 opacity-0 shadow-[0_12px_30px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+                >
+                  <span v-if="!deepThinkingEnabled">
+                    小喵道童随问随应，<br />
+                    可观其大概，不作深推。
+                  </span>
+                  <span v-else>
+                    喵道长入局推演，<br />
+                    将从命局整体权衡轻重。
+                  </span>
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <div v-if="deepThinkingEnabled" class="mt-3 space-y-2 text-xs leading-relaxed text-white/70">
+            <div>喵道长入局推演，将从命局整体权衡轻重。</div>
+            <div class="text-[13px] text-white/80">
+              此次将由喵道长亲自推演命局，<br />
+              以更细致的角度，权衡干支、生克与流转之势。
+            </div>
+            <div class="text-[13px] text-white/80">
+              此举并非否定此前之解，<br />
+              而是换一重心法，再观命势侧重。
+            </div>
+            <div class="text-[13px] text-white/80">
+              推演所耗心力与时间，皆非常态可比。
+            </div>
+          </div>
         </div>
       </div>
 
@@ -288,36 +343,19 @@
 	              {{ selectedArchive ? selectedArchive.displayName : '未选择命主' }}
 	            </button>
 
-	            <!-- 3. 模型选择（本地 / 云端兼容） -->
+	            <!-- 3. 深度思考（云端精批） -->
 	            <button
 	              :class="[
-	                'ui-sans-font shrink-0 rounded-full border px-2.5 py-1 text-sm transition',
-	                selectedLlmProvider === 'openai'
-	                  ? 'border-[rgba(88,150,250,0.55)] bg-[rgba(88,150,250,0.14)] text-[#7fb0ff]'
+	                'shrink-0 rounded-xl border px-2.5 py-1 text-sm transition',
+	                deepThinkingEnabled
+	                  ? 'border-[rgba(125,213,111,0.55)] bg-[rgba(125,213,111,0.16)] text-[#7dd56f]'
 	                  : 'border-white/10 bg-white/5 text-white/75 hover:bg-white/10'
 	              ]"
 	              type="button"
-	              @click="toggleLlmProvider"
-	              aria-label="选择模型"
-	            >
-	              {{ selectedLlmProvider === 'openai' ? '大师本尊' : '见习小喵' }}
-	            </button>
-
-	            <!-- 4. 深度思考（仅云端兼容可切换；本地默认开启） -->
-	            <button
-	              :class="[
-	                'ui-sans-font shrink-0 rounded-xl border px-2.5 py-1 text-sm transition',
-	                effectiveDeepThinkingEnabled
-	                  ? 'border-[rgba(125,213,111,0.55)] bg-[rgba(125,213,111,0.16)] text-[#7dd56f]'
-	                  : 'border-white/10 bg-white/5 text-white/75 hover:bg-white/10',
-	                selectedLlmProvider === 'local' ? 'cursor-not-allowed opacity-70' : ''
-	              ]"
-	              type="button"
 	              @click="toggleDeepThinking"
-	              :aria-pressed="effectiveDeepThinkingEnabled"
-	              :disabled="selectedLlmProvider === 'local'"
+	              :aria-pressed="deepThinkingEnabled"
 	            >
-	              灵批秘算
+	              {{ deepThinkingEnabled ? '喵道长' : '小喵道童' }}
 	            </button>
 	          </div>
 
@@ -531,28 +569,17 @@ const lastScrollTop = ref(0);
 const archivePickerOpen = ref(false);
 // 选中的“命主档案”（只影响聊天上下文，不会改变当前浏览的命盘页面）
 const selectedArchiveId = ref<number | null>(null);
-	// 是否把命主信息一起发给后端（命主按钮的选中/未选中状态）
-	const subjectEnabled = ref(true);
-	// LLM 渠道选择：local(本地 Ollama) / openai(云端兼容)
-	const selectedLlmProvider = ref<"local" | "openai">("openai");
-	// 深度思考开关：仅云端兼容可切换；本地默认开启
-	const deepThinkingEnabledForOpenai = ref(false);
+// 是否把命主信息一起发给后端（命主按钮的选中/未选中状态）
+const subjectEnabled = ref(true);
+// 深度思考开关（云端精批）
+const deepThinkingEnabled = ref(false);
+const lastSendDeepThinking = ref(false);
 // 是否跟随当前正在查看的档案（activeArchiveId）。用户手动选择后会切到 manual。
 const archiveSelectionMode = ref<"auto" | "manual">("auto");
 const didInitSubjectDefaults = ref(false);
 
-const effectiveDeepThinkingEnabled = computed(() => {
-  if (selectedLlmProvider.value === "local") return true;
-  return deepThinkingEnabledForOpenai.value;
-});
-
-const toggleLlmProvider = () => {
-  selectedLlmProvider.value = selectedLlmProvider.value === "local" ? "openai" : "local";
-};
-
 const toggleDeepThinking = () => {
-  if (selectedLlmProvider.value !== "openai") return;
-  deepThinkingEnabledForOpenai.value = !deepThinkingEnabledForOpenai.value;
+  deepThinkingEnabled.value = !deepThinkingEnabled.value;
 };
 
 const selectedArchive = computed(() => {
@@ -590,33 +617,18 @@ const updateInputDockHeight = () => {
 };
 
 // 等待状态随机文字
-const thinkingTexts = [
-  "正在掐指一算",
-  "正在翻阅古籍",
-  "正在观星推演",
-  "正在卜卦问天",
-  "正在参悟玄机",
-  "正在排盘校时",
-  "正在推演十神旺衰",
-  "正在比对天干地支合冲刑害",
-  "正在细算流年流月的起伏",
-  "正在斟酌用神与忌神",
-  "正在核对五行强弱与调候",
-  "正在拆解格局与喜忌取舍",
-  "正在看大运交接点的变化",
-  "正在合参命盘与现实经历",
-  "正在抓取关键时间节点",
-  "正在整理结论与建议",
-  "正在用更直白的话说明白",
-  "正在把复杂推演变简单",
-  "正在确认你的问题重点",
-  "正在把答案写得更具体些",
-  "正在结合你提供的信息复核",
-  "正在给出可执行的建议清单",
-  "正在避免空泛，尽量说人话",
-  "正在收尾，马上就好",
+const thinkingTextsDeep = [
+  "神机运转，命局渐明",
+  "正在权衡五行轻重",
+  "正在推演命势流转",
+  "请稍候片刻，道长尚在入局",
 ];
-const currentThinkingText = ref(thinkingTexts[0]);
+const thinkingTextsLight = [
+  "小喵道童在整理要点",
+  "小喵道童随问随应",
+  "小喵道童正在梳理重点",
+];
+const currentThinkingText = ref("");
 const displayedThinkingText = ref("");
 let thinkingTextTimer: number | null = null;
 let thinkingLoopActive = false;
@@ -624,16 +636,20 @@ let thinkingLoopActive = false;
 const TYPEWRITER_STEP_MS = 160;
 const TYPEWRITER_DONE_PAUSE_MS = 2500;
 
+const getActiveThinkingTexts = () =>
+  lastSendDeepThinking.value ? thinkingTextsDeep : thinkingTextsLight;
+
 const pickRandomThinkingText = () => {
-  if (thinkingTexts.length === 0) return;
-  if (thinkingTexts.length === 1) {
-    currentThinkingText.value = thinkingTexts[0];
+  const pool = getActiveThinkingTexts();
+  if (pool.length === 0) return;
+  if (pool.length === 1) {
+    currentThinkingText.value = pool[0];
     return;
   }
 
   let next = currentThinkingText.value;
   for (let i = 0; i < 6 && next === currentThinkingText.value; i += 1) {
-    next = thinkingTexts[Math.floor(Math.random() * thinkingTexts.length)];
+    next = pool[Math.floor(Math.random() * pool.length)];
   }
   currentThinkingText.value = next;
 };
@@ -704,6 +720,10 @@ const canSend = computed(
   () => inputText.value.trim().length > 0 && !isThinking.value && !isStreamingActive.value,
 );
 
+const thinkingPrimaryText = computed(() =>
+  lastSendDeepThinking.value ? "喵道长静心推演中……" : "小喵道童随问随应……",
+);
+
 // ========== 轻提示（Toast） ==========
 const toastVisible = ref(false);
 const toastMessage = ref("");
@@ -772,6 +792,8 @@ const sendMessage = async () => {
   inputText.value = "";
   resetTextareaHeight();
 
+  lastSendDeepThinking.value = deepThinkingEnabled.value;
+
   // 立即给一个文案，避免等待态出现时空白
   pickRandomThinkingText();
   displayedThinkingText.value = currentThinkingText.value.slice(0, 1);
@@ -803,8 +825,8 @@ const sendMessage = async () => {
 
   sendMessageInStore(text, {
     subject,
-    deepThinking: effectiveDeepThinkingEnabled.value,
-    llmProvider: selectedLlmProvider.value,
+    deepThinking: deepThinkingEnabled.value,
+    llmProvider: "openai",
   });
 
   // 发送后立即滚动到底部

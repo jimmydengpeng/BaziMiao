@@ -61,7 +61,7 @@ class GeneralChatRequest(BaseModel):
     history: List[ChatTurn]
     system_prompt: Optional[str] = Field(None, description="自定义系统提示词")
     llm_provider: LlmProvider = Field(
-        "local", description="模型渠道：local(本地Ollama) / openai(云端兼容)"
+        "openai", description="模型渠道：openai(云端兼容)"
     )
     # 可选：命主上下文（用于通用聊天里也能“带命主”提问）
     subject_enabled: bool = Field(False, description="是否启用命主上下文")
@@ -70,8 +70,8 @@ class GeneralChatRequest(BaseModel):
     subject_gender: Optional[str] = Field(None, description="命主性别（简化：男/女/其他）")
     subject_destiny: Optional[str] = Field(None, description="十年大运列表（简化：年份 + 干支）")
     subject_chart: Optional[Dict] = Field(None, description="命盘原始数据（前端档案）")
-    # 可选：思考模式（云端 OpenAI 兼容：enable_thinking；本地默认开启，忽略该开关）
-    deep_think: bool = Field(False, description="是否启用思考模式（openai 有效；本地默认开启）")
+    # 可选：思考模式（云端 openai 兼容：enable_thinking）
+    deep_think: bool = Field(False, description="是否启用思考模式（openai 有效）")
 
 
 class PillarSearchRequest(BaseModel):
